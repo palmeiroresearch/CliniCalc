@@ -294,6 +294,10 @@ function calculateWellsTEP(event) {
 
 // === 15. MELD === //
 function createMELDForm() {
+    const units = Storage.getSettings().units;
+    const crMax = units.creatinine === 'mg/dL' ? 15 : 1300;
+    const crStep = units.creatinine === 'mg/dL' ? 0.1 : 10;
+    
     return `
         <form id="meldForm" onsubmit="calculateMELD(event)">
             <div class="alert-box" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
@@ -318,9 +322,9 @@ function createMELDForm() {
             
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
-                    Creatinina sérica (mg/dL)
+                    Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineMELD" required step="0.1" min="0.1" max="15" class="form-input">
+                <input type="number" id="creatinineMELD" required step="${crStep}" min="0.1" max="${crMax}" class="form-input">
             </div>
             
             <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
@@ -398,25 +402,30 @@ function calculateMELD(event) {
 // === 2. CLEARANCE CREATININA 24H === //
 function createClearance24hForm() {
     const units = Storage.getSettings().units;
+    const crUrineMax = units.creatinine === 'mg/dL' ? 300 : 26500;
+    const crSerumMax = units.creatinine === 'mg/dL' ? 20 : 2000;
+    const crUrineStep = units.creatinine === 'mg/dL' ? 0.1 : 10;
+    const crSerumStep = units.creatinine === 'mg/dL' ? 0.01 : 1;
+    
     return `
         <form id="clearance24hForm" onsubmit="calculateClearance24h(event)">
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina en orina (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineUrine" required step="0.1" class="form-input">
+                <input type="number" id="creatinineUrine" required step="${crUrineStep}" min="1" max="${crUrineMax}" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineSerum" required step="0.01" class="form-input">
+                <input type="number" id="creatinineSerum" required step="${crSerumStep}" min="0.1" max="${crSerumMax}" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Volumen de orina en 24h (mL)
                 </label>
-                <input type="number" id="urineVolume" required step="1" class="form-input">
+                <input type="number" id="urineVolume" required step="1" min="100" max="10000" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Clearance
