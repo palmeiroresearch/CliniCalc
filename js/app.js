@@ -211,6 +211,10 @@ function loadCalculatorForm(calc) {
 function createGFRForm() {
     const units = Storage.getSettings().units;
     
+    // Ajustar validación según unidad
+    const crMax = units.creatinine === 'mg/dL' ? 20 : 2000;
+    const crStep = units.creatinine === 'mg/dL' ? 0.01 : 1;
+    
     return `
         <form id="gfrForm" onsubmit="calculateGFR(event)">
             <div class="form-group" style="margin-bottom: 16px;">
@@ -241,7 +245,7 @@ function createGFRForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="gfrCreatinine" required step="0.01" min="0.1" max="20" class="form-input">
+                <input type="number" id="gfrCreatinine" required step="${crStep}" min="0.1" max="${crMax}" class="form-input">
             </div>
             
             <div id="gfrWeightField" class="form-group" style="margin-bottom: 16px; display: none;">
@@ -482,6 +486,16 @@ function setupEventListeners() {
     });
     
     // Botones de gestión
+    document.getElementById('manageCalcsBtn')?.addEventListener('click', () => {
+        switchTab('settings');
+        // Scroll hacia la sección de gestión
+        setTimeout(() => {
+            const manageSection = document.querySelector('.settings-section:nth-child(3)');
+            if (manageSection) {
+                manageSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    });
     document.getElementById('restoreDefaultBtn')?.addEventListener('click', restoreDefaultConfig);
     document.getElementById('clearHistoryBtn')?.addEventListener('click', clearAllHistory);
     document.getElementById('clearAllHistoryBtn')?.addEventListener('click', clearAllHistory);
