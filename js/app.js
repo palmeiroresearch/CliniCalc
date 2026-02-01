@@ -213,7 +213,6 @@ function createGFRForm() {
     
     // Ajustar validación según unidad
     const crMax = units.creatinine === 'mg/dL' ? 20 : 2000;
-    const crStep = units.creatinine === 'mg/dL' ? 0.01 : 1;
     
     return `
         <form id="gfrForm" onsubmit="calculateGFR(event)">
@@ -245,14 +244,14 @@ function createGFRForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="gfrCreatinine" required step="${crStep}" min="0.1" max="${crMax}" class="form-input">
+                <input type="number" id="gfrCreatinine" required step="any" min="0.1" max="${crMax}" class="form-input">
             </div>
             
             <div id="gfrWeightField" class="form-group" style="margin-bottom: 16px; display: none;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Peso (${units.weight}) <span style="color: var(--danger);">*</span>
                 </label>
-                <input type="number" id="gfrWeight" step="0.1" min="30" max="300" class="form-input">
+                <input type="number" id="gfrWeight" step="any" min="30" max="300" class="form-input">
             </div>
             
             <div id="gfrRaceField" class="form-group" style="margin-bottom: 16px; display: none;">
@@ -529,12 +528,167 @@ function registerServiceWorker() {
             .then(reg => {
                 console.log('✅ Service Worker registrado');
                 document.getElementById('offlineStatus').textContent = '✅ Activo';
+                
+                // Detectar actualizaciones
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    console.log('🔄 Nueva versión detectada');
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Hay una nueva versión disponible
+                            showUpdateBanner(reg);
+                        }
+                    });
+                });
+                
+                // Verificar si ya hay una actualización esperando
+                if (reg.waiting) {
+                    showUpdateBanner(reg);
+                }
             })
             .catch(err => {
                 console.error('❌ Error SW:', err);
                 document.getElementById('offlineStatus').textContent = '❌ Error';
             });
+        
+        // Escuchar mensajes del SW (para confirmar actualización)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('🔄 Controlador actualizado, recargando...');
+            window.location.reload();
+        });
     }
+}
+
+function showUpdateBanner(registration) {
+    // Evitar duplicados
+    if (document.getElementById('updateBanner')) {
+        return;
+    }
+    
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px 20px;
+        text-align: center;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        animation: slideDown 0.3s ease;
+    `;
+    
+    banner.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <span style="font-size: 14px; font-weight: 600;">
+                🎉 <strong>Nueva versión disponible</strong> - Actualiza para obtener las últimas mejoras
+            </span>
+            <div style="display: flex; gap: 10px;">
+                <button id="updateNowBtn" style="
+                    background: white;
+                    color: #667eea;
+                    border: none;
+                    padding: 8px 20px;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                ">
+                    Actualizar Ahora
+                </button>
+                <button id="dismissUpdateBtn" style="
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    border: none;
+                    padding: 8px 20px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                ">
+                    Más Tarde
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertBefore(banner, document.body.firstChild);
+    
+    // Añadir estilos de animación si no existen
+    if (!document.getElementById('updateBannerStyles')) {
+        const style = document.createElement('style');
+        style.id = 'updateBannerStyles';
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideUp {
+                from {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+            }
+            #updateNowBtn:hover {
+                background: #f0f0f0 !important;
+                transform: translateY(-1px);
+            }
+            #dismissUpdateBtn:hover {
+                background: rgba(255,255,255,0.3) !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Event listeners
+    document.getElementById('updateNowBtn').addEventListener('click', () => {
+        console.log('🔄 Usuario aceptó actualización');
+        
+        // Enviar mensaje al SW para que se active inmediatamente
+        if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        
+        // Mostrar mensaje de carga
+        banner.innerHTML = `
+            <div style="text-align: center;">
+                <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px;"></div>
+                <span style="font-size: 14px; font-weight: 600;">Actualizando...</span>
+            </div>
+        `;
+        
+        // Añadir animación de spinner si no existe
+        if (!document.getElementById('spinnerAnimation')) {
+            const spinStyle = document.createElement('style');
+            spinStyle.id = 'spinnerAnimation';
+            spinStyle.textContent = `
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(spinStyle);
+        }
+    });
+    
+    document.getElementById('dismissUpdateBtn').addEventListener('click', () => {
+        banner.style.animation = 'slideUp 0.3s ease';
+        setTimeout(() => banner.remove(), 300);
+    });
 }
 
 // ============================================
@@ -550,19 +704,19 @@ function createClearance24hForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina en orina (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineUrine" required step="0.1" class="form-input">
+                <input type="number" id="creatinineUrine" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineSerum" required step="0.01" class="form-input">
+                <input type="number" id="creatinineSerum" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Volumen de orina en 24h (mL)
                 </label>
-                <input type="number" id="urineVolume" required step="1" class="form-input">
+                <input type="number" id="urineVolume" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Clearance
@@ -592,25 +746,25 @@ function createAnionGapForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio (Na) - mEq/L
                 </label>
-                <input type="number" id="sodium" required step="0.1" min="120" max="160" class="form-input">
+                <input type="number" id="sodium" required step="any" min="120" max="160" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Cloruro (Cl) - mEq/L
                 </label>
-                <input type="number" id="chloride" required step="0.1" min="85" max="120" class="form-input">
+                <input type="number" id="chloride" required step="any" min="85" max="120" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Bicarbonato (HCO₃) - mEq/L
                 </label>
-                <input type="number" id="bicarbonate" required step="0.1" min="10" max="40" class="form-input">
+                <input type="number" id="bicarbonate" required step="any" min="10" max="40" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina (g/dL)
                 </label>
-                <input type="number" id="albumin" required step="0.1" min="1.5" max="6" value="4" class="form-input">
+                <input type="number" id="albumin" required step="any" min="1.5" max="6" value="4" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Anion Gap
@@ -667,13 +821,13 @@ function createCorrectedCalciumForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Calcio sérico (mg/dL)
                 </label>
-                <input type="number" id="calcium" required step="0.1" min="6" max="15" class="form-input">
+                <input type="number" id="calcium" required step="any" min="6" max="15" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina sérica (g/dL)
                 </label>
-                <input type="number" id="albuminCa" required step="0.1" min="1.5" max="6" class="form-input">
+                <input type="number" id="albuminCa" required step="any" min="1.5" max="6" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Calcio Corregido
@@ -703,13 +857,13 @@ function createCorrectedSodiumForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio sérico (mEq/L)
                 </label>
-                <input type="number" id="sodiumNa" required step="0.1" min="120" max="160" class="form-input">
+                <input type="number" id="sodiumNa" required step="any" min="120" max="160" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Glucosa (${units.glucose})
                 </label>
-                <input type="number" id="glucose" required step="1" class="form-input">
+                <input type="number" id="glucose" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Sodio Corregido
@@ -765,13 +919,13 @@ function createBMIForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Peso (${units.weight})
                 </label>
-                <input type="number" id="weight" required step="0.1" min="30" max="300" class="form-input">
+                <input type="number" id="weight" required step="any" min="30" max="300" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Altura (${units.height})
                 </label>
-                <input type="number" id="height" required step="0.1" class="form-input">
+                <input type="number" id="height" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular IMC
@@ -808,13 +962,13 @@ function createBSAForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Peso (${units.weight})
                 </label>
-                <input type="number" id="weightBSA" required step="0.1" min="30" max="300" class="form-input">
+                <input type="number" id="weightBSA" required step="any" min="30" max="300" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Altura (${units.height})
                 </label>
-                <input type="number" id="heightBSA" required step="0.1" class="form-input">
+                <input type="number" id="heightBSA" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular BSA
@@ -845,25 +999,25 @@ function createOsmolarityForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio (mEq/L)
                 </label>
-                <input type="number" id="sodiumOsm" required step="0.1" class="form-input">
+                <input type="number" id="sodiumOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Glucosa (${units.glucose})
                 </label>
-                <input type="number" id="glucoseOsm" required step="1" class="form-input">
+                <input type="number" id="glucoseOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     BUN (${units.bun})
                 </label>
-                <input type="number" id="bunOsm" required step="1" class="form-input">
+                <input type="number" id="bunOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Osmolaridad medida (opcional) - mOsm/kg
                 </label>
-                <input type="number" id="measuredOsm" step="1" class="form-input" placeholder="Dejar vacío si no se midió">
+                <input type="number" id="measuredOsm" step="any" class="form-input" placeholder="Dejar vacío si no se midió">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Osmolaridad

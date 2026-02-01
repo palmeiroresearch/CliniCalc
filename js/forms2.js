@@ -12,13 +12,13 @@ function createCorrectedSodiumForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio sérico (mEq/L)
                 </label>
-                <input type="number" id="sodiumNa" required step="0.1" min="120" max="160" class="form-input">
+                <input type="number" id="sodiumNa" required step="any" min="120" max="160" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Glucosa (${units.glucose})
                 </label>
-                <input type="number" id="glucose" required step="1" class="form-input">
+                <input type="number" id="glucose" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Sodio Corregido
@@ -74,13 +74,13 @@ function createBMIForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Peso (${units.weight})
                 </label>
-                <input type="number" id="weight" required step="0.1" min="30" max="300" class="form-input">
+                <input type="number" id="weight" required step="any" min="30" max="300" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Altura (${units.height})
                 </label>
-                <input type="number" id="height" required step="0.1" class="form-input">
+                <input type="number" id="height" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular IMC
@@ -117,13 +117,13 @@ function createBSAForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Peso (${units.weight})
                 </label>
-                <input type="number" id="weightBSA" required step="0.1" min="30" max="300" class="form-input">
+                <input type="number" id="weightBSA" required step="any" min="30" max="300" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Altura (${units.height})
                 </label>
-                <input type="number" id="heightBSA" required step="0.1" class="form-input">
+                <input type="number" id="heightBSA" required step="any" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular BSA
@@ -154,25 +154,25 @@ function createOsmolarityForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio (mEq/L)
                 </label>
-                <input type="number" id="sodiumOsm" required step="0.1" class="form-input">
+                <input type="number" id="sodiumOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Glucosa (${units.glucose})
                 </label>
-                <input type="number" id="glucoseOsm" required step="1" class="form-input">
+                <input type="number" id="glucoseOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     BUN (${units.bun})
                 </label>
-                <input type="number" id="bunOsm" required step="1" class="form-input">
+                <input type="number" id="bunOsm" required step="any" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Osmolaridad medida (opcional) - mOsm/kg
                 </label>
-                <input type="number" id="measuredOsm" step="1" class="form-input" placeholder="Dejar vacío si no se midió">
+                <input type="number" id="measuredOsm" step="any" class="form-input" placeholder="Dejar vacío si no se midió">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Osmolaridad

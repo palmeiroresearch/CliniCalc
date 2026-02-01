@@ -3,7 +3,7 @@
 // Funcionalidad Offline Completa
 // ============================================
 
-const CACHE_NAME = 'clinicalc-v1.0.0';
+const CACHE_NAME = 'clinicalc-v1.1.0';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -11,11 +11,14 @@ const ASSETS_TO_CACHE = [
     './icon-192.png',
     './icon-512.png',
     './css/main.css',
+    './css/additional-styles.css',
     './js/config.js',
     './js/storage.js',
     './js/calculators.js',
     './js/ui.js',
     './js/app.js',
+    './js/forms.js',
+    './js/forms2.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
 ];
 
@@ -30,8 +33,8 @@ self.addEventListener('install', (event) => {
                 return cache.addAll(ASSETS_TO_CACHE);
             })
             .then(() => {
-                console.log('[SW] Instalación completa');
-                return self.skipWaiting();
+                console.log('[SW] Instalación completa - esperando confirmación del usuario');
+                // NO hacer skipWaiting() aquí - esperar mensaje del usuario
             })
             .catch((error) => {
                 console.error('[SW] Error al cachear:', error);

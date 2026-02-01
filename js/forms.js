@@ -11,21 +11,21 @@ function createChildPughForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Bilirrubina total (mg/dL)
                 </label>
-                <input type="number" id="bilirubinCP" required step="0.1" min="0.1" max="20" class="form-input">
+                <input type="number" id="bilirubinCP" required step="any" min="0.1" max="20" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina sérica (g/dL)
                 </label>
-                <input type="number" id="albuminCP" required step="0.1" min="1" max="6" class="form-input">
+                <input type="number" id="albuminCP" required step="any" min="1" max="6" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     INR
                 </label>
-                <input type="number" id="inrCP" required step="0.1" min="0.8" max="5" class="form-input">
+                <input type="number" id="inrCP" required step="any" min="0.8" max="5" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
@@ -93,7 +93,7 @@ function createCURB65Form() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     BUN/Urea (mg/dL)
                 </label>
-                <input type="number" id="bunCURB" required step="1" min="0" max="200" class="form-input">
+                <input type="number" id="bunCURB" required step="any" min="0" max="200" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
@@ -296,7 +296,6 @@ function calculateWellsTEP(event) {
 function createMELDForm() {
     const units = Storage.getSettings().units;
     const crMax = units.creatinine === 'mg/dL' ? 15 : 1300;
-    const crStep = units.creatinine === 'mg/dL' ? 0.1 : 10;
     
     return `
         <form id="meldForm" onsubmit="calculateMELD(event)">
@@ -310,21 +309,21 @@ function createMELDForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Bilirrubina total (mg/dL)
                 </label>
-                <input type="number" id="bilirubinMELD" required step="0.1" min="0.1" max="50" class="form-input">
+                <input type="number" id="bilirubinMELD" required step="any" min="0.1" max="50" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     INR
                 </label>
-                <input type="number" id="inrMELD" required step="0.1" min="0.8" max="10" class="form-input">
+                <input type="number" id="inrMELD" required step="any" min="0.8" max="10" class="form-input">
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineMELD" required step="${crStep}" min="0.1" max="${crMax}" class="form-input">
+                <input type="number" id="creatinineMELD" required step="any" min="0.1" max="${crMax}" class="form-input">
             </div>
             
             <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
@@ -338,7 +337,7 @@ function createMELDForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio sérico (opcional para MELD-Na) - mEq/L
                 </label>
-                <input type="number" id="sodiumMELD" step="1" min="120" max="160" class="form-input" placeholder="Dejar vacío para MELD estándar">
+                <input type="number" id="sodiumMELD" step="any" min="120" max="160" class="form-input" placeholder="Dejar vacío para MELD estándar">
             </div>
             
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
@@ -404,8 +403,6 @@ function createClearance24hForm() {
     const units = Storage.getSettings().units;
     const crUrineMax = units.creatinine === 'mg/dL' ? 300 : 26500;
     const crSerumMax = units.creatinine === 'mg/dL' ? 20 : 2000;
-    const crUrineStep = units.creatinine === 'mg/dL' ? 0.1 : 10;
-    const crSerumStep = units.creatinine === 'mg/dL' ? 0.01 : 1;
     
     return `
         <form id="clearance24hForm" onsubmit="calculateClearance24h(event)">
@@ -413,19 +410,19 @@ function createClearance24hForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina en orina (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineUrine" required step="${crUrineStep}" min="1" max="${crUrineMax}" class="form-input">
+                <input type="number" id="creatinineUrine" required step="any" min="1" max="${crUrineMax}" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Creatinina sérica (${units.creatinine})
                 </label>
-                <input type="number" id="creatinineSerum" required step="${crSerumStep}" min="0.1" max="${crSerumMax}" class="form-input">
+                <input type="number" id="creatinineSerum" required step="any" min="0.1" max="${crSerumMax}" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Volumen de orina en 24h (mL)
                 </label>
-                <input type="number" id="urineVolume" required step="1" min="100" max="10000" class="form-input">
+                <input type="number" id="urineVolume" required step="any" min="100" max="10000" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Clearance
@@ -455,25 +452,25 @@ function createAnionGapForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Sodio (Na) - mEq/L
                 </label>
-                <input type="number" id="sodium" required step="0.1" min="120" max="160" class="form-input">
+                <input type="number" id="sodium" required step="any" min="120" max="160" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Cloruro (Cl) - mEq/L
                 </label>
-                <input type="number" id="chloride" required step="0.1" min="85" max="120" class="form-input">
+                <input type="number" id="chloride" required step="any" min="85" max="120" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Bicarbonato (HCO₃) - mEq/L
                 </label>
-                <input type="number" id="bicarbonate" required step="0.1" min="10" max="40" class="form-input">
+                <input type="number" id="bicarbonate" required step="any" min="10" max="40" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina (g/dL)
                 </label>
-                <input type="number" id="albumin" required step="0.1" min="1.5" max="6" value="4" class="form-input">
+                <input type="number" id="albumin" required step="any" min="1.5" max="6" value="4" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Anion Gap
@@ -529,13 +526,13 @@ function createCorrectedCalciumForm() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Calcio sérico (mg/dL)
                 </label>
-                <input type="number" id="calcium" required step="0.1" min="6" max="15" class="form-input">
+                <input type="number" id="calcium" required step="any" min="6" max="15" class="form-input">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina sérica (g/dL)
                 </label>
-                <input type="number" id="albuminCa" required step="0.1" min="1.5" max="6" class="form-input">
+                <input type="number" id="albuminCa" required step="any" min="1.5" max="6" class="form-input">
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Calcio Corregido
