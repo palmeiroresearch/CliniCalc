@@ -38,16 +38,21 @@ const UI = {
             const isFav = favorites.includes(calcId);
             
             html += `
-                <div class="calculator-card ${isFav ? 'favorited' : ''}" 
+                <div class="calculator-card ${isFav ? 'favorited' : ''}"
                      onclick="openCalculator(${calcId})"
-                     data-calc-id="${calcId}">
-                    <span class="calc-favorite ${isFav ? 'active' : ''}" 
+                     data-calc-id="${calcId}"
+                     data-category="${calc.category}">
+                    <span class="calc-favorite ${isFav ? 'active' : ''}"
                           onclick="event.stopPropagation(); toggleFavorite(${calcId})">
                         ${isFav ? '⭐' : '☆'}
                     </span>
-                    <span class="calc-icon">${calc.icon}</span>
+                    <div class="calc-icon-wrapper">
+                        <span class="calc-icon">${calc.icon}</span>
+                    </div>
                     <div class="calc-name">${calc.name}</div>
-                    <div class="calc-category">${calc.categoryLabel}</div>
+                    <div class="calc-category">
+                        <span class="cat-dot"></span>${calc.categoryLabel}
+                    </div>
                 </div>
             `;
         });
@@ -70,14 +75,15 @@ const UI = {
             const isFav = favorites.includes(calc.id);
             
             html += `
-                <div class="calculator-list-item ${isFav ? 'favorited' : ''}" 
-                     onclick="openCalculator(${calc.id})">
+                <div class="calculator-list-item ${isFav ? 'favorited' : ''}"
+                     onclick="openCalculator(${calc.id})"
+                     data-category="${calc.category}">
                     <div class="calc-list-icon">${calc.icon}</div>
                     <div class="calc-list-info">
                         <div class="calc-list-name">${calc.fullName}</div>
                         <div class="calc-list-description">${calc.description}</div>
                     </div>
-                    <div class="calc-list-favorite" 
+                    <div class="calc-list-favorite"
                          onclick="event.stopPropagation(); toggleFavorite(${calc.id})">
                         ${isFav ? '⭐' : '☆'}
                     </div>
@@ -109,6 +115,11 @@ const UI = {
             const date = new Date(item.timestamp);
             const timeAgo = this.getTimeAgo(date);
             
+            const hasPatient = item.patientName || item.bedNumber;
+            const patientDisplay = hasPatient
+                ? `<span class="patient-name">👤 ${item.patientName || '—'}</span><span class="patient-bed">🛏 ${item.bedNumber || '—'}</span>`
+                : `<span class="patient-add">+ Añadir paciente</span>`;
+
             html += `
                 <div class="history-item" data-item-id="${item.id}">
                     <div class="history-header">
@@ -124,14 +135,32 @@ const UI = {
                             ${item.interpretation.label}
                         </span>
                     </div>
+
+                    <div class="history-patient" id="patient-display-${item.id}"
+                         onclick="editPatientInfo('${item.id}')">
+                        ${patientDisplay}
+                    </div>
+                    <div class="history-patient-edit" id="patient-edit-${item.id}">
+                        <input type="text" class="patient-input" id="pname-${item.id}"
+                               placeholder="Nombre del paciente"
+                               value="${item.patientName || ''}"
+                               onkeydown="if(event.key==='Enter') savePatientInfo('${item.id}'); if(event.key==='Escape') cancelPatientEdit('${item.id}')">
+                        <input type="text" class="patient-input patient-input--bed" id="pbed-${item.id}"
+                               placeholder="Cama"
+                               value="${item.bedNumber || ''}"
+                               onkeydown="if(event.key==='Enter') savePatientInfo('${item.id}'); if(event.key==='Escape') cancelPatientEdit('${item.id}')">
+                        <button class="patient-action patient-action--save" onclick="savePatientInfo('${item.id}')" title="Guardar">✓</button>
+                        <button class="patient-action patient-action--cancel" onclick="cancelPatientEdit('${item.id}')" title="Cancelar">✕</button>
+                    </div>
+
                     <div class="history-actions">
-                        <button class="btn-icon" onclick="recalculate('${item.id}')" title="Recalcular">
+                        <button class="btn-icon" onclick="recalculate('${item.id}')" title="Recalcular con estos valores">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
                                 <path d="M21 3v5h-5"/>
                             </svg>
                         </button>
-                        <button class="btn-icon" onclick="shareResult('${item.id}')" title="Compartir">
+                        <button class="btn-icon" onclick="shareResult('${item.id}')" title="Compartir por WhatsApp">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
                                 <polyline points="16 6 12 2 8 6"/>
@@ -183,9 +212,9 @@ const UI = {
     updateActiveCalcCount() {
         const mainScreen = Storage.getMainScreen();
         const counter = document.getElementById('activeCalcCount');
-        if (counter) {
-            counter.textContent = mainScreen.length;
-        }
+        const total = document.querySelector('.counter-total');
+        if (counter) counter.textContent = mainScreen.length;
+        if (total) total.textContent = '/ ' + CALCULATORS_CONFIG.length;
     },
 
     // === BÚSQUEDA === //
@@ -476,6 +505,102 @@ const historyStyles = `
     padding: 40px 20px;
     text-align: center;
     color: var(--text-tertiary);
+}
+
+/* === PATIENT INFO SECTION === */
+.history-patient {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    min-height: 32px;
+}
+
+.history-patient:hover {
+    background: var(--bg-tertiary);
+}
+
+.patient-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.patient-bed {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 4px;
+}
+
+.patient-add {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+.history-patient-edit {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.patient-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+    transition: border-color var(--transition-fast);
+}
+
+.patient-input:focus {
+    outline: none;
+    border-color: var(--brand-accent);
+}
+
+.patient-input--bed {
+    flex: 0 0 72px;
+}
+
+.patient-action {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.patient-action--save {
+    background: var(--brand-accent);
+    color: var(--brand-primary-dark);
+}
+
+.patient-action--save:hover {
+    background: var(--brand-accent-light);
+}
+
+.patient-action--cancel {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.patient-action--cancel:hover {
+    background: var(--bg-tertiary);
 }
 </style>
 `;
