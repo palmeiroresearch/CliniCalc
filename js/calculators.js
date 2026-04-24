@@ -347,8 +347,8 @@ const Calculators = {
         // Labile INR (1 punto)
         if (inputs.labileINR) score += 1;
         
-        // Elderly (>65 años) (1 punto)
-        if (inputs.age > 65) score += 1;
+        // Elderly (≥65 años) (1 punto)
+        if (inputs.age >= 65) score += 1;
         
         // Drugs/Alcohol (1 punto cada uno, máximo 2)
         if (inputs.drugs) score += 1;
@@ -498,18 +498,24 @@ const Calculators = {
 
     // === 15. MELD SCORE === //
     calculateMELD(inputs) {
-        const { bilirubin, inr, creatinine, dialysis, sodium } = inputs;
-        
+        let { bilirubin, inr, creatinine, dialysis, sodium } = inputs;
+
+        // Convertir creatinina a mg/dL si está en µmol/L
+        const currentUnit = Storage.getSetting('units.creatinine');
+        if (currentUnit === 'µmol/L') {
+            creatinine = creatinine / 88.42;
+        }
+
+        // Si está en diálisis, creatinina = 4 (antes de cualquier cálculo)
+        if (dialysis) creatinine = 4;
+
         // MELD original
-        const meld = 9.57 * Math.log(Math.max(creatinine, 1)) + 
-                     3.78 * Math.log(Math.max(bilirubin, 1)) + 
-                     11.2 * Math.log(Math.max(inr, 1)) + 
+        const meld = 9.57 * Math.log(Math.max(creatinine, 1)) +
+                     3.78 * Math.log(Math.max(bilirubin, 1)) +
+                     11.2 * Math.log(Math.max(inr, 1)) +
                      6.43;
-        
-        // Ajustar si está en diálisis (creatinine = 4)
-        let finalMeld = dialysis ? 
-            9.57 * Math.log(4) + 3.78 * Math.log(Math.max(bilirubin, 1)) + 11.2 * Math.log(Math.max(inr, 1)) + 6.43 :
-            meld;
+
+        let finalMeld = meld;
         
         // Límites
         finalMeld = Math.max(6, Math.min(40, Math.round(finalMeld * 10) / 10));
@@ -533,5 +539,272 @@ const Calculators = {
     interpretMELD(score) {
         const range = INTERPRETATIONS.meld.find(r => score >= r.min && score <= r.max);
         return range || INTERPRETATIONS.meld[INTERPRETATIONS.meld.length - 1];
+    },
+
+    // === 16. SOFA SCORE === //
+    calculateSOFA(inputs) {
+        let { pao2fio2, ventilation, platelets, bilirubin, cardiovascular, gcs, creatinine, urineOutput } = inputs;
+
+        // Convertir creatinina a mg/dL si está en µmol/L
+        const currentUnit = Storage.getSetting('units.creatinine');
+        if (currentUnit === 'µmol/L') {
+            creatinine = creatinine / 88.42;
+        }
+
+        // 1. Respiración (PaO2/FiO2)
+        let resp = 0;
+        if (pao2fio2 >= 400) resp = 0;
+        else if (pao2fio2 >= 300) resp = 1;
+        else if (pao2fio2 >= 200) resp = 2;
+        else if (pao2fio2 >= 100 && ventilation) resp = 3;
+        else if (pao2fio2 < 100 && ventilation) resp = 4;
+        else resp = 2; // Sin ventilación con PaO2/FiO2 <200 → máx score posible = 2
+
+        // 2. Coagulación (Plaquetas ×10³/µL)
+        let coag = 0;
+        if (platelets >= 150) coag = 0;
+        else if (platelets >= 100) coag = 1;
+        else if (platelets >= 50) coag = 2;
+        else if (platelets >= 20) coag = 3;
+        else coag = 4;
+
+        // 3. Hepático (Bilirrubina mg/dL)
+        let liver = 0;
+        if (bilirubin < 1.2) liver = 0;
+        else if (bilirubin < 2.0) liver = 1;
+        else if (bilirubin < 6.0) liver = 2;
+        else if (bilirubin < 12.0) liver = 3;
+        else liver = 4;
+
+        // 4. Cardiovascular (0-4 seleccionado directamente)
+        const cardio = parseInt(cardiovascular);
+
+        // 5. Neurológico (GCS)
+        let neuro = 0;
+        if (gcs === 15) neuro = 0;
+        else if (gcs >= 13) neuro = 1;
+        else if (gcs >= 10) neuro = 2;
+        else if (gcs >= 6) neuro = 3;
+        else neuro = 4;
+
+        // 6. Renal (Creatinina mg/dL + diuresis opcional)
+        let renal = 0;
+        if (creatinine < 1.2) renal = 0;
+        else if (creatinine < 2.0) renal = 1;
+        else if (creatinine < 3.5) renal = 2;
+        else if (creatinine < 5.0) renal = 3;
+        else renal = 4;
+
+        // Ajustar renal por diuresis si es peor
+        if (urineOutput !== null && urineOutput !== undefined) {
+            let renalByUrine = 0;
+            if (urineOutput < 200) renalByUrine = 4;
+            else if (urineOutput < 500) renalByUrine = 3;
+            renal = Math.max(renal, renalByUrine);
+        }
+
+        const total = resp + coag + liver + cardio + neuro + renal;
+
+        return {
+            value: total,
+            unit: 'puntos',
+            components: { resp, coag, liver, cardio, neuro, renal },
+            interpretation: this.interpretSOFA(total)
+        };
+    },
+
+    interpretSOFA(score) {
+        const range = INTERPRETATIONS.sofa.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.sofa[INTERPRETATIONS.sofa.length - 1];
+    },
+
+    // === 17. NIHSS SCORE === //
+    calculateNIHSS(inputs) {
+        const {
+            loc, locQuestions, locCommands,
+            gaze, visual, facial,
+            motorArmL, motorArmR, motorLegL, motorLegR,
+            ataxia, sensory, language, dysarthria, extinction
+        } = inputs;
+
+        const total = loc + locQuestions + locCommands +
+                      gaze + visual + facial +
+                      motorArmL + motorArmR + motorLegL + motorLegR +
+                      ataxia + sensory + language + dysarthria + extinction;
+
+        return {
+            value: total,
+            unit: 'puntos',
+            interpretation: this.interpretNIHSS(total)
+        };
+    },
+
+    interpretNIHSS(score) {
+        const range = INTERPRETATIONS.nihss.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.nihss[INTERPRETATIONS.nihss.length - 1];
+    },
+
+    // === 18. GLASGOW COMA SCALE === //
+    calculateGlasgow(inputs) {
+        const { eyes, verbal, motor } = inputs;
+        const total = eyes + verbal + motor;
+
+        return {
+            value: total,
+            unit: 'puntos',
+            components: { eyes, verbal, motor },
+            interpretation: this.interpretGlasgow(total)
+        };
+    },
+
+    interpretGlasgow(score) {
+        const range = INTERPRETATIONS.glasgow.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.glasgow[INTERPRETATIONS.glasgow.length - 1];
+    },
+
+    // === 19. TIMI RISK SCORE — UA/NSTEMI === //
+    calculateTIMI_NSTEMI(inputs) {
+        let score = 0;
+        if (inputs.age65)        score += 1;
+        if (inputs.riskFactors)  score += 1;
+        if (inputs.knownCAD)     score += 1;
+        if (inputs.aspirin)      score += 1;
+        if (inputs.severeAngina) score += 1;
+        if (inputs.elevMarkers)  score += 1;
+        if (inputs.stDeviation)  score += 1;
+
+        return {
+            value: score,
+            unit: 'puntos',
+            interpretation: this.interpretTIMI_NSTEMI(score)
+        };
+    },
+
+    interpretTIMI_NSTEMI(score) {
+        const range = INTERPRETATIONS.timiNSTEMI.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.timiNSTEMI[INTERPRETATIONS.timiNSTEMI.length - 1];
+    },
+
+    // === 20. TIMI RISK SCORE — STEMI === //
+    calculateTIMI_STEMI(inputs) {
+        let { age, sbp, hr, weight } = inputs;
+        let score = 0;
+
+        // Edad (rangos de puntos)
+        if (age >= 75)      score += 3;
+        else if (age >= 65) score += 2;
+
+        // Checkboxes clínicos
+        if (inputs.riskHistory) score += 1; // DM / HTA / angina previa
+        if (sbp < 100)          score += 3;
+        if (hr > 100)           score += 2;
+        if (inputs.killip2plus)  score += 2; // Killip ≥ II
+
+        // Peso: convertir a kg si está en lb
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+        if (weight < 67) score += 1;
+
+        if (inputs.anteriorST)  score += 1; // Elevación ST anterior o BCRI
+        if (inputs.timeLate)    score += 1; // Tiempo a tratamiento >4h
+
+        return {
+            value: score,
+            unit: 'puntos',
+            interpretation: this.interpretTIMI_STEMI(score)
+        };
+    },
+
+    interpretTIMI_STEMI(score) {
+        const range = INTERPRETATIONS.timiSTEMI.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.timiSTEMI[INTERPRETATIONS.timiSTEMI.length - 1];
+    },
+
+    // === 21. GRACE SCORE === //
+    calculateGRACE(inputs) {
+        let { age, hr, sbp, creatinine, killip, cardiacArrest, stDeviation, elevMarkers } = inputs;
+
+        // Convertir creatinina a mg/dL si está en µmol/L
+        const crUnit = Storage.getSetting('units.creatinine');
+        if (crUnit === 'µmol/L') creatinine = creatinine / 88.42;
+
+        // Puntos por edad
+        let agePoints = 0;
+        if      (age < 40)  agePoints = 0;
+        else if (age < 50)  agePoints = 18;
+        else if (age < 60)  agePoints = 36;
+        else if (age < 70)  agePoints = 55;
+        else if (age < 80)  agePoints = 73;
+        else                agePoints = 91;
+
+        // Puntos por FC
+        let hrPoints = 0;
+        if      (hr < 70)   hrPoints = 0;
+        else if (hr < 90)   hrPoints = 7;
+        else if (hr < 110)  hrPoints = 13;
+        else if (hr < 150)  hrPoints = 23;
+        else if (hr < 200)  hrPoints = 36;
+        else                hrPoints = 46;
+
+        // Puntos por PAS
+        let sbpPoints = 0;
+        if      (sbp < 80)   sbpPoints = 63;
+        else if (sbp < 100)  sbpPoints = 58;
+        else if (sbp < 120)  sbpPoints = 47;
+        else if (sbp < 140)  sbpPoints = 37;
+        else if (sbp < 160)  sbpPoints = 26;
+        else if (sbp < 200)  sbpPoints = 11;
+        else                 sbpPoints = 0;
+
+        // Puntos por creatinina (mg/dL)
+        let crPoints = 0;
+        if      (creatinine < 0.4)  crPoints = 2;
+        else if (creatinine < 0.8)  crPoints = 5;
+        else if (creatinine < 1.2)  crPoints = 8;
+        else if (creatinine < 1.6)  crPoints = 11;
+        else if (creatinine < 2.0)  crPoints = 14;
+        else if (creatinine < 4.0)  crPoints = 23;
+        else                        crPoints = 31;
+
+        // Killip class
+        const killipMap = { '1': 0, '2': 21, '3': 43, '4': 64 };
+        const killipPoints = killipMap[String(killip)] || 0;
+
+        // Binarios
+        const arrestPoints  = cardiacArrest ? 43 : 0;
+        const stPoints      = stDeviation   ? 30 : 0;
+        const markerPoints  = elevMarkers   ? 15 : 0;
+
+        const total = agePoints + hrPoints + sbpPoints + crPoints + killipPoints + arrestPoints + stPoints + markerPoints;
+
+        return {
+            value: total,
+            unit: 'puntos',
+            components: { agePoints, hrPoints, sbpPoints, crPoints, killipPoints, arrestPoints, stPoints, markerPoints },
+            interpretation: this.interpretGRACE(total)
+        };
+    },
+
+    interpretGRACE(score) {
+        const range = INTERPRETATIONS.grace.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.grace[INTERPRETATIONS.grace.length - 1];
+    },
+
+    // === 22. ESCALA DE BRADEN === //
+    calculateBraden(inputs) {
+        const { sensory, moisture, activity, mobility, nutrition, friction } = inputs;
+        const total = sensory + moisture + activity + mobility + nutrition + friction;
+
+        return {
+            value: total,
+            unit: 'puntos',
+            components: { sensory, moisture, activity, mobility, nutrition, friction },
+            interpretation: this.interpretBraden(total)
+        };
+    },
+
+    interpretBraden(score) {
+        const range = INTERPRETATIONS.braden.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.braden[INTERPRETATIONS.braden.length - 1];
     }
 };
