@@ -126,7 +126,9 @@ const Storage = {
             inputs: calculation.inputs,
             result: calculation.result,
             interpretation: calculation.interpretation,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            patientName: null,
+            bedNumber: null
         };
         
         // Añadir al inicio
@@ -152,6 +154,15 @@ const Storage = {
         const filtered = history.filter(item => item.id !== itemId);
         this.setHistory(filtered);
         this.dispatchEvent('historyChanged', filtered);
+    },
+
+    updateHistoryItem(itemId, fields) {
+        const history = this.getHistory();
+        const idx = history.findIndex(h => h.id === itemId);
+        if (idx === -1) return false;
+        Object.assign(history[idx], fields);
+        this.setHistory(history);
+        return true;
     },
 
     // === CONFIGURACIÓN === //
@@ -209,7 +220,7 @@ const Storage = {
     // === EXPORTAR/IMPORTAR === //
     exportData() {
         return {
-            version: '1.0.0',
+            version: APP_VERSION,
             exportDate: new Date().toISOString(),
             mainScreen: this.getMainScreen(),
             favorites: this.getFavorites(),
