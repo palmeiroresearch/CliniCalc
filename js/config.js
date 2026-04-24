@@ -1,7 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 15 Calculadoras Médicas
+// Metadata de las 22 Calculadoras Médicas
 // ============================================
+
+const APP_VERSION = '1.1.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -167,6 +169,84 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Hepatología',
         description: 'Prioridad para trasplante hepático',
         formulas: ['MELD', 'MELD-Na']
+    },
+
+    // === CATEGORÍA: INFECCIONES/UCI === //
+    {
+        id: 16,
+        name: 'SOFA',
+        fullName: 'SOFA Score',
+        icon: '🏨',
+        category: 'infecciones',
+        categoryLabel: 'Infecciones',
+        description: 'Evaluación secuencial de falla orgánica en UCI (sepsis)',
+        formulas: ['SOFA']
+    },
+
+    // === CATEGORÍA: NEUROLOGÍA === //
+    {
+        id: 17,
+        name: 'NIHSS',
+        fullName: 'NIHSS Score',
+        icon: '🧠',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Escala de ictus del NIH - severidad del ACV isquémico',
+        formulas: ['NIHSS']
+    },
+    {
+        id: 18,
+        name: 'Glasgow',
+        fullName: 'Escala de Glasgow (GCS)',
+        icon: '👁️',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Evalúa nivel de conciencia: apertura ocular, respuesta verbal y motora',
+        formulas: ['GCS']
+    },
+
+    // === CATEGORÍA: CARDIOLOGÍA (continuación) === //
+    {
+        id: 19,
+        name: 'TIMI NSTEMI',
+        fullName: 'TIMI Risk Score (UA/NSTEMI)',
+        icon: '💔',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Riesgo de muerte/IAM/revascularización en angina inestable y NSTEMI',
+        formulas: ['TIMI UA/NSTEMI']
+    },
+    {
+        id: 20,
+        name: 'TIMI STEMI',
+        fullName: 'TIMI Risk Score (STEMI)',
+        icon: '🫀',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Mortalidad a 30 días en infarto agudo con elevación del ST',
+        formulas: ['TIMI STEMI']
+    },
+    {
+        id: 21,
+        name: 'GRACE',
+        fullName: 'GRACE Score (SCA)',
+        icon: '🏥',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Mortalidad intrahospitalaria en síndrome coronario agudo',
+        formulas: ['GRACE']
+    },
+
+    // === CATEGORÍA: OTROS (continuación) === //
+    {
+        id: 22,
+        name: 'Braden',
+        fullName: 'Escala de Braden',
+        icon: '🛏️',
+        category: 'otros',
+        categoryLabel: 'Otros',
+        description: 'Riesgo de úlceras por presión (escaras)',
+        formulas: ['Braden']
     }
 ];
 
@@ -295,6 +375,60 @@ const INTERPRETATIONS = {
         { min: 10, max: 19, label: 'Riesgo moderado', color: 'warning', description: 'Mortalidad 90d: 6-20%' },
         { min: 20, max: 29, label: 'Alto riesgo', color: 'danger', description: 'Mortalidad 90d: 19-45%' },
         { min: 30, max: Infinity, label: 'Muy alto riesgo', color: 'danger', description: 'Mortalidad 90d: >50% - urgente' }
+    ],
+
+    // SOFA
+    sofa: [
+        { min: 0, max: 6, label: 'Bajo riesgo', color: 'success', description: 'Mortalidad esperada <10%' },
+        { min: 7, max: 9, label: 'Riesgo moderado', color: 'warning', description: 'Mortalidad esperada 15-20%' },
+        { min: 10, max: 12, label: 'Alto riesgo', color: 'danger', description: 'Mortalidad esperada 40-50%' },
+        { min: 13, max: 24, label: 'Muy alto riesgo', color: 'danger', description: 'Mortalidad >50% - UCI crítico' }
+    ],
+
+    // TIMI UA/NSTEMI
+    timiNSTEMI: [
+        { min: 0, max: 2, label: 'Bajo riesgo', color: 'success', description: 'Evento adverso a 14 días: 5-8% — manejo conservador, considerar estrategia temprana selectiva' },
+        { min: 3, max: 4, label: 'Riesgo moderado', color: 'warning', description: 'Evento adverso a 14 días: 13-20% — estrategia invasiva temprana (<72h)' },
+        { min: 5, max: 7, label: 'Alto riesgo', color: 'danger', description: 'Evento adverso a 14 días: 26-41% — estrategia invasiva urgente (<24h), anticoagulación intensiva' }
+    ],
+
+    // TIMI STEMI
+    timiSTEMI: [
+        { min: 0, max: 3, label: 'Bajo riesgo', color: 'success', description: 'Mortalidad a 30 días <5% — reperfusión estándar' },
+        { min: 4, max: 6, label: 'Riesgo moderado', color: 'warning', description: 'Mortalidad a 30 días 5-20% — reperfusión urgente, monitorización estrecha' },
+        { min: 7, max: 14, label: 'Alto riesgo', color: 'danger', description: 'Mortalidad a 30 días >20% — reperfusión urgente, soporte hemodinámico, UCI' }
+    ],
+
+    // GRACE Score
+    grace: [
+        { min: 0, max: 108, label: 'Bajo riesgo', color: 'success', description: 'Mortalidad intrahospitalaria <1% — estrategia conservadora o invasiva electiva' },
+        { min: 109, max: 140, label: 'Riesgo intermedio', color: 'warning', description: 'Mortalidad intrahospitalaria 1-3% — estrategia invasiva temprana (<72h)' },
+        { min: 141, max: 372, label: 'Alto riesgo', color: 'danger', description: 'Mortalidad intrahospitalaria >3% — estrategia invasiva urgente (<24h), UCI' }
+    ],
+
+    // Braden
+    braden: [
+        { min: 6, max: 9, label: 'Riesgo muy alto', color: 'danger', description: 'Úlcera por presión muy probable — cambios posturales cada 2h, superficie especializada, nutrición intensiva' },
+        { min: 10, max: 12, label: 'Riesgo alto', color: 'danger', description: 'Riesgo alto — cambios posturales frecuentes, colchón antiescaras, vigilancia intensiva de piel' },
+        { min: 13, max: 14, label: 'Riesgo moderado', color: 'warning', description: 'Riesgo moderado — medidas preventivas estándar, revisar factores modificables' },
+        { min: 15, max: 18, label: 'Riesgo bajo', color: 'warning', description: 'Riesgo bajo — monitorizar y prevenir deterioro, educación al paciente y familia' },
+        { min: 19, max: 23, label: 'Sin riesgo significativo', color: 'success', description: 'Riesgo mínimo — mantener movilización y nutrición adecuadas' }
+    ],
+
+    // Glasgow (GCS)
+    glasgow: [
+        { min: 13, max: 15, label: 'TCE leve / Alerta', color: 'success', description: 'Conciencia preservada o mínimamente alterada' },
+        { min: 9, max: 12, label: 'TCE moderado / Confusión', color: 'warning', description: 'Obnubilación — vigilancia estrecha, considerar TC craneal' },
+        { min: 3, max: 8, label: 'TCE severo / Coma', color: 'danger', description: 'Coma — intubación y neuroprotección; pronóstico reservado' }
+    ],
+
+    // NIHSS
+    nihss: [
+        { min: 0, max: 0, label: 'Sin déficit neurológico', color: 'success', description: 'Exploración neurológica normal' },
+        { min: 1, max: 4, label: 'Ictus leve', color: 'success', description: 'Déficit menor, posible manejo ambulatorio' },
+        { min: 5, max: 15, label: 'Ictus moderado', color: 'warning', description: 'Hospitalización recomendada, evaluar trombolisis/trombectomía' },
+        { min: 16, max: 20, label: 'Ictus moderado-severo', color: 'danger', description: 'UCI/Unidad de ictus, alta necesidad de intervención' },
+        { min: 21, max: 42, label: 'Ictus severo', color: 'danger', description: 'UCI, mortalidad y discapacidad severa elevadas' }
     ]
 };
 
@@ -305,7 +439,7 @@ const DEFAULT_CONFIG = {
     settings: {
         darkMode: true,
         units: {
-            creatinine: 'mg/dL',
+            creatinine: 'µmol/L',
             weight: 'kg',
             height: 'cm',
             glucose: 'mg/dL',
