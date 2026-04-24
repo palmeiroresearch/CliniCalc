@@ -18,7 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializar módulos
     Storage.init();
     UI.init();
-    
+
+    // Poblar sección Información (valores dinámicos)
+    document.getElementById('appVersion').textContent = APP_VERSION;
+    document.getElementById('calcCount').textContent = CALCULATORS_CONFIG.length;
+
     // Aplicar tema
     applyTheme();
     
@@ -144,8 +148,8 @@ function createCalculatorModal(calc) {
                 <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">${calc.icon} ${calc.fullName}</h2>
                 <p style="font-size: 13px; color: var(--text-secondary);">${calc.description}</p>
             </div>
-            <button class="btn-icon" onclick="closeCalculatorModal()" style="flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="btn-icon" onclick="event.stopPropagation(); closeCalculatorModal()" style="flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -170,10 +174,9 @@ function createCalculatorModal(calc) {
 
 function closeCalculatorModal() {
     const modal = document.getElementById('calculatorModal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease';
-        setTimeout(() => modal.remove(), 200);
-    }
+    if (!modal) return;
+    modal.style.animation = 'fadeOut 0.2s ease forwards';
+    setTimeout(() => modal.remove(), 210);
 }
 
 // === CARGAR FORMULARIO DE CALCULADORA === //
@@ -197,6 +200,13 @@ function loadCalculatorForm(calc) {
         case 13: container.innerHTML = createQSOFAForm(); break;
         case 14: container.innerHTML = createWellsTEPForm(); break;
         case 15: container.innerHTML = createMELDForm(); break;
+        case 16: container.innerHTML = createSOFAForm(); break;
+        case 17: container.innerHTML = createNIHSSForm(); break;
+        case 18: container.innerHTML = createGlasgowForm(); break;
+        case 19: container.innerHTML = createTIMI_NSTEMIForm(); break;
+        case 20: container.innerHTML = createTIMI_STEMIForm(); break;
+        case 21: container.innerHTML = createGRACEForm(); break;
+        case 22: container.innerHTML = createBradenForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
@@ -376,6 +386,110 @@ function shareGFRResult() {
 }
 
 // === HISTORIAL === //
+function recalculate(itemId) {
+    const item = Storage.getHistory().find(h => h.id === itemId);
+    if (!item) return;
+
+    openCalculator(item.calculatorId);
+
+    // Pre-rellenar campos con los valores guardados (best-effort)
+    requestAnimationFrame(() => {
+        if (!item.inputs) return;
+
+        // Si hay fórmula (ej. GFR), intentar seleccionarla
+        if (item.formula) {
+            const formulaEl = document.querySelector('select[id$="Formula"], select[id*="formula"]');
+            if (formulaEl) {
+                formulaEl.value = item.formula;
+                formulaEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        Object.entries(item.inputs).forEach(([key, value]) => {
+            if (value === null || value === undefined) return;
+            // 1. Coincidencia exacta de ID
+            let el = document.getElementById(key);
+            // 2. Coincidencia parcial (ID contiene el key, ej. "sofaGCS" contiene "gcs" no, pero "bradenSensory" contiene "sensory")
+            if (!el) el = document.querySelector(`[id$="${key}"], [id*="${key}"]`);
+            if (!el) return;
+
+            if (el.type === 'checkbox') {
+                el.checked = Boolean(value);
+            } else {
+                el.value = value;
+            }
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        // Actualizar totales en vivo (Glasgow, Braden)
+        if (typeof updateGlasgowTotal === 'function') updateGlasgowTotal();
+        if (typeof updateBradenTotal === 'function') updateBradenTotal();
+    });
+}
+
+function shareResult(itemId) {
+    const item = Storage.getHistory().find(h => h.id === itemId);
+    if (!item) return;
+
+    const patientLine = item.patientName
+        ? `👤 *${item.patientName}*${item.bedNumber ? ` · Cama ${item.bedNumber}` : ''}\n`
+        : '';
+    const formulaLine = item.formula ? ` (${item.formula})` : '';
+    const date = new Date(item.timestamp).toLocaleString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    const text = `🏥 *CliniCalc — ${item.calculatorName}${formulaLine}*
+${patientLine}
+📊 Resultado: *${item.result.value} ${item.result.unit}*
+🔍 ${item.interpretation.label}
+${item.interpretation.description}
+
+📅 ${date}
+_Calculado con CliniCalc_`;
+
+    if (navigator.share) {
+        navigator.share({ title: `CliniCalc — ${item.calculatorName}`, text })
+            .catch(() => openWhatsApp(text));
+    } else {
+        openWhatsApp(text);
+    }
+}
+
+function openWhatsApp(text) {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function editPatientInfo(itemId) {
+    const display = document.getElementById(`patient-display-${itemId}`);
+    const edit    = document.getElementById(`patient-edit-${itemId}`);
+    if (!display || !edit) return;
+    display.style.display = 'none';
+    edit.style.display    = 'flex';
+    document.getElementById(`pname-${itemId}`).focus();
+}
+
+function cancelPatientEdit(itemId) {
+    const display = document.getElementById(`patient-display-${itemId}`);
+    const edit    = document.getElementById(`patient-edit-${itemId}`);
+    if (!display || !edit) return;
+    display.style.display = '';
+    edit.style.display    = 'none';
+}
+
+function savePatientInfo(itemId) {
+    const name = document.getElementById(`pname-${itemId}`).value.trim();
+    const bed  = document.getElementById(`pbed-${itemId}`).value.trim();
+    Storage.updateHistoryItem(itemId, {
+        patientName: name || null,
+        bedNumber:   bed  || null
+    });
+    UI.renderHistory();
+    UI.showToast('Datos del paciente guardados', 'success');
+}
+
 function deleteHistoryItem(itemId) {
     UI.showConfirmDialog(
         '¿Eliminar cálculo?',
@@ -561,133 +675,44 @@ function registerServiceWorker() {
 }
 
 function showUpdateBanner(registration) {
-    // Evitar duplicados
-    if (document.getElementById('updateBanner')) {
-        return;
-    }
-    
+    if (document.getElementById('updateBanner')) return;
+
     const banner = document.createElement('div');
     banner.id = 'updateBanner';
-    banner.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 16px 20px;
-        text-align: center;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        animation: slideDown 0.3s ease;
-    `;
-    
+    banner.className = 'update-banner';
+
     banner.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-            <span style="font-size: 14px; font-weight: 600;">
-                🎉 <strong>Nueva versión disponible</strong> - Actualiza para obtener las últimas mejoras
-            </span>
-            <div style="display: flex; gap: 10px;">
-                <button id="updateNowBtn" style="
-                    background: white;
-                    color: #667eea;
-                    border: none;
-                    padding: 8px 20px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    font-size: 14px;
-                    transition: all 0.2s;
-                ">
-                    Actualizar Ahora
-                </button>
-                <button id="dismissUpdateBtn" style="
-                    background: rgba(255,255,255,0.2);
-                    color: white;
-                    border: none;
-                    padding: 8px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    transition: all 0.2s;
-                ">
-                    Más Tarde
-                </button>
-            </div>
+        <div class="update-banner__icon">🔄</div>
+        <div class="update-banner__body">
+            <div class="update-banner__title">Nueva versión disponible</div>
+            <div class="update-banner__sub">Toca "Ahora" para aplicar la actualización</div>
+        </div>
+        <div class="update-banner__actions">
+            <button id="updateNowBtn" class="update-btn update-btn--primary">Ahora</button>
+            <button id="dismissUpdateBtn" class="update-btn update-btn--secondary">Luego</button>
         </div>
     `;
-    
-    document.body.insertBefore(banner, document.body.firstChild);
-    
-    // Añadir estilos de animación si no existen
-    if (!document.getElementById('updateBannerStyles')) {
-        const style = document.createElement('style');
-        style.id = 'updateBannerStyles';
-        style.textContent = `
-            @keyframes slideDown {
-                from {
-                    transform: translateY(-100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-            }
-            @keyframes slideUp {
-                from {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateY(-100%);
-                    opacity: 0;
-                }
-            }
-            #updateNowBtn:hover {
-                background: #f0f0f0 !important;
-                transform: translateY(-1px);
-            }
-            #dismissUpdateBtn:hover {
-                background: rgba(255,255,255,0.3) !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Event listeners
+
+    document.body.appendChild(banner);
+
     document.getElementById('updateNowBtn').addEventListener('click', () => {
-        console.log('🔄 Usuario aceptó actualización');
-        
-        // Enviar mensaje al SW para que se active inmediatamente
         if (registration.waiting) {
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
-        
-        // Mostrar mensaje de carga
         banner.innerHTML = `
-            <div style="text-align: center;">
-                <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px;"></div>
-                <span style="font-size: 14px; font-weight: 600;">Actualizando...</span>
+            <div class="update-banner__icon">
+                <div class="update-spinner"></div>
+            </div>
+            <div class="update-banner__body">
+                <div class="update-banner__title">Aplicando actualización…</div>
+                <div class="update-banner__sub">La app se recargará en un momento</div>
             </div>
         `;
-        
-        // Añadir animación de spinner si no existe
-        if (!document.getElementById('spinnerAnimation')) {
-            const spinStyle = document.createElement('style');
-            spinStyle.id = 'spinnerAnimation';
-            spinStyle.textContent = `
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(spinStyle);
-        }
     });
-    
+
     document.getElementById('dismissUpdateBtn').addEventListener('click', () => {
-        banner.style.animation = 'slideUp 0.3s ease';
-        setTimeout(() => banner.remove(), 300);
+        banner.classList.add('update-banner--dismissing');
+        setTimeout(() => banner.remove(), 350);
     });
 }
 
