@@ -585,7 +585,7 @@ function setupEventListeners() {
     });
     
     // Unidades
-    const unitSelects = ['unitCreatinine', 'unitWeight', 'unitHeight', 'unitGlucose'];
+    const unitSelects = ['unitCreatinine', 'unitWeight', 'unitHeight', 'unitGlucose', 'unitBun'];
     unitSelects.forEach(id => {
         const select = document.getElementById(id);
         if (select) {
