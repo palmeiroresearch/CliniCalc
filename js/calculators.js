@@ -115,19 +115,16 @@ const Calculators = {
     // === 3. ANION GAP === //
     calculateAnionGap(inputs) {
         const { sodium, chloride, bicarbonate, albumin } = inputs;
-        
-        // AG = Na - (Cl + HCO3)
+
         const ag = sodium - (chloride + bicarbonate);
-        
-        // AG corregido por albúmina (normal = 4 g/dL)
-        const albuminCorrection = 2.5 * (4 - albumin);
-        const agCorrected = ag + albuminCorrection;
-        
+        const hasAlbumin = albumin !== null && !isNaN(albumin);
+        const agCorrected = hasAlbumin ? ag + 2.5 * (4 - albumin) : null;
+
         return {
-            value: Math.round(ag * 10) / 10,
-            correctedValue: Math.round(agCorrected * 10) / 10,
+            value:          Math.round(ag * 10) / 10,
+            correctedValue: hasAlbumin ? Math.round(agCorrected * 10) / 10 : null,
             unit: 'mEq/L',
-            interpretation: this.interpretAnionGap(agCorrected)
+            interpretation: this.interpretAnionGap(hasAlbumin ? agCorrected : ag)
         };
     },
 
@@ -403,35 +400,34 @@ const Calculators = {
         return range || INTERPRETATIONS.childPugh[INTERPRETATIONS.childPugh.length - 1];
     },
 
-    // === 12. CURB-65 === //
+    // === 12. CURB-65 / CRB-65 === //
     calculateCURB65(inputs) {
+        const hasBUN = inputs.bun !== null && !isNaN(inputs.bun);
         let score = 0;
-        
-        // Confusion (1 punto)
-        if (inputs.confusion) score += 1;
-        
-        // Urea >7 mmol/L o BUN >19 mg/dL (1 punto)
-        if (inputs.bun > 19) score += 1;
-        
-        // Respiratory rate ≥30 (1 punto)
-        if (inputs.respiratoryRate >= 30) score += 1;
-        
-        // Blood pressure (SBP <90 o DBP ≤60) (1 punto)
+
+        if (inputs.confusion)                                     score += 1;
+        if (hasBUN && inputs.bun > 19)                           score += 1;
+        if (inputs.respiratoryRate >= 30)                        score += 1;
         if (inputs.systolicBP < 90 || inputs.diastolicBP <= 60) score += 1;
-        
-        // Age ≥65 (1 punto)
-        if (inputs.age >= 65) score += 1;
-        
+        if (inputs.age >= 65)                                    score += 1;
+
         return {
             value: score,
+            maxScore: hasBUN ? 5 : 4,
+            mode: hasBUN ? 'CURB-65' : 'CRB-65',
             unit: 'puntos',
-            interpretation: this.interpretCURB65(score)
+            interpretation: hasBUN ? this.interpretCURB65(score) : this.interpretCRB65(score)
         };
     },
 
     interpretCURB65(score) {
         const range = INTERPRETATIONS.curb65.find(r => score >= r.min && score <= r.max);
         return range || INTERPRETATIONS.curb65[INTERPRETATIONS.curb65.length - 1];
+    },
+
+    interpretCRB65(score) {
+        const range = INTERPRETATIONS.crb65.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.crb65[INTERPRETATIONS.crb65.length - 1];
     },
 
     // === 13. qSOFA === //
