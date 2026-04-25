@@ -61,18 +61,17 @@
 
 ### 🔄 Conversión de Unidades
 
-Soporta múltiples sistemas con conversión automática interna:
+Configurable en Ajustes → Unidades de Medida, con conversión automática interna:
 
-| Parámetro | Unidades |
-|-----------|----------|
-| Creatinina | mg/dL ↔ µmol/L (por defecto µmol/L) |
-| Peso | kg ↔ lb |
-| Altura | cm, m, in, ft |
-| Glucosa | mg/dL ↔ mmol/L |
-| BUN | mg/dL ↔ mmol/L |
-| Bilirrubina | mg/dL ↔ µmol/L |
-| Calcio | mg/dL ↔ mmol/L |
-| Albúmina | g/dL ↔ g/L |
+| Parámetro | Unidades disponibles | Por defecto |
+|-----------|---------------------|-------------|
+| Creatinina | mg/dL · µmol/L | µmol/L (SI) |
+| Peso | kg · lb | kg |
+| Altura | cm · m · in · ft | cm |
+| Glucosa | mg/dL · mmol/L | mg/dL |
+| BUN / Urea | mg/dL · mmol/L | mg/dL |
+
+> Bilirrubina, Calcio y Albúmina se ingresan en sus unidades convencionales (mg/dL / g/dL), estándar en Latinoamérica.
 
 ### 🎨 Diseño por Categorías
 
@@ -283,4 +282,4 @@ Desarrollado para profesionales de la salud: médicos internos, residentes, estu
 
 ---
 
-*CliniCalc v1.1.0 — Abril 2026*
+*CliniCalc v1.1.1 — Abril 2026*
