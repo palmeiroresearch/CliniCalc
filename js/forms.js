@@ -92,8 +92,10 @@ function createCURB65Form() {
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     BUN/Urea (mg/dL)
+                    <span style="font-size: 11px; font-weight: 500; color: var(--text-tertiary); margin-left: 6px;">opcional</span>
                 </label>
-                <input type="number" id="bunCURB" required step="any" min="0" max="200" class="form-input">
+                <input type="number" id="bunCURB" step="any" min="0" max="200" class="form-input" placeholder="Dejar vacío si no disponible">
+                <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Sin BUN → se calculará como CRB-65 (variante validada sin laboratorio)</p>
             </div>
             
             <div class="form-group" style="margin-bottom: 16px;">
@@ -135,22 +137,47 @@ function createCURB65Form() {
 
 function calculateCURB65(event) {
     event.preventDefault();
+    const bunRaw = document.getElementById('bunCURB').value;
     const inputs = {
-        age: parseInt(document.getElementById('ageCURB').value),
-        bun: parseFloat(document.getElementById('bunCURB').value),
+        age:             parseInt(document.getElementById('ageCURB').value),
+        bun:             bunRaw === '' ? null : parseFloat(bunRaw),
         respiratoryRate: parseInt(document.getElementById('rrCURB').value),
-        systolicBP: parseInt(document.getElementById('sbpCURB').value),
-        diastolicBP: parseInt(document.getElementById('dbpCURB').value),
-        confusion: document.getElementById('confusionCURB').checked
+        systolicBP:      parseInt(document.getElementById('sbpCURB').value),
+        diastolicBP:     parseInt(document.getElementById('dbpCURB').value),
+        confusion:       document.getElementById('confusionCURB').checked
     };
     const result = Calculators.calculateCURB65(inputs);
-    displayGenericResult(result, inputs, 12, 'CURB-65', null, 'curb65Result');
-    Storage.addToHistory({ 
-        calculatorId: 12, 
-        calculatorName: 'CURB-65', 
-        inputs, 
-        result, 
-        interpretation: result.interpretation 
+
+    const container = document.getElementById('curb65Result');
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const modeColor = result.mode === 'CRB-65' ? 'var(--warning)' : 'var(--brand-accent)';
+    container.innerHTML = `
+        <div style="background: linear-gradient(135deg, var(--brand-accent-dark), var(--brand-accent)); padding: 24px; border-radius: var(--radius-lg); color: var(--brand-primary-dark); margin-bottom: 16px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <span style="font-size: 13px; font-weight: 600; opacity: 0.8;">${result.mode}</span>
+                ${result.mode === 'CRB-65' ? '<span style="font-size:11px; background:rgba(30,56,114,0.2); padding:2px 8px; border-radius:4px; font-weight:600;">Sin BUN</span>' : ''}
+            </div>
+            <div style="font-size: 36px; font-weight: 800; margin-bottom: 4px;">
+                ${result.value}<span style="font-size: 18px; font-weight: 500; opacity: 0.8;"> / ${result.maxScore} pts</span>
+            </div>
+            <div style="font-size: 14px; font-weight: 600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); border-left: 4px solid ${colorMap[result.interpretation.color] || 'var(--brand-accent)'}; margin-bottom: 16px;">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Interpretación</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">${result.interpretation.description}</p>
+            ${result.mode === 'CRB-65' ? '<p style="font-size: 12px; color: var(--text-tertiary); margin-top: 8px;">⚠ BUN no disponible — se aplicó escala CRB-65 (C, R, B, 65). Si obtiene BUN, recalcule con CURB-65 completo.</p>' : ''}
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('curb65Form').reset(); document.getElementById('curb65Result').style.display='none';" style="width: 100%; margin-top: 0;">
+            🔄 Nuevo Cálculo
+        </button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({
+        calculatorId: 12,
+        calculatorName: result.mode,
+        inputs,
+        result,
+        interpretation: result.interpretation
     });
 }
 
@@ -469,8 +496,10 @@ function createAnionGapForm() {
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
                     Albúmina (g/dL)
+                    <span style="font-size: 11px; font-weight: 500; color: var(--text-tertiary); margin-left: 6px;">opcional</span>
                 </label>
-                <input type="number" id="albumin" required step="any" min="1.5" max="6" value="4" class="form-input">
+                <input type="number" id="albumin" step="any" min="1.5" max="6" class="form-input" placeholder="Dejar vacío si no disponible">
+                <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Sin albúmina → solo AG estándar sin corrección</p>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
                 🧮 Calcular Anion Gap
@@ -482,14 +511,23 @@ function createAnionGapForm() {
 
 function calculateAnionGap(event) {
     event.preventDefault();
+    const albuminRaw = document.getElementById('albumin').value;
     const inputs = {
-        sodium: parseFloat(document.getElementById('sodium').value),
-        chloride: parseFloat(document.getElementById('chloride').value),
+        sodium:      parseFloat(document.getElementById('sodium').value),
+        chloride:    parseFloat(document.getElementById('chloride').value),
         bicarbonate: parseFloat(document.getElementById('bicarbonate').value),
-        albumin: parseFloat(document.getElementById('albumin').value)
+        albumin:     albuminRaw === '' ? null : parseFloat(albuminRaw)
     };
     const result = Calculators.calculateAnionGap(inputs);
-    
+
+    const correctedLine = result.correctedValue !== null
+        ? `<div style="background: rgba(30, 56, 114, 0.15); padding: 12px; border-radius: 8px; font-size: 13px;">
+               <strong>AG corregido por albúmina:</strong> ${result.correctedValue} ${result.unit}
+           </div>`
+        : `<div style="background: rgba(30, 56, 114, 0.15); padding: 12px; border-radius: 8px; font-size: 13px;">
+               ⚠ Sin albúmina — corrección no aplicada. Interpretar AG estándar con precaución.
+           </div>`;
+
     const container = document.getElementById('anionGapResult');
     container.innerHTML = `
         <div class="result-card" style="background: linear-gradient(135deg, var(--brand-accent-dark), var(--brand-accent)); padding: 24px; border-radius: var(--radius-lg); color: var(--brand-primary-dark); margin-bottom: 16px;">
@@ -500,9 +538,7 @@ function calculateAnionGap(event) {
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">
                 ${result.interpretation.label}
             </div>
-            <div style="background: rgba(30, 56, 114, 0.15); padding: 12px; border-radius: 8px; font-size: 13px;">
-                <strong>AG corregido por albúmina:</strong> ${result.correctedValue} ${result.unit}
-            </div>
+            ${correctedLine}
         </div>
         <div class="interpretation-card" style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); border-left: 4px solid var(--${result.interpretation.color});">
             <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Interpretación</h4>
