@@ -548,10 +548,13 @@ const historyStyles = `
     align-items: center;
     gap: 6px;
     margin-bottom: 10px;
+    width: 100%;
+    min-width: 0;
 }
 
 .patient-input {
     flex: 1;
+    min-width: 0;
     padding: 6px 10px;
     font-size: 13px;
     border: 1px solid var(--border-color);
