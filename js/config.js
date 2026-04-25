@@ -3,7 +3,7 @@
 // Metadata de las 22 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -347,6 +347,13 @@ const INTERPRETATIONS = {
         { min: 0, max: 1, label: 'Bajo riesgo', color: 'success', description: 'Manejo ambulatorio (mortalidad 1.5%)' },
         { min: 2, max: 2, label: 'Riesgo moderado', color: 'warning', description: 'Considerar hospitalización (mortalidad 9.2%)' },
         { min: 3, max: Infinity, label: 'Alto riesgo', color: 'danger', description: 'Hospitalización/UCI (mortalidad >20%)' }
+    ],
+
+    // CRB-65 (variante sin BUN, para entornos sin laboratorio)
+    crb65: [
+        { min: 0, max: 0, label: 'Bajo riesgo',     color: 'success', description: 'Manejo ambulatorio (mortalidad ~1%).' },
+        { min: 1, max: 2, label: 'Riesgo moderado', color: 'warning', description: 'Evaluar hospitalización (mortalidad ~5-12%).' },
+        { min: 3, max: 4, label: 'Alto riesgo',     color: 'danger',  description: 'Hospitalización urgente (mortalidad >20%).' }
     ],
     
     // qSOFA
