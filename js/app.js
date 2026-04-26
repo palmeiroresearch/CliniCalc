@@ -615,6 +615,7 @@ function setupEventListeners() {
             }
         }, 100);
     });
+    document.getElementById('reorderCalcsBtn')?.addEventListener('click', showReorderModal);
     document.getElementById('restoreDefaultBtn')?.addEventListener('click', restoreDefaultConfig);
     document.getElementById('clearHistoryBtn')?.addEventListener('click', clearAllHistory);
     document.getElementById('clearAllHistoryBtn')?.addEventListener('click', clearAllHistory);
@@ -1282,4 +1283,157 @@ function resetCalculator(containerId) {
     const formId = containerId.replace('Result', 'Form');
     document.getElementById(formId).reset();
     document.getElementById(containerId).style.display = 'none';
+}
+
+// === REORDER MODAL === //
+function showReorderModal() {
+    const mainScreen = Storage.getMainScreen();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'reorder-modal-overlay';
+    overlay.innerHTML = `
+        <div class="reorder-modal">
+            <div class="reorder-modal-header">
+                <h3>Reordenar calculadoras</h3>
+                <button class="btn btn-primary" id="reorderDoneBtn" style="padding:8px 20px;font-size:14px;">Listo</button>
+            </div>
+            <p class="reorder-hint">Arrastra ⠿ para cambiar el orden</p>
+            <div id="reorderList">
+                ${mainScreen.map(calcId => {
+                    const calc = CALCULATORS_CONFIG.find(c => c.id === calcId);
+                    if (!calc) return '';
+                    return `<div class="reorder-list-item" data-calc-id="${calcId}">
+                        <span class="reorder-handle">⠿</span>
+                        <span class="reorder-icon">${calc.icon}</span>
+                        <span class="reorder-name">${calc.name}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('reorderDoneBtn').addEventListener('click', () => {
+        const newOrder = [...document.getElementById('reorderList')
+            .querySelectorAll('.reorder-list-item[data-calc-id]')]
+            .map(el => parseInt(el.dataset.calcId))
+            .filter(id => !isNaN(id));
+        Storage.reorderMainScreen(newOrder);
+        overlay.remove();
+    });
+
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.remove();
+    });
+
+    initReorderDrag(document.getElementById('reorderList'));
+}
+
+function initReorderDrag(list) {
+    const SCROLL_ZONE = 64;
+    const SCROLL_MAX_SPEED = 14;
+    const scrollEl = list.closest('.reorder-modal');
+
+    let dragging = false;
+    let dragItem = null;
+    let ghost = null;
+    let placeholder = null;
+    let lastCx = 0, lastCy = 0;
+    let scrollRAF = null;
+
+    const updatePlaceholder = (cx, cy) => {
+        ghost.style.visibility = 'hidden';
+        const target = document.elementFromPoint(cx, cy)?.closest('.reorder-list-item');
+        ghost.style.visibility = '';
+        if (target && target !== dragItem && list.contains(target)) {
+            const tr = target.getBoundingClientRect();
+            if (cy < tr.top + tr.height / 2) {
+                list.insertBefore(placeholder, target);
+            } else {
+                target.after(placeholder);
+            }
+        }
+    };
+
+    const autoScroll = () => {
+        if (!dragging || !scrollEl) return;
+        const sr = scrollEl.getBoundingClientRect();
+        const distTop    = lastCy - sr.top;
+        const distBottom = sr.bottom - lastCy;
+        let speed = 0;
+
+        if (distTop < SCROLL_ZONE && distTop > 0) {
+            speed = -SCROLL_MAX_SPEED * (1 - distTop / SCROLL_ZONE);
+        } else if (distBottom < SCROLL_ZONE && distBottom > 0) {
+            speed = SCROLL_MAX_SPEED * (1 - distBottom / SCROLL_ZONE);
+        }
+
+        if (speed !== 0) {
+            scrollEl.scrollTop += speed;
+            updatePlaceholder(lastCx, lastCy);
+            scrollRAF = requestAnimationFrame(autoScroll);
+        } else {
+            scrollRAF = null;
+        }
+    };
+
+    list.querySelectorAll('.reorder-handle').forEach(handle => {
+        handle.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            const item = handle.closest('.reorder-list-item');
+            if (!item) return;
+
+            dragging = true;
+            dragItem = item;
+            const rect = item.getBoundingClientRect();
+            const offY = e.clientY - rect.top;
+            lastCx = e.clientX; lastCy = e.clientY;
+
+            ghost = item.cloneNode(true);
+            ghost.className = 'reorder-list-item reorder-item-ghost';
+            ghost.style.width  = rect.width  + 'px';
+            ghost.style.height = rect.height + 'px';
+            ghost.style.left   = rect.left   + 'px';
+            ghost.style.top    = rect.top    + 'px';
+            document.body.appendChild(ghost);
+
+            placeholder = document.createElement('div');
+            placeholder.className = 'reorder-item-placeholder';
+            placeholder.style.height = rect.height + 'px';
+            list.insertBefore(placeholder, item);
+            item.style.visibility = 'hidden';
+
+            if (navigator.vibrate) navigator.vibrate(20);
+
+            const onMove = e => {
+                if (!dragging) return;
+                e.preventDefault();
+                lastCx = e.clientX; lastCy = e.clientY;
+                ghost.style.top = (lastCy - offY) + 'px';
+                updatePlaceholder(lastCx, lastCy);
+                if (!scrollRAF) scrollRAF = requestAnimationFrame(autoScroll);
+            };
+
+            const onUp = () => {
+                if (!dragging) return;
+                dragging = false;
+                if (scrollRAF) { cancelAnimationFrame(scrollRAF); scrollRAF = null; }
+                if (placeholder?.parentNode === list) {
+                    list.insertBefore(dragItem, placeholder);
+                }
+                dragItem.style.visibility = '';
+                placeholder?.remove();
+                ghost?.remove();
+                dragItem = null; ghost = null; placeholder = null;
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onUp);
+                document.removeEventListener('pointercancel', onUp);
+            };
+
+            document.addEventListener('pointermove', onMove, { passive: false });
+            document.addEventListener('pointerup', onUp);
+            document.addEventListener('pointercancel', onUp);
+        });
+    });
 }
