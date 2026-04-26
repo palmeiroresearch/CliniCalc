@@ -1351,6 +1351,464 @@ function calculateFOURScore(event) {
     Storage.addToHistory({ calculatorId: 25, calculatorName: 'FOUR Score', inputs, result, interpretation: result.interpretation });
 }
 
+// === 26. HEART SCORE === //
+function createHEARTForm() {
+    const sel = (id, opts) => `
+        <select id="${id}" class="form-input">
+            ${opts.map((o, i) => `<option value="${i}">${i} — ${o}</option>`).join('')}
+        </select>`;
+    return `
+        <form id="heartForm" onsubmit="calculateHEART(event)">
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:16px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:13px; color:#92400e; margin:0;">
+                    <strong>⚠️ Uso en Urgencias</strong> — Aplicar en dolor torácico con sospecha de SCA. No usar como única herramienta diagnóstica. <em>Six AJ et al., Neth Heart J 2008.</em>
+                </p>
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">H — Historia</div>
+            <div style="margin-bottom:16px;">
+                ${sel('heartHistory', [
+                    'Levemente sospechosa — no típica, inespecífica',
+                    'Moderadamente sospechosa — mixta o atípica',
+                    'Altamente sospechosa — típica de SCA (opresiva, irradiación, diaforesis)'
+                ])}
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">E — ECG</div>
+            <div style="margin-bottom:16px;">
+                ${sel('heartECG', [
+                    'Normal',
+                    'Alteración inespecífica de repolarización / BRI conocido / HVI / cambios no diagnósticos',
+                    'Depresión ST significativa o elevación nueva / BRI nuevo / cambios isquémicos activos'
+                ])}
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">A — Edad (Age)</div>
+            <div style="margin-bottom:16px;">
+                ${sel('heartAge', [
+                    'Menor de 45 años',
+                    '45 – 64 años',
+                    '65 años o mayor'
+                ])}
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">R — Factores de riesgo</div>
+            <div style="margin-bottom:16px;">
+                ${sel('heartRisk', [
+                    'Sin factores de riesgo conocidos',
+                    '1-2 factores (HTA, DM, dislipemia, tabaquismo, obesidad, antecedente familiar)',
+                    '≥3 factores de riesgo O aterosclerosis conocida (SCA previo, stent, bypass, ACV, EAP)'
+                ])}
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">T — Troponina</div>
+            <div style="margin-bottom:20px;">
+                ${sel('heartTroponin', [
+                    '≤ Límite normal del laboratorio',
+                    '1-3× el límite normal',
+                    '> 3× el límite normal'
+                ])}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Calcular HEART Score
+            </button>
+        </form>
+        <div id="heartResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateHEART(event) {
+    event.preventDefault();
+    const inputs = {
+        history:     parseInt(document.getElementById('heartHistory').value),
+        ecg:         parseInt(document.getElementById('heartECG').value),
+        age:         parseInt(document.getElementById('heartAge').value),
+        riskFactors: parseInt(document.getElementById('heartRisk').value),
+        troponin:    parseInt(document.getElementById('heartTroponin').value)
+    };
+    const result = Calculators.calculateHEART(inputs);
+    const c = result.components;
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const labels = ['H', 'E', 'A', 'R', 'T'];
+    const vals   = [c.history, c.ecg, c.age, c.riskFactors, c.troponin];
+
+    const container = document.getElementById('heartResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">HEART SCORE</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">
+                ${result.value} <span style="font-size:20px; font-weight:500;">/10</span>
+            </div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:12px;">${result.interpretation.label}</div>
+            <div style="background:rgba(30,56,114,0.15); padding:12px; border-radius:8px; font-size:14px; display:flex; justify-content:space-around;">
+                ${labels.map((l, i) => `<span><strong>${l}</strong> ${vals[i]}</span>`).join('')}
+            </div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <h4 style="font-size:14px; font-weight:700; margin-bottom:8px;">Interpretación</h4>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('heartForm').reset(); document.getElementById('heartResult').style.display='none';" style="width:100%; margin-top:0;">
+            🔄 Nuevo Cálculo
+        </button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 26, calculatorName: 'HEART Score', inputs, result, interpretation: result.interpretation });
+}
+
+// === 27. REGLA PERC === //
+function createPERCForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px; flex-shrink:0;">
+            <span style="font-size:14px;">${text}</span>
+        </label>`;
+    return `
+        <form id="percForm" onsubmit="calculatePERC(event)">
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:16px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:13px; color:#1e3a8a; margin:0;">
+                    <strong>ℹ️ Solo en bajo riesgo pre-test</strong> — Aplicar únicamente si la probabilidad pre-test de TEP es BAJA (Wells ≤1 o Geneva bajo). Marcar los criterios que el paciente <strong>SÍ cumple</strong>. Si ninguno aplica → TEP descartado. <em>Kline JA et al., J Thromb Haemost 2004.</em>
+                </p>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:20px;">
+                <p style="font-size:13px; font-weight:700; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Marcar si está presente</p>
+                ${check('percAge',     'Edad ≥ 50 años')}
+                ${check('percHR',      'Frecuencia cardíaca ≥ 100 lpm')}
+                ${check('percSpO2',    'SpO₂ < 95% en aire ambiente')}
+                ${check('percLeg',     'Edema unilateral de miembro inferior')}
+                ${check('percHemo',    'Hemoptisis')}
+                ${check('percSurg',    'Cirugía o trauma en las últimas 4 semanas (con anestesia general)')}
+                ${check('percVTE',     'TEP o TVP previos documentados')}
+                ${check('percEstro',   'Uso de estrógenos (ACO, TRH, embarazo)')}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Aplicar Regla PERC
+            </button>
+        </form>
+        <div id="percResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculatePERC(event) {
+    event.preventDefault();
+    const inputs = {
+        age50:       document.getElementById('percAge').checked,
+        hr100:       document.getElementById('percHR').checked,
+        spo294:      document.getElementById('percSpO2').checked,
+        legSwelling: document.getElementById('percLeg').checked,
+        hemoptysis:  document.getElementById('percHemo').checked,
+        surgery:     document.getElementById('percSurg').checked,
+        priorVTE:    document.getElementById('percVTE').checked,
+        estrogen:    document.getElementById('percEstro').checked
+    };
+    const result = Calculators.calculatePERC(inputs);
+    const isNegative = result.value === 0;
+    const bgColor   = isNegative ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#dc2626,#ef4444)';
+    const textColor = 'white';
+
+    const container = document.getElementById('percResult');
+    container.innerHTML = `
+        <div style="background:${bgColor}; padding:24px; border-radius:var(--radius-lg); color:${textColor}; margin-bottom:16px; text-align:center;">
+            <div style="font-size:40px; margin-bottom:8px;">${isNegative ? '✅' : '⚠️'}</div>
+            <div style="font-size:20px; font-weight:800; margin-bottom:4px;">${result.interpretation.label}</div>
+            <div style="font-size:14px; opacity:0.9;">${isNegative ? 'Todos los criterios PERC negativos' : `${result.value} criterio${result.value > 1 ? 's' : ''} positivo${result.value > 1 ? 's' : ''}`}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${isNegative ? 'var(--success)' : 'var(--danger)'}; margin-bottom:16px;">
+            <h4 style="font-size:14px; font-weight:700; margin-bottom:8px;">Interpretación</h4>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('percForm').reset(); document.getElementById('percResult').style.display='none';" style="width:100%; margin-top:0;">
+            🔄 Nuevo Cálculo
+        </button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 27, calculatorName: 'Regla PERC', inputs, result, interpretation: result.interpretation });
+}
+
+// === 28. CAD / CADE — PROTOCOLO INTEGRAL === //
+function createDKAForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="dkaForm" onsubmit="calculateDKAProtocol(event)">
+
+            <!-- Sección 1: Paciente -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Datos del Paciente</div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="dkaWeight" required step="any" min="30" max="300" class="form-input" oninput="updateDKALiveCalcs()">
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Tipo de presentación</label>
+                    <select id="dkaType" required class="form-input" onchange="updateDKALiveCalcs()">
+                        <option value="classic">CAD Clásica — Glucosa ≥ 200 mg/dL (11.1 mmol/L)</option>
+                        <option value="cade">CAD Euglucémica (CADE) — Glucosa &lt; 250 mg/dL (13.9 mmol/L) · SGLT-2i / embarazo / ayuno</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Estado hemodinámico</label>
+                    <select id="dkaHemo" required class="form-input">
+                        <option value="mild">Hipovolemia leve-moderada (más frecuente)</option>
+                        <option value="severe">Hipovolemia severa — signos de shock</option>
+                        <option value="euvolemic">Euvolémico</option>
+                        <option value="cardiogenic">Choque cardiogénico / Falla cardíaca</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sección 2: Laboratorio -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:14px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Laboratorio</div>
+
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-bottom:14px; align-items:end;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Glucosa</label>
+                        <input type="number" id="dkaGlucose" required step="any" min="30" max="2000" class="form-input" oninput="updateDKALiveCalcs()">
+                    </div>
+                    <select id="dkaGlucoseUnit" class="form-input" style="min-width:100px;" onchange="updateDKALiveCalcs()">
+                        <option value="mg/dL" ${(Storage.getSetting('units.glucose')||'mg/dL')==='mg/dL' ? 'selected' : ''}>mg/dL</option>
+                        <option value="mmol/L" ${Storage.getSetting('units.glucose')==='mmol/L' ? 'selected' : ''}>mmol/L</option>
+                    </select>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">pH venoso/arterial</label>
+                        <input type="number" id="dkaPh" required step="0.01" min="6.5" max="7.5" class="form-input" placeholder="ej. 7.15">
+                        <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">GSV tan confiable como GSA en CAD (ADA 2024)</p>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">HCO₃⁻ (mEq/L)</label>
+                        <input type="number" id="dkaHco3" required step="any" min="1" max="40" class="form-input" oninput="updateDKALiveCalcs()">
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Na⁺ (mEq/L)</label>
+                        <input type="number" id="dkaSodium" required step="any" min="115" max="170" class="form-input" oninput="updateDKALiveCalcs()">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">
+                            K⁺ (mEq/L) <span style="color:#ef4444; font-size:11px;">crítico</span>
+                        </label>
+                        <input type="number" id="dkaPotassium" required step="0.1" min="1.5" max="8" class="form-input" id="dkaPotassium" oninput="updateDKALiveCalcs()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">
+                        Cl⁻ (mEq/L)
+                        <span style="font-size:11px; font-weight:500; color:var(--text-tertiary); margin-left:6px;">opcional — para calcular Anión Gap</span>
+                    </label>
+                    <input type="number" id="dkaChloride" step="any" min="85" max="130" class="form-input" placeholder="Dejar vacío si no disponible" oninput="updateDKALiveCalcs()">
+                </div>
+            </div>
+
+            <!-- Cálculos en tiempo real -->
+            <div id="dkaLiveCalcs"></div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px; margin-top:4px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en ADA Consensus Report 2024 · JBDS 2023 · JAMA Netw Open 2020.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo CAD/CADE
+            </button>
+        </form>
+        <div id="dkaResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function updateDKALiveCalcs() {
+    const glucoseVal  = parseFloat(document.getElementById('dkaGlucose')?.value);
+    const glucoseUnit = document.getElementById('dkaGlucoseUnit')?.value || 'mg/dL';
+    const sodiumVal   = parseFloat(document.getElementById('dkaSodium')?.value);
+    const chlorideVal = parseFloat(document.getElementById('dkaChloride')?.value);
+    const hco3Val     = parseFloat(document.getElementById('dkaHco3')?.value);
+    const kVal        = parseFloat(document.getElementById('dkaPotassium')?.value);
+    const liveDiv     = document.getElementById('dkaLiveCalcs');
+    if (!liveDiv) return;
+
+    let glucoseMg = glucoseVal;
+    if (glucoseUnit === 'mmol/L' && !isNaN(glucoseVal)) glucoseMg = glucoseVal / 0.0555;
+
+    const naCorr = (!isNaN(sodiumVal) && !isNaN(glucoseMg))
+        ? Math.round((sodiumVal + 2.4 * (glucoseMg - 100) / 100) * 10) / 10 : null;
+    const ag = (!isNaN(sodiumVal) && !isNaN(chlorideVal) && !isNaN(hco3Val))
+        ? Math.round((sodiumVal - (chlorideVal + hco3Val)) * 10) / 10 : null;
+    const osm = (!isNaN(sodiumVal) && !isNaN(glucoseMg))
+        ? Math.round((2 * sodiumVal + glucoseMg / 18) * 10) / 10 : null;
+
+    // Color K+ field
+    const kField = document.getElementById('dkaPotassium');
+    if (kField && !isNaN(kVal)) {
+        kField.style.borderColor = kVal < 3.3 ? '#dc2626' : '';
+        kField.style.boxShadow   = kVal < 3.3 ? '0 0 0 3px rgba(220,38,38,0.15)' : '';
+    }
+
+    const hasData = naCorr !== null || ag !== null || osm !== null;
+    if (!hasData) { liveDiv.innerHTML = ''; return; }
+
+    let rows = '';
+    if (naCorr !== null) {
+        const c = naCorr > 150 ? '#f59e0b' : 'var(--success)';
+        rows += `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Na corregido (ADA 2024)</span><strong style="color:${c}">${naCorr} mEq/L${naCorr > 150 ? ' ⚠' : ''}</strong></div>`;
+    }
+    if (ag !== null) {
+        const c = ag > 12 ? '#ef4444' : 'var(--success)';
+        rows += `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Anión Gap</span><strong style="color:${c}">${ag} mEq/L${ag > 12 ? ' ↑' : ''}</strong></div>`;
+    }
+    if (osm !== null) {
+        rows += `<div style="display:flex;justify-content:space-between;"><span>Osmolaridad efectiva</span><strong>${osm} mOsm/kg</strong></div>`;
+    }
+
+    let kAlert = '';
+    if (!isNaN(kVal) && kVal < 3.3) {
+        kAlert = `<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:6px;padding:8px;margin-top:8px;color:#dc2626;font-weight:700;font-size:12px;">⚠️ K⁺ ${kVal} mEq/L — RETENER INSULINA al generar el protocolo</div>`;
+    }
+
+    liveDiv.innerHTML = `<div style="background:var(--bg-secondary);padding:12px;border-radius:10px;margin-bottom:12px;font-size:13px;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Cálculos automáticos</div>${rows}${kAlert}</div>`;
+}
+
+// Función reutilizable por calculateDKAProtocol y showFullResult
+function buildDKAProtocolHTML(r, inputs) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const check = (met, label, actual, target) => {
+        if (met === null) return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-color);"><span>${label}</span><span style="color:var(--text-tertiary);">No disponible</span></div>`;
+        const ic = met ? '✅' : '❌';
+        const co = met ? 'var(--success)' : 'var(--danger)';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-color);"><span>${label} <span style="color:var(--text-tertiary);font-size:11px;">(actual: ${actual})</span></span><span style="color:${co};font-weight:700;">${ic} ${target}</span></div>`;
+    };
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:13px; opacity:0.9; display:flex; flex-wrap:wrap; gap:12px;">
+                <span>pH ${inputs.ph}</span><span>HCO₃ ${inputs.hco3} mEq/L</span>
+                <span>Glucosa ${inputs.glucose} ${inputs.glucoseUnit}</span><span>K⁺ ${inputs.potassium} mEq/L</span>
+            </div>
+            <div style="margin-top:8px; font-size:12px; opacity:0.85; display:flex; gap:12px; flex-wrap:wrap;">
+                <span>Na corregido: ${r.naCorregido} mEq/L</span>
+                ${r.agCalc !== null ? `<span>AG: ${r.agCalc} mEq/L</span>` : ''}
+                <span>Osm efectiva: ${r.osmEffective} mOsm/kg</span>
+            </div>
+        </div>`;
+
+    const alertHTML = r.criticalAlert.hasAlert ? `
+        <div style="background:#7f1d1d; color:#fca5a5; border:2px solid #dc2626; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:24px;">🚨</span><span>${r.criticalAlert.message}</span>
+        </div>` : '';
+
+    const cadeHTML = r.isCADE ? `
+        <div style="background:#4c1d95; color:#c4b5fd; border:2px solid #7c3aed; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px;">
+            <div style="font-weight:700; font-size:14px; margin-bottom:6px;">🟣 CAD EUGLUCÉMICA (CADE)</div>
+            <div style="font-size:13px; line-height:1.7;">
+                • Glucosa aparentemente normal — no descartar CAD<br>
+                • Dextrosa 5-10% <strong>DESDE EL INICIO</strong><br>
+                • Suspender SGLT-2i inmediatamente si aplica<br>
+                • Meta: cerrar el Anión Gap (no bajar glucosa)
+            </div>
+        </div>` : '';
+
+    const kColor = r.potassium.holdInsulin ? '#dc2626' : '#f59e0b';
+
+    const fluidContent = `
+        <div><strong>Bolo inicial:</strong> <span style="color:var(--brand-accent);font-weight:700;">${r.fluids.bolusML} mL</span> de ${r.fluids.fluidType} en ${r.fluids.bolusTime}</div>
+        <div><strong>Mantenimiento:</strong> 150–200 mL/h de cristaloide balanceado</div>
+        <div><strong>Fluido recomendado:</strong> Ringer Lactato o Plasmalyte ✓ — <em>SS 0.9% genera AGMA hiperclorémica</em></div>
+        <div><strong>Na corregido:</strong> ${r.fluids.naNote}</div>
+        <div><strong>Agregar Dextrosa:</strong> ${r.fluids.dextroseStart}</div>
+        ${r.fluids.hemodynamic === 'cardiogenic' ? '<div style="margin-top:4px;color:#f59e0b;font-weight:600;">⚠️ Choque cardiogénico — evaluar vasopresores desde el inicio</div>' : ''}`;
+
+    const potassiumContent = `
+        <div><strong>K⁺ actual:</strong> ${r.potassium.value} mEq/L</div>
+        <div><strong>Acción:</strong> <span style="color:${kColor};font-weight:700;">${r.potassium.kAction}</span></div>
+        ${r.potassium.kRate !== '—' ? `<div><strong>Velocidad:</strong> ${r.potassium.kRate}</div>` : ''}
+        <div style="margin-top:4px;">${r.potassium.kNote}</div>
+        <div style="margin-top:4px;color:var(--text-secondary);font-size:12px;">Fosfato: reponer solo si &lt; 1 mg/dL · Magnesio: reponer si bajo</div>`;
+
+    const insulinContent = r.potassium.holdInsulin
+        ? `<div style="color:#dc2626;font-weight:700;">⚠️ INSULINA EN ESPERA — Reiniciar cuando K⁺ ≥ 3.3 mEq/L</div>`
+        : `<div><strong>Vía:</strong> ${r.insulin.insulinRoute} ${r.insulin.isSevereOrShock ? '(IV — caso severo/shock)' : '(IV o SC según severidad)'}</div>
+           <div><strong>Insulina IV:</strong> <span style="color:var(--brand-accent);font-weight:700;">Regular 0.1 U/kg/h = ${r.insulin.doseIV} U/h</span></div>
+           <div><strong>Si Glu &lt; 250 mg/dL:</strong> reducir a <strong>0.05 U/kg/h = ${r.insulin.doseIVReduced} U/h</strong> + Dextrosa</div>
+           <div><strong>Insulina SC (leve/mod):</strong> Lispro/Aspart ${r.insulin.doseSCBolus} U · c/2h si Glu>250 · c/4h si Glu&lt;250</div>
+           <div style="margin-top:4px;color:#dc2626;font-weight:600;">⛔ NO detener insulina IV — agregar Dextrosa hasta BA ≤ 12 + HCO₃ > 18</div>
+           ${r.isCADE ? '<div style="margin-top:4px;color:#7c3aed;font-weight:600;">CADE: misma dosis — la insulina cierra el AG, no baja la glucosa</div>' : ''}`;
+
+    const bicarboContent = r.bicarbonate.indicated
+        ? `<div style="color:#dc2626;font-weight:700;">pH ${r.bicarbonate.ph} &lt; 6.9 — BICARBONATO INDICADO</div>
+           <div>100 mEq NaHCO₃ en 400 mL agua + 20 mEq KCl en 2 h IV · Repetir c/2h hasta pH > 7.0</div>
+           <div style="color:var(--text-secondary);">Monitorear K⁺ — el bicarbonato lo desplaza intracelularmente</div>`
+        : `<div style="color:var(--success);font-weight:600;">pH ${r.bicarbonate.ph} ≥ 6.9 — No indicado</div>
+           <div style="color:var(--text-secondary);">Uso rutinario no mejora outcomes y puede empeorar la hipocalemia.</div>`;
+
+    const resContent = `
+        ${check(r.resolution.agMet, 'Brecha Aniónica', r.resolution.agCalc !== null ? `${r.resolution.agCalc} mEq/L` : 'no calculada', '≤ 12 mEq/L')}
+        ${check(r.resolution.hco3Met, 'HCO₃⁻', `${r.resolution.hco3} mEq/L`, '> 18 mEq/L')}
+        ${check(r.resolution.phMet, 'pH', r.resolution.ph, '> 7.30')}
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">Tolerancia a vía oral — confirmar clínicamente</div>
+        <div style="padding:4px 0;">β-hidroxibutirato &lt; 0.6 mmol/L — si disponible</div>`;
+
+    const transContent = `
+        <div><strong>Criterio:</strong> BA ≤ 12 + HCO₃ > 18 + tolerando VO</div>
+        <div><strong>Glargina:</strong> 0.5–0.8 U/kg/día = <span style="color:var(--brand-accent);font-weight:700;">${r.transition.glarginMin}–${r.transition.glarginMax} U/día</span></div>
+        <div>50% basal (glargina) · 50% bolo (aspart/lispro con comidas)</div>
+        <div style="color:#dc2626;font-weight:600;">⛔ Mantener infusión IV 2 h tras la primera glargina</div>
+        <div style="color:var(--text-secondary);font-size:12px;">t½ plasmático insulina IV = 6 min — suspensión brusca reinicia cetogénesis</div>`;
+
+    return `${headerHTML}${alertHTML}${cadeHTML}
+        ${section('💧', '1. Fluidos IV', '#3b82f6', fluidContent)}
+        ${section('🧪', '2. Potasio', r.potassium.holdInsulin ? '#dc2626' : '#f59e0b', potassiumContent)}
+        ${section('💉', '3. Insulina', '#22c55e', insulinContent)}
+        ${section('🔬', '4. Bicarbonato', r.bicarbonate.indicated ? '#dc2626' : '#6366f1', bicarboContent)}
+        ${section('📋', '5. Criterios de Resolución', '#8b5cf6', resContent)}
+        ${section('🔄', '6. Transición a Insulina SC', '#14b8a6', transContent)}`;
+}
+
+function calculateDKAProtocol(event) {
+    event.preventDefault();
+    const chlorideRaw = document.getElementById('dkaChloride').value;
+    const inputs = {
+        weight:      parseFloat(document.getElementById('dkaWeight').value),
+        type:        document.getElementById('dkaType').value,
+        hemodynamic: document.getElementById('dkaHemo').value,
+        glucose:     parseFloat(document.getElementById('dkaGlucose').value),
+        glucoseUnit: document.getElementById('dkaGlucoseUnit').value,
+        ph:          parseFloat(document.getElementById('dkaPh').value),
+        hco3:        parseFloat(document.getElementById('dkaHco3').value),
+        sodium:      parseFloat(document.getElementById('dkaSodium').value),
+        potassium:   parseFloat(document.getElementById('dkaPotassium').value),
+        chloride:    chlorideRaw === '' ? null : parseFloat(chlorideRaw)
+    };
+    const r = Calculators.calculateDKA(inputs);
+    const container = document.getElementById('dkaResult');
+    container.innerHTML = buildDKAProtocolHTML(r, inputs) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('dkaForm').reset(); document.getElementById('dkaResult').style.display='none'; document.getElementById('dkaLiveCalcs').innerHTML='';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 28, calculatorName: 'CAD / CADE', inputs, result: r, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);
