@@ -860,5 +860,153 @@ const Calculators = {
     interpretFOURScore(score) {
         const range = INTERPRETATIONS.fourScore.find(r => score >= r.min && score <= r.max);
         return range || INTERPRETATIONS.fourScore[INTERPRETATIONS.fourScore.length - 1];
+    },
+
+    // === 26. HEART SCORE === //
+    calculateHEART(inputs) {
+        const { history, ecg, age, riskFactors, troponin } = inputs;
+        const score = history + ecg + age + riskFactors + troponin;
+        return {
+            value: score,
+            unit: 'puntos',
+            components: { history, ecg, age, riskFactors, troponin },
+            interpretation: this.interpretHEART(score)
+        };
+    },
+
+    interpretHEART(score) {
+        const range = INTERPRETATIONS.heart.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.heart[INTERPRETATIONS.heart.length - 1];
+    },
+
+    // === 27. REGLA PERC === //
+    calculatePERC(inputs) {
+        let score = 0;
+        if (inputs.age50)       score++;
+        if (inputs.hr100)       score++;
+        if (inputs.spo294)      score++;
+        if (inputs.legSwelling) score++;
+        if (inputs.hemoptysis)  score++;
+        if (inputs.surgery)     score++;
+        if (inputs.priorVTE)    score++;
+        if (inputs.estrogen)    score++;
+        return {
+            value: score,
+            unit: 'criterios positivos',
+            interpretation: this.interpretPERC(score)
+        };
+    },
+
+    interpretPERC(score) {
+        const range = INTERPRETATIONS.perc.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.perc[INTERPRETATIONS.perc.length - 1];
+    },
+
+    // === 28. CAD / CADE — PROTOCOLO INTEGRAL === //
+    calculateDKA(inputs) {
+        let { weight, type, hemodynamic, glucose, glucoseUnit, ph, hco3, sodium, potassium, chloride } = inputs;
+
+        // Convertir unidades
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+        if (glucoseUnit === 'mmol/L') glucose = glucose / 0.0555;
+
+        const isCADE = type === 'cade';
+
+        // Na corregido (ADA 2024: factor 2.4 uniforme)
+        const naCorregido = Math.round((sodium + 2.4 * (glucose - 100) / 100) * 10) / 10;
+
+        // Anión Gap (solo si Cl disponible)
+        const agCalc = (chloride !== null && !isNaN(chloride))
+            ? Math.round((sodium - (chloride + hco3)) * 10) / 10
+            : null;
+
+        // Osmolaridad sérica efectiva
+        const osmEffective = Math.round((2 * sodium + glucose / 18) * 10) / 10;
+
+        // Clasificación de severidad (pH tiene prioridad clínica)
+        let severity;
+        if (isCADE) {
+            severity = { label: 'CAD Euglucémica (CADE)', colorHex: '#7c3aed', badge: '🟣' };
+        } else if (ph < 7.00 || hco3 < 10) {
+            severity = { label: 'CAD Severa', colorHex: '#dc2626', badge: '🔴' };
+        } else if (ph < 7.25 || hco3 < 15) {
+            severity = { label: 'CAD Moderada', colorHex: '#f59e0b', badge: '🟠' };
+        } else {
+            severity = { label: 'CAD Leve', colorHex: '#16a34a', badge: '🟡' };
+        }
+
+        // Alerta crítica K+
+        const criticalAlert = potassium < 3.3
+            ? { hasAlert: true, message: `K⁺ ${potassium} mEq/L — RETENER INSULINA. Reponer potasio primero. Riesgo de arritmia fatal.` }
+            : { hasAlert: false };
+
+        // Fluidos
+        let bolusML, bolusTime;
+        if (hemodynamic === 'severe') {
+            bolusML = 1000; bolusTime = '30 min';
+        } else if (hemodynamic === 'cardiogenic') {
+            bolusML = 250; bolusTime = '30 min con monitoreo estrecho';
+        } else if (hemodynamic === 'euvolemic') {
+            bolusML = 300; bolusTime = '30 min';
+        } else {
+            bolusML = Math.round(weight * 17.5); bolusTime = '60 min';
+        }
+
+        const fluidType = naCorregido > 150 ? 'NaCl 0.45%' : 'Ringer Lactato o Plasmalyte';
+        const naNote = naCorregido > 150
+            ? `Na corregido ${naCorregido} mEq/L (elevado) → usar NaCl 0.45% para reponer agua libre`
+            : `Na corregido ${naCorregido} mEq/L → cristaloide balanceado (RL/Plasmalyte)`;
+        const dextroseStart = isCADE ? 'DESDE EL INICIO — Dextrosa 5-10% (CADE)' : 'Cuando Glucosa < 250 mg/dL — sistema de 2 bolsas';
+
+        // Potasio
+        let kAction, kRate, holdInsulin, kNote;
+        if (potassium < 3.3) {
+            kAction = 'RETENER INSULINA — Reponer K⁺ primero';
+            kRate = '20-40 mEq/h IV'; holdInsulin = true;
+            kNote = 'Monitoreo ECG continuo. Si velocidad > 10 mEq/h: línea central o 2 venas periféricas. Reiniciar insulina cuando K⁺ ≥ 3.3 mEq/L.';
+        } else if (potassium <= 4.0) {
+            kAction = 'Reponer + iniciar insulina'; kRate = '20 mEq/h IV'; holdInsulin = false;
+            kNote = 'Monitoreo ECG continuo. Reponer Mg²⁺ si está bajo (favorece refractariedad al K⁺).';
+        } else if (potassium <= 5.5) {
+            kAction = 'Reponer (dosis reducida) + iniciar insulina'; kRate = '10 mEq/h IV'; holdInsulin = false;
+            kNote = 'K⁺ descenderá con insulina. Anticipar hipokalemia a las 2-4 h de iniciada la infusión.';
+        } else {
+            kAction = 'No reponer — iniciar insulina'; kRate = '—'; holdInsulin = false;
+            kNote = 'Hiperkalemia ficticia por redistribución en acidosis. Descenderá con insulina + corrección de pH.';
+        }
+
+        // Insulina (dosis concretas)
+        const doseIV       = Math.round(weight * 0.1  * 10) / 10;
+        const doseIVReduced= Math.round(weight * 0.05 * 10) / 10;
+        const doseSCBolus  = Math.round(weight * 0.15 * 10) / 10;
+        const isSevereOrShock = ph < 7.00 || hco3 < 10 || hemodynamic === 'cardiogenic' || hemodynamic === 'severe';
+        const insulinRoute = isSevereOrShock ? 'IV' : 'IV o SC';
+
+        // Bicarbonato
+        const bicarboIndicated = ph < 6.9;
+
+        // Estado vs criterios de resolución
+        const agMet  = agCalc !== null ? agCalc <= 12 : null;
+        const hco3Met = hco3 > 18;
+        const phMet   = ph > 7.30;
+
+        // Transición a SC
+        const glarginMin = Math.round(weight * 0.5);
+        const glarginMax = Math.round(weight * 0.8);
+
+        return {
+            severity, criticalAlert, isCADE,
+            naCorregido, agCalc, osmEffective,
+            fluids: { bolusML, bolusTime, fluidType, naNote, dextroseStart, hemodynamic },
+            potassium: { kAction, kRate, holdInsulin, kNote, value: potassium },
+            insulin: { doseIV, doseIVReduced, doseSCBolus, insulinRoute, holdInsulin, isSevereOrShock },
+            bicarbonate: { indicated: bicarboIndicated, ph },
+            resolution: { agCalc, hco3, ph, agMet, hco3Met, phMet },
+            transition: { glarginMin, glarginMax },
+            value: weight,
+            unit: 'kg',
+            interpretation: { label: severity.label, color: 'danger', description: 'Protocolo CAD/CADE generado.' }
+        };
     }
 };
