@@ -1070,6 +1070,287 @@ function calculateBraden(event) {
     Storage.addToHistory({ calculatorId: 22, calculatorName: 'Braden', inputs, result, interpretation: result.interpretation });
 }
 
+// === 23. MACOCHA SCORE === //
+function createMACOCHAForm() {
+    return `
+        <form id="macochаForm" onsubmit="calculateMAOCHA(event)">
+            <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <p style="font-size: 13px; color: #1e3a8a; margin: 0;">
+                    <strong>ℹ️ MACOCHA Score</strong> — Predice intubación difícil en UCI/Emergencias. Score ≥4 indica alto riesgo (tasa de fallo >90%). <em>De Jong et al., AJRCCM 2013.</em>
+                </p>
+            </div>
+
+            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                <p style="font-size: 13px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">Criterios (marcar los presentes)</p>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macMallampati" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Mallampati clase III o IV</strong> <span style="color: var(--brand-accent); font-weight: 700;">+5 pts</span><br><span style="font-size: 12px; color: var(--text-secondary);">Solo visible paladar blando o úvula / no visible paladar blando</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macOSA" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Apnea obstructiva del sueño</strong> <span style="color: var(--brand-accent); font-weight: 700;">+2 pts</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macCervical" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Limitación de columna cervical</strong> <span style="font-weight: 700;">+1 pt</span><br><span style="font-size: 12px; color: var(--text-secondary);">Incapacidad de flexionar/extender el cuello</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macOpening" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Apertura oral &lt;3 cm</strong> <span style="font-weight: 700;">+1 pt</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macComa" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Coma (GCS &lt;8)</strong> <span style="font-weight: 700;">+1 pt</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer;">
+                    <input type="checkbox" id="macHypoxemia" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Hipoxemia grave (SpO₂ &lt;80% pre-intubación)</strong> <span style="font-weight: 700;">+1 pt</span></span>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="macNonAnest" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                    <span style="font-size: 14px;"><strong>Operador no anestesiólogo</strong> <span style="font-weight: 700;">+1 pt</span></span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
+                🧮 Calcular MACOCHA
+            </button>
+        </form>
+        <div id="macochаResult" style="display: none; margin-top: 24px;"></div>
+    `;
+}
+
+function calculateMAOCHA(event) {
+    event.preventDefault();
+    const inputs = {
+        mallampati: document.getElementById('macMallampati').checked,
+        osa:        document.getElementById('macOSA').checked,
+        cervical:   document.getElementById('macCervical').checked,
+        opening:    document.getElementById('macOpening').checked,
+        coma:       document.getElementById('macComa').checked,
+        hypoxemia:  document.getElementById('macHypoxemia').checked,
+        nonAnest:   document.getElementById('macNonAnest').checked
+    };
+    const result = Calculators.calculateMAOCHA(inputs);
+    displayGenericResult(result, inputs, 23, 'MACOCHA Score', null, 'macochаResult');
+    Storage.addToHistory({ calculatorId: 23, calculatorName: 'MACOCHA Score', inputs, result, interpretation: result.interpretation });
+}
+
+// === 24. PBW + VOLUMEN TIDAL === //
+function createPBWForm() {
+    const units = Storage.getSettings().units;
+    const hUnit = units.height || 'cm';
+    return `
+        <form id="pbwForm" onsubmit="calculatePBW(event)">
+            <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <p style="font-size: 13px; color: #1e3a8a; margin: 0;">
+                    <strong>ℹ️ ARDSNet</strong> — El volumen tidal se calcula sobre el <strong>peso corporal predicho (PBW)</strong>, no el peso real. Solo se necesita la talla. <em>NEJM 2000.</em>
+                </p>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Sexo biológico</label>
+                <select id="pbwSex" required class="form-input">
+                    <option value="male">Hombre</option>
+                    <option value="female">Mujer</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Talla (${hUnit})</label>
+                <input type="number" id="pbwHeight" required step="any" min="100" max="220" class="form-input" placeholder="Puede estimarse visualmente">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Contexto clínico</label>
+                <select id="pbwMode" required class="form-input">
+                    <option value="ards">ARDS / Pulmón lesionado → TV 6 mL/kg PBW</option>
+                    <option value="normal">Sin ARDS / Pulmón normal → TV 8 mL/kg PBW</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
+                🧮 Calcular PBW y Volumen Tidal
+            </button>
+        </form>
+        <div id="pbwResult" style="display: none; margin-top: 24px;"></div>
+    `;
+}
+
+function calculatePBW(event) {
+    event.preventDefault();
+    const inputs = {
+        sex:    document.getElementById('pbwSex').value,
+        height: parseFloat(document.getElementById('pbwHeight').value),
+        mode:   document.getElementById('pbwMode').value
+    };
+    const result = Calculators.calculatePBW(inputs);
+    const targetTV = inputs.mode === 'ards' ? result.tv6 : result.tv8;
+    const targetLabel = inputs.mode === 'ards' ? '6 mL/kg (ARDS)' : '8 mL/kg (estándar)';
+
+    const row = (label, value, highlight) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+            <span style="font-size: 13px; color: var(--text-secondary);">${label}</span>
+            <span style="font-size: 15px; font-weight: ${highlight ? '800' : '600'}; color: ${highlight ? 'var(--brand-accent)' : 'var(--text-primary)'};">${value}</span>
+        </div>`;
+
+    const container = document.getElementById('pbwResult');
+    container.innerHTML = `
+        <div style="background: linear-gradient(135deg, var(--brand-accent-dark), var(--brand-accent)); padding: 24px; border-radius: var(--radius-lg); color: var(--brand-primary-dark); margin-bottom: 16px;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; opacity: 0.8;">PESO CORPORAL PREDICHO (PBW)</div>
+            <div style="font-size: 36px; font-weight: 800; margin-bottom: 4px;">${result.value} <span style="font-size: 20px; font-weight: 600;">kg</span></div>
+            <div style="font-size: 14px; font-weight: 600;">Vol. tidal objetivo: ${targetTV} mL</div>
+        </div>
+        <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); margin-bottom: 16px;">
+            <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">Volúmenes tidales</h4>
+            ${row('4 mL/kg PBW — ARDS severo', result.tv4 + ' mL', false)}
+            ${row('6 mL/kg PBW — ARDS / protector ✓', result.tv6 + ' mL', inputs.mode === 'ards')}
+            ${row('8 mL/kg PBW — Sin ARDS ✓', result.tv8 + ' mL', inputs.mode === 'normal')}
+        </div>
+        <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); margin-bottom: 16px;">
+            <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">Parámetros de ventilación</h4>
+            ${row('Frecuencia respiratoria', '12 – 20 rpm', false)}
+            ${row('Presión plateau máxima', '< 30 cmH₂O', false)}
+            ${row('PEEP mínimo', '≥ 5 cmH₂O', false)}
+        </div>
+        <div style="background: var(--bg-secondary); padding: 16px; border-radius: var(--radius-lg); border-left: 4px solid var(--info, #3b82f6); margin-bottom: 16px;">
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('pbwForm').reset(); document.getElementById('pbwResult').style.display='none';" style="width: 100%; margin-top: 0;">
+            🔄 Nuevo Cálculo
+        </button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 24, calculatorName: 'PBW / Vol. Tidal', inputs, result, interpretation: result.interpretation });
+}
+
+// === 25. FOUR SCORE === //
+function createFOURScoreForm() {
+    const sel = (id, options) => `
+        <select id="${id}" class="form-input" onchange="updateFOURTotal()">
+            ${options.map((o, i) => `<option value="${i}">${i} – ${o}</option>`).reverse().join('')}
+        </select>`;
+
+    return `
+        <form id="fourScoreForm" onsubmit="calculateFOURScore(event)">
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <p style="font-size: 13px; color: #92400e; margin: 0;">
+                    <strong>⚠️ Para pacientes intubados</strong> — El FOUR Score reemplaza al Glasgow cuando la respuesta verbal no puede evaluarse. <em>Wijdicks et al., Mayo Clin Proc 2005.</em>
+                </p>
+            </div>
+
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">E — Apertura ocular</div>
+            <div style="margin-bottom: 16px;">
+                ${sel('fourEyes', [
+                    'Párpados cerrados al dolor',
+                    'Párpados cerrados, abren al dolor',
+                    'Párpados cerrados, abren a la voz',
+                    'Abiertos pero sin seguimiento',
+                    'Abiertos o abiertos, con seguimiento o parpadeo a la orden'
+                ])}
+            </div>
+
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">M — Respuesta motora</div>
+            <div style="margin-bottom: 16px;">
+                ${sel('fourMotor', [
+                    'Sin respuesta o mioclonías generalizadas',
+                    'Extensión al dolor (descerebración)',
+                    'Flexión al dolor (decorticación)',
+                    'Localiza el dolor',
+                    'Obedece a la orden (pulgar arriba / puño / señal de paz)'
+                ])}
+            </div>
+
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">B — Reflejos de tronco encefálico</div>
+            <div style="margin-bottom: 16px;">
+                ${sel('fourBrainstem', [
+                    'Ausencia de reflejos pupilares, corneales y tusígeno',
+                    'Reflejos pupilares Y corneales ausentes',
+                    'Reflejo pupilar O corneal ausente',
+                    'Una pupila dilatada y fija',
+                    'Reflejos pupilares y corneales presentes'
+                ])}
+            </div>
+
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">R — Respiración</div>
+            <div style="margin-bottom: 20px;">
+                ${sel('fourResp', [
+                    'Apnea o respira a la frecuencia del ventilador (intubado)',
+                    'Respira por encima del ventilador (intubado)',
+                    'Respiración irregular (no intubado)',
+                    'Patrón de Cheyne-Stokes (no intubado)',
+                    'Patrón regular (no intubado)'
+                ])}
+            </div>
+
+            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; margin-bottom: 16px; text-align: center;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">TOTAL FOUR SCORE (E+M+B+R)</div>
+                <div id="fourTotalDisplay" style="font-size: 32px; font-weight: 800;">0</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
+                🧮 Calcular FOUR Score
+            </button>
+        </form>
+        <div id="fourScoreResult" style="display: none; margin-top: 24px;"></div>
+    `;
+}
+
+function updateFOURTotal() {
+    const eyes      = parseInt(document.getElementById('fourEyes')?.value || 0);
+    const motor     = parseInt(document.getElementById('fourMotor')?.value || 0);
+    const brainstem = parseInt(document.getElementById('fourBrainstem')?.value || 0);
+    const resp      = parseInt(document.getElementById('fourResp')?.value || 0);
+    const display   = document.getElementById('fourTotalDisplay');
+    if (display) display.textContent = eyes + motor + brainstem + resp;
+}
+
+function calculateFOURScore(event) {
+    event.preventDefault();
+    const inputs = {
+        eyes:        parseInt(document.getElementById('fourEyes').value),
+        motor:       parseInt(document.getElementById('fourMotor').value),
+        brainstem:   parseInt(document.getElementById('fourBrainstem').value),
+        respiration: parseInt(document.getElementById('fourResp').value)
+    };
+    const result = Calculators.calculateFOURScore(inputs);
+    const c = result.components;
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)', info: '#3b82f6' };
+
+    const container = document.getElementById('fourScoreResult');
+    container.innerHTML = `
+        <div style="background: linear-gradient(135deg, var(--brand-accent-dark), var(--brand-accent)); padding: 24px; border-radius: var(--radius-lg); color: var(--brand-primary-dark); margin-bottom: 16px;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; opacity: 0.8;">FOUR SCORE</div>
+            <div style="font-size: 36px; font-weight: 800; margin-bottom: 4px;">
+                ${result.value} <span style="font-size: 20px; font-weight: 500;">/16</span>
+            </div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">${result.interpretation.label}</div>
+            <div style="background: rgba(30,56,114,0.15); padding: 12px; border-radius: 8px; font-size: 14px; display: flex; justify-content: space-around;">
+                <span><strong>E</strong> ${c.eyes}/4</span>
+                <span><strong>M</strong> ${c.motor}/4</span>
+                <span><strong>B</strong> ${c.brainstem}/4</span>
+                <span><strong>R</strong> ${c.respiration}/4</span>
+            </div>
+        </div>
+        <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); border-left: 4px solid ${colorMap[result.interpretation.color] || 'var(--brand-accent)'}; margin-bottom: 16px;">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Interpretación</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('fourScoreForm').reset(); document.getElementById('fourScoreResult').style.display='none'; updateFOURTotal();" style="width: 100%; margin-top: 0;">
+            🔄 Nuevo Cálculo
+        </button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 25, calculatorName: 'FOUR Score', inputs, result, interpretation: result.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);
