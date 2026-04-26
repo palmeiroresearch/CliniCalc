@@ -802,5 +802,63 @@ const Calculators = {
     interpretBraden(score) {
         const range = INTERPRETATIONS.braden.find(r => score >= r.min && score <= r.max);
         return range || INTERPRETATIONS.braden[INTERPRETATIONS.braden.length - 1];
+    },
+
+    // === 23. MACOCHA SCORE === //
+    calculateMAOCHA(inputs) {
+        let score = 0;
+        if (inputs.mallampati) score += 5;
+        if (inputs.osa)        score += 2;
+        if (inputs.cervical)   score += 1;
+        if (inputs.opening)    score += 1;
+        if (inputs.coma)       score += 1;
+        if (inputs.hypoxemia)  score += 1;
+        if (inputs.nonAnest)   score += 1;
+        return { value: score, unit: 'puntos', interpretation: this.interpretMAOCHA(score) };
+    },
+
+    interpretMAOCHA(score) {
+        const range = INTERPRETATIONS.macocha.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.macocha[INTERPRETATIONS.macocha.length - 1];
+    },
+
+    // === 24. PBW + VOLUMEN TIDAL (ARDSNet) === //
+    calculatePBW(inputs) {
+        let { sex, height } = inputs;
+        const heightUnit = Storage.getSetting('units.height');
+        if (heightUnit === 'm')  height = height * 100;
+        if (heightUnit === 'in') height = height * 2.54;
+        if (heightUnit === 'ft') height = height * 30.48;
+
+        const pbw = sex === 'male'
+            ? 50 + 0.91 * (height - 152.4)
+            : 45.5 + 0.91 * (height - 152.4);
+        const p = Math.round(pbw * 10) / 10;
+
+        return {
+            value: p,
+            unit: 'kg',
+            tv4: Math.round(p * 4),
+            tv6: Math.round(p * 6),
+            tv8: Math.round(p * 8),
+            interpretation: INTERPRETATIONS.pbw[0]
+        };
+    },
+
+    // === 25. FOUR SCORE === //
+    calculateFOURScore(inputs) {
+        const { eyes, motor, brainstem, respiration } = inputs;
+        const total = eyes + motor + brainstem + respiration;
+        return {
+            value: total,
+            unit: 'puntos',
+            components: { eyes, motor, brainstem, respiration },
+            interpretation: this.interpretFOURScore(total)
+        };
+    },
+
+    interpretFOURScore(score) {
+        const range = INTERPRETATIONS.fourScore.find(r => score >= r.min && score <= r.max);
+        return range || INTERPRETATIONS.fourScore[INTERPRETATIONS.fourScore.length - 1];
     }
 };
