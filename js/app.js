@@ -207,6 +207,9 @@ function loadCalculatorForm(calc) {
         case 20: container.innerHTML = createTIMI_STEMIForm(); break;
         case 21: container.innerHTML = createGRACEForm(); break;
         case 22: container.innerHTML = createBradenForm(); break;
+        case 23: container.innerHTML = createMACOCHAForm(); break;
+        case 24: container.innerHTML = createPBWForm(); break;
+        case 25: container.innerHTML = createFOURScoreForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
