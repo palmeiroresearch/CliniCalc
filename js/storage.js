@@ -36,12 +36,12 @@ const Storage = {
     },
 
     setMainScreen(calcIds) {
-        // Validar mínimo 1, máximo 10
+        // Validar mínimo 1, máximo 15
         if (calcIds.length < 1) {
             calcIds = [1]; // GFR como mínimo
         }
-        if (calcIds.length > 10) {
-            calcIds = calcIds.slice(0, 10);
+        if (calcIds.length > 15) {
+            calcIds = calcIds.slice(0, 15);
         }
         localStorage.setItem(this.KEYS.MAIN_SCREEN, JSON.stringify(calcIds));
         this.dispatchEvent('mainScreenChanged', calcIds);
@@ -49,8 +49,8 @@ const Storage = {
 
     addToMainScreen(calcId) {
         const mainScreen = this.getMainScreen();
-        if (mainScreen.length >= 10) {
-            return { success: false, error: 'Máximo 10 calculadoras' };
+        if (mainScreen.length >= 15) {
+            return { success: false, error: 'Máximo 15 calculadoras' };
         }
         if (mainScreen.includes(calcId)) {
             return { success: false, error: 'Ya está en pantalla principal' };
