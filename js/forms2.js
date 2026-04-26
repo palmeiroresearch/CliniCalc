@@ -1630,8 +1630,23 @@ function createDKAForm() {
 }
 
 function updateDKALiveCalcs() {
-    const glucoseVal  = parseFloat(document.getElementById('dkaGlucose')?.value);
     const glucoseUnit = document.getElementById('dkaGlucoseUnit')?.value || 'mg/dL';
+
+    // Ajustar min/max del input de glucosa según la unidad seleccionada
+    const glucoseField = document.getElementById('dkaGlucose');
+    if (glucoseField) {
+        if (glucoseUnit === 'mmol/L') {
+            glucoseField.min  = '1.7';
+            glucoseField.max  = '111';
+            glucoseField.step = '0.1';
+        } else {
+            glucoseField.min  = '30';
+            glucoseField.max  = '2000';
+            glucoseField.step = 'any';
+        }
+    }
+
+    const glucoseVal  = parseFloat(glucoseField?.value);
     const sodiumVal   = parseFloat(document.getElementById('dkaSodium')?.value);
     const chlorideVal = parseFloat(document.getElementById('dkaChloride')?.value);
     const hco3Val     = parseFloat(document.getElementById('dkaHco3')?.value);
