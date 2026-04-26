@@ -1244,3 +1244,66 @@ input:checked + .toggle-slider:before {
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
 }
+
+/* === DRAG & DROP REORDER (Pantalla Principal) === */
+
+/* Cards en modo edición: escala ligera + borde accent + handle */
+.calculators-grid.edit-mode .calculator-card {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transform: scale(0.96);
+    border-color: var(--cat-color, var(--brand-accent));
+    box-shadow: 0 0 0 1px var(--cat-color, var(--brand-accent));
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Icono de handle (6 puntos) en esquina inferior-derecha */
+.calculators-grid.edit-mode .calculator-card::after {
+    content: '⠿';
+    position: absolute;
+    bottom: 5px;
+    right: 7px;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    opacity: 0;
+    animation: fadeIn 0.25s ease 0.1s forwards;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Cancelar hover-lift en modo edición */
+.calculators-grid.edit-mode .calculator-card:hover {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 1px var(--cat-color, var(--brand-accent));
+}
+
+/* Botón Reordenar → estado activo (Listo) */
+#reorderCalcsBtn.reorder-active {
+    color: var(--brand-accent);
+    background: rgba(120, 218, 171, 0.12);
+}
+
+/* Ghost: efecto de "levantar" con spring */
+@keyframes liftUp {
+    from { transform: scale(1) rotate(0deg);    box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    to   { transform: scale(1.07) rotate(2deg); box-shadow: 0 28px 56px rgba(0,0,0,0.5), 0 0 0 2px var(--brand-accent); }
+}
+
+.calc-card-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    border-radius: var(--radius-lg);
+    opacity: 0.93;
+    animation: liftUp 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Placeholder: hueco que indica la posición de destino */
+.calc-drag-placeholder {
+    background: var(--bg-secondary);
+    border: 2px dashed var(--brand-accent);
+    border-radius: var(--radius-lg);
+    opacity: 0.45;
+    transition: all 0.12s ease;
+}
