@@ -154,6 +154,12 @@ const UI = {
                     </div>
 
                     <div class="history-actions">
+                        <button class="btn-icon" onclick="showFullResult('${item.id}')" title="Ver resultado completo">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
                         <button class="btn-icon" onclick="recalculate('${item.id}')" title="Recalcular con estos valores">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
