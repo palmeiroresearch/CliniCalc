@@ -639,10 +639,13 @@ function hideSearch() {
 }
 
 // === SERVICE WORKER === //
+let swRegistration = null;
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
             .then(reg => {
+                swRegistration = reg;
                 console.log('✅ Service Worker registrado');
                 document.getElementById('offlineStatus').textContent = '✅ Activo';
                 
@@ -674,6 +677,34 @@ function registerServiceWorker() {
             console.log('🔄 Controlador actualizado, recargando...');
             window.location.reload();
         });
+    }
+}
+
+async function checkForUpdates() {
+    const btn = document.getElementById('checkUpdateBtn');
+    if (!swRegistration) {
+        UI.showToast('Service Worker no disponible', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;"><span class="update-spinner" style="width:14px;height:14px;border-width:2px;"></span> Verificando...</span>';
+
+    let updateDetected = false;
+    swRegistration.addEventListener('updatefound', () => { updateDetected = true; }, { once: true });
+
+    try {
+        await swRegistration.update();
+        await new Promise(r => setTimeout(r, 1200));
+        if (!updateDetected && !swRegistration.waiting) {
+            UI.showToast('Ya tienes la versión más reciente ✓', 'success');
+        }
+    } catch {
+        UI.showToast('Error al verificar actualizaciones', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
