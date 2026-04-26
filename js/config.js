@@ -247,6 +247,38 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Otros',
         description: 'Riesgo de úlceras por presión (escaras)',
         formulas: ['Braden']
+    },
+
+    // === CATEGORÍA: UCI / CRÍTICO === //
+    {
+        id: 23,
+        name: 'MACOCHA',
+        fullName: 'MACOCHA Score',
+        icon: '🫁',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Predicción de intubación difícil en UCI y Emergencias',
+        formulas: ['Mallampati + 6 criterios clínicos']
+    },
+    {
+        id: 24,
+        name: 'PBW / Vol. Tidal',
+        fullName: 'Peso Ideal + Volumen Tidal',
+        icon: '💨',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Configuración del ventilador post-intubación (protocolo ARDSNet)',
+        formulas: ['PBW ARDSNet', 'TV 6-8 mL/kg PBW']
+    },
+    {
+        id: 25,
+        name: 'FOUR Score',
+        fullName: 'FOUR Score (Paciente Intubado)',
+        icon: '🧠',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Evaluación neurológica para intubados — reemplaza Glasgow verbal',
+        formulas: ['Ojos + Motor + Tronco encefálico + Respiración']
     }
 ];
 
@@ -436,6 +468,34 @@ const INTERPRETATIONS = {
         { min: 5, max: 15, label: 'Ictus moderado', color: 'warning', description: 'Hospitalización recomendada, evaluar trombolisis/trombectomía' },
         { min: 16, max: 20, label: 'Ictus moderado-severo', color: 'danger', description: 'UCI/Unidad de ictus, alta necesidad de intervención' },
         { min: 21, max: 42, label: 'Ictus severo', color: 'danger', description: 'UCI, mortalidad y discapacidad severa elevadas' }
+    ],
+
+    // MACOCHA Score (De Jong, AJRCCM 2013)
+    macocha: [
+        { min: 0, max: 3, label: 'Bajo riesgo', color: 'success',
+          description: 'Intubación probablemente fácil (tasa de dificultad <11%). Preparación estándar.' },
+        { min: 4, max: 12, label: 'Alto riesgo', color: 'danger',
+          description: 'Intubación potencialmente difícil (tasa de dificultad >90%). Prepare videolaringoscopio, operador experto y plan de vía aérea alternativa.' }
+    ],
+
+    // PBW + Volumen Tidal (interpretación única — no es un score de riesgo)
+    pbw: [
+        { min: 0, max: Infinity, label: 'Ventilación protectora', color: 'info',
+          description: 'TV objetivo: 6 mL/kg PBW (ARDS: 4-6 mL/kg). FR: 12-20 rpm. Presión plateau máx. 30 cmH₂O. PEEP ≥ 5 cmH₂O. (ARDSNet, NEJM 2000).' }
+    ],
+
+    // FOUR Score (Wijdicks, Mayo Clin Proc 2005)
+    fourScore: [
+        { min: 0,  max: 0,  label: 'Compatible con muerte cerebral', color: 'danger',
+          description: 'Score 0. Ausencia de reflejos de tronco encefálico y respiración espontánea. Evaluar test de apnea y protocolo de muerte cerebral.' },
+        { min: 1,  max: 7,  label: 'Coma profundo', color: 'danger',
+          description: 'Coma profundo. Pronóstico muy reservado. Búsqueda activa de causa tratable.' },
+        { min: 8,  max: 12, label: 'Deterioro grave', color: 'warning',
+          description: 'Respuesta motora presente pero deterioro neurológico grave. Monitorización estrecha.' },
+        { min: 13, max: 15, label: 'Deterioro moderado', color: 'warning',
+          description: 'Respuesta conservada parcialmente. Evaluar causa y potencial de recuperación.' },
+        { min: 16, max: 16, label: 'Alerta', color: 'success',
+          description: 'Score máximo: apertura ocular espontánea con seguimiento, respuesta a órdenes, reflejos presentes.' }
     ]
 };
 
