@@ -210,6 +210,9 @@ function loadCalculatorForm(calc) {
         case 23: container.innerHTML = createMACOCHAForm(); break;
         case 24: container.innerHTML = createPBWForm(); break;
         case 25: container.innerHTML = createFOURScoreForm(); break;
+        case 26: container.innerHTML = createHEARTForm(); break;
+        case 27: container.innerHTML = createPERCForm(); break;
+        case 28: container.innerHTML = createDKAForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
@@ -706,6 +709,70 @@ async function checkForUpdates() {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
+}
+
+function showFullResult(itemId) {
+    const item = Storage.getHistory().find(h => h.id === itemId);
+    if (!item) return;
+
+    let bodyHTML;
+    if (item.calculatorId === 28) {
+        const r = Calculators.calculateDKA(item.inputs);
+        bodyHTML = buildDKAProtocolHTML(r, item.inputs);
+    } else {
+        const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+        const c = colorMap[item.interpretation?.color] || 'var(--brand-accent)';
+        bodyHTML = `
+            <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent));
+                        padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">${item.calculatorName}</div>
+                <div style="font-size:36px; font-weight:800; margin-bottom:4px;">
+                    ${item.result?.value ?? '—'} <span style="font-size:20px;">${item.result?.unit ?? ''}</span>
+                </div>
+                <div style="font-size:14px; font-weight:600;">${item.interpretation?.label ?? ''}</div>
+            </div>
+            <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg);
+                        border-left:4px solid ${c}; margin-bottom:8px;">
+                <h4 style="font-size:14px; font-weight:700; margin-bottom:8px;">Interpretación completa</h4>
+                <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                    ${item.interpretation?.description ?? 'Sin descripción disponible'}
+                </p>
+            </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fullResultOverlay';
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;
+        align-items:flex-start;justify-content:center;z-index:10000;
+        backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;overflow-y:auto;padding:20px;`;
+
+    const ts = new Date(item.timestamp).toLocaleString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const patientLine = item.patientName ? ` · ${item.patientName}${item.bedNumber ? ' · Cama ' + item.bedNumber : ''}` : '';
+
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card); border-radius:var(--radius-xl); padding:24px;
+                    max-width:560px; width:100%; margin:auto; box-shadow:var(--shadow-xl);
+                    animation:scaleIn 0.3s ease;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:18px; font-weight:700; margin-bottom:2px;">${item.calculatorName}</h2>
+                    <p style="font-size:12px; color:var(--text-secondary);">${ts}${patientLine}</p>
+                </div>
+                <button onclick="event.stopPropagation(); document.getElementById('fullResultOverlay').remove();"
+                        style="background:var(--bg-secondary);border:none;width:36px;height:36px;border-radius:8px;
+                               cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div>${bodyHTML}</div>
+        </div>`;
+
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
 }
 
 function showUpdateBanner(registration) {
