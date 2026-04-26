@@ -279,6 +279,40 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'UCI / Crítico',
         description: 'Evaluación neurológica para intubados — reemplaza Glasgow verbal',
         formulas: ['Ojos + Motor + Tronco encefálico + Respiración']
+    },
+
+    // === CATEGORÍA: CARDIOLOGÍA (continuación) === //
+    {
+        id: 26,
+        name: 'HEART Score',
+        fullName: 'HEART Score',
+        icon: '💔',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Riesgo de evento cardíaco adverso mayor (MACE) en dolor torácico en Urgencias',
+        formulas: ['Historia + ECG + Edad + Factores de riesgo + Troponina']
+    },
+    {
+        id: 27,
+        name: 'Regla PERC',
+        fullName: 'Regla PERC (Exclusión TEP)',
+        icon: '🫁',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Descarta tromboembolia pulmonar sin dímero D en bajo riesgo pre-test',
+        formulas: ['8 criterios de exclusión']
+    },
+
+    // === CATEGORÍA: UCI / CRÍTICO (continuación) === //
+    {
+        id: 28,
+        name: 'CAD / CADE',
+        fullName: 'Protocolo CAD / CADE',
+        icon: '🩸',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Reposición de fluidos, electrolitos e insulina en cetoacidosis diabética (ADA 2024)',
+        formulas: ['Fluidos IV', 'Potasio', 'Insulina', 'Bicarbonato']
     }
 ];
 
@@ -496,12 +530,30 @@ const INTERPRETATIONS = {
           description: 'Respuesta conservada parcialmente. Evaluar causa y potencial de recuperación.' },
         { min: 16, max: 16, label: 'Alerta', color: 'success',
           description: 'Score máximo: apertura ocular espontánea con seguimiento, respuesta a órdenes, reflejos presentes.' }
+    ],
+
+    // HEART Score (Six AJ et al., Neth Heart J 2008)
+    heart: [
+        { min: 0, max: 3, label: 'Bajo riesgo', color: 'success',
+          description: 'Riesgo de MACE ~1.7%. Considerar alta hospitalaria con seguimiento ambulatorio. No requiere ingreso urgente.' },
+        { min: 4, max: 6, label: 'Riesgo moderado', color: 'warning',
+          description: 'Riesgo de MACE ~12%. Observación hospitalaria, troponina seriada e imagen según criterio clínico.' },
+        { min: 7, max: 10, label: 'Alto riesgo', color: 'danger',
+          description: 'Riesgo de MACE ~65%. Estrategia invasiva precoz. Ingreso en Cardiología o UCI coronaria.' }
+    ],
+
+    // Regla PERC (Kline JA et al., J Thromb Haemost 2004)
+    perc: [
+        { min: 0, max: 0, label: 'TEP descartado clínicamente', color: 'success',
+          description: 'Todos los criterios PERC negativos. En paciente con probabilidad pre-test BAJA (Wells ≤1 o Geneva bajo), el TEP puede descartarse sin dímero D ni imagen.' },
+        { min: 1, max: 8, label: 'No se puede descartar TEP', color: 'danger',
+          description: 'Uno o más criterios PERC positivos. La regla PERC no aplica. Continuar con dímero D y/o imagen según probabilidad pre-test.' }
     ]
 };
 
 // === CONFIGURACIÓN PREDETERMINADA === //
 const DEFAULT_CONFIG = {
-    mainScreen: [1, 6, 3, 9, 12], // GFR, IMC, Anion Gap, CHADS2-VASc, CURB-65
+    mainScreen: [1, 6, 3, 9, 12, 28], // GFR, IMC, Anion Gap, CHADS2-VASc, CURB-65, CAD/CADE
     favorites: [1, 6, 3, 9, 12],
     settings: {
         darkMode: true,
