@@ -484,15 +484,316 @@ function calculateSOFA(event) {
 }
 
 // === 17. NIHSS === //
+const NIHSS_HELP = {
+    loc: {
+        title: '1a. Nivel de Consciencia',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Observe al paciente sin estimulación adicional</li>
+                <li>Llame al paciente por su nombre en voz alta</li>
+                <li>Si no responde, aplique estímulo táctil suave (toque el hombro)</li>
+                <li>Si persiste sin respuesta, aplique estímulo doloroso: presión en esternón o lecho ungueal</li>
+                <li>Evalúe la calidad y rapidez de la respuesta</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Use estímulos progresivos: verbal → táctil → nociceptivo. No asuma somnolencia si hay barrera del lenguaje — verifique respuesta a órdenes gestuales. Documente exactamente qué estímulo generó respuesta.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">La intubación orotraqueal NO limita este ítem — evalúe despertar y respuesta motora. Un paciente agitado que "pelea" con el tubo = alerta (puntúa 0).</p>
+            </div>`
+    },
+    locQ: {
+        title: '1b. Preguntas de Orientación',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Pregunte: <em>"¿En qué mes estamos?"</em></li>
+                <li>Pregunte: <em>"¿Cuántos años tiene usted?"</em></li>
+                <li>Solo acepte respuestas exactamente correctas — no aproximaciones</li>
+                <li>No repita las preguntas ni dé pistas</li>
+                <li>No acepte respuestas con ayuda de familiares</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Si el nivel de consciencia impide responder verbalmente, intente comunicación escrita. Afasia severa sin ninguna comunicación posible = puntúe 2. No puntúe 2 solo por disartria si la respuesta intenta ser correcta.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Autocorrección válida: "tengo… no, 65 años" = correcto. El ítem mide orientación, no velocidad de respuesta. El paciente intubado que puede escribir se evalúa normalmente.</p>
+            </div>`
+    },
+    locC: {
+        title: '1c. Órdenes Motoras',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Orden 1: <em>"Abra y cierre los ojos"</em></li>
+                <li>Orden 2: <em>"Abra y cierre la mano no parética"</em></li>
+                <li>Repita cada orden solo una vez</li>
+                <li>Evalúe si realiza el esfuerzo aunque no complete la acción</li>
+                <li>Alternativa si hay trauma en mano: <em>"Levante la pierna"</em></li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">En estuporoso: dé la orden en voz muy alta y repita una vez. En coma profundo sin respuesta a estímulos: marque 2 directamente. No se deben realizar gestos demostrativos (si lo imita, puntúe como no realizado).</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">El esfuerzo visible cuenta aunque no complete la acción. Un intento fallido = realizó una tarea (puntúa 1). Solo la ausencia total de intento en ambas = 2.</p>
+            </div>`
+    },
+    gaze: {
+        title: '2. Mirada Conjugada',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Pida al paciente que siga su dedo con la mirada</li>
+                <li>Mueva su dedo horizontalmente de lado a lado lentamente</li>
+                <li>Observe si ambos ojos se mueven conjugados y alcanzan excursión completa</li>
+                <li>Observe si hay desviación tónica de la mirada en reposo</li>
+                <li>Evalúe si la paresia puede superarse voluntariamente</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Use la maniobra oculocefálica (ojos de muñeca): gire la cabeza bruscamente hacia un lado — los ojos deben desviarse en sentido contrario si el reflejo es normal. Contraindicado si hay sospecha de trauma cervical.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Desviación conjugada <strong>hacia</strong> la lesión = hemisférica. Desviación <strong>contraria</strong> a la lesión = tallo cerebral. Paresia que el paciente puede superar = puntúa 1, no 2.</p>
+            </div>`
+    },
+    visual: {
+        title: '3. Campos Visuales',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Posiciónese frente al paciente a aproximadamente 1 metro</li>
+                <li>Pida que mire fijamente a sus ojos durante toda la prueba</li>
+                <li>Presente 1-2 dedos simultáneamente en los 4 cuadrantes visuales</li>
+                <li>Pregunte: <em>"¿Cuántos dedos ve de cada lado?"</em></li>
+                <li>Repita en diferentes cuadrantes para confirmar</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Use la amenaza visual: aproxime su mano bruscamente al ojo del paciente desde cada cuadrante. El parpadeo indica campo visual intacto en esa zona. Ausencia de parpadeo ante amenaza = déficit en ese cuadrante.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Hemianopsia bilateral (puntúa 3) es rara en ACV; sugiere lesión de corteza visual bilateral o tallo cerebral. Cuadrantanopsia superior = lesión temporal; inferior = lesión parietal.</p>
+            </div>`
+    },
+    facial: {
+        title: '4. Parálisis Facial',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Observe la simetría facial en reposo</li>
+                <li>Pida que muestre los dientes o sonría ampliamente</li>
+                <li>Pida que cierre los ojos con fuerza (compare la resistencia al abrirlos)</li>
+                <li>Observe asimetría del surco nasogeniano y comisura labial</li>
+                <li>Observe si puede elevar ambas cejas simétricamente</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Aplique estímulo doloroso (presión supraorbitaria o lecho ungueal) y observe asimetría en la mueca de dolor. La hemicara que no se contrae al estímulo = lado parético.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;"><strong>Central (ACV):</strong> respeta el tercio superior (puede arrugar el ceño), afecta mitad inferior. <strong>Periférica (Bell):</strong> afecta toda la hemicara — no puede cerrar el ojo (signo de Bell positivo).</p>
+            </div>`
+    },
+    motorArm: {
+        title: '5a/5b. Función Motora del Brazo',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li><strong>Sentado:</strong> extienda el brazo a 90° (palma abajo)</li>
+                <li><strong>Acostado:</strong> extienda el brazo a 45°</li>
+                <li>Pida: <em>"Mantenga el brazo en esta posición por 10 segundos"</em></li>
+                <li>Observe si cae antes de 10 segundos y con qué velocidad</li>
+                <li>Evalúe ambos brazos por separado — nunca permita apoyo</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Posicione usted el brazo pasivamente en la posición correcta y suéltelo. Observe si mantiene, cae lentamente o cae de inmediato. Cualquier resistencia visible aunque sea mínima = puntúa 3, no 4.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Amputación o fusión articular = marque 9 (no evaluable) y documente el motivo. El ítem mide fuerza antigravitacional, no motricidad fina. Evalúe siempre ambos lados aunque uno sea normal.</p>
+            </div>`
+    },
+    motorLeg: {
+        title: '6a/6b. Función Motora de la Pierna',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Paciente en decúbito supino</li>
+                <li>Pida: <em>"Levante la pierna a 30° del nivel de la cama"</em></li>
+                <li>Tiempo de sostén: <strong>5 segundos</strong> (diferente al brazo)</li>
+                <li>Observe si cae antes y con qué velocidad</li>
+                <li>Evalúe ambas piernas por separado</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Posicione usted la pierna a 30° y suéltela. Con dolor lumbar: ayude a posicionar y evalúe el esfuerzo de mantención. Mismos criterios que el brazo: esfuerzo mínimo visible = 3, ningún movimiento = 4.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">⚠️ El tiempo es <strong>5 segundos</strong>, no 10 como el brazo. La diferencia entre 3 y 4 es clave: cualquier resistencia mínima = 3; ningún movimiento en absoluto = 4.</p>
+            </div>`
+    },
+    ataxia: {
+        title: '7. Ataxia de Extremidades',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li><strong>Índice-nariz:</strong> pida que toque su nariz y luego el dedo del examinador alternadamente (varias veces rápido)</li>
+                <li><strong>Talón-rodilla:</strong> pida que deslice el talón de una pierna por la espinilla de la otra</li>
+                <li>Observe dismetría (error en distancia) y temblor intencional</li>
+                <li>Evalúe ambos lados</li>
+                <li>La ataxia debe ser <strong>desproporcionada</strong> a la debilidad presente</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Si la alteración de consciencia impide seguir instrucciones o si hay parálisis que impide el movimiento: puntúe 0 (no se puede evaluar ataxia). No puntúe ataxia en una extremidad pléjica.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Si el motor del brazo puntúa 3-4, no puede evaluarse ataxia en ese brazo — la paresia explica el déficit. Ataxia verdadera sugiere lesión cerebelosa o de vías espinocerebelosas (ACV de fosa posterior).</p>
+            </div>`
+    },
+    sensory: {
+        title: '8. Sensibilidad',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Use un objeto punzante (alfiler estéril, punta de lapicero o palillo)</li>
+                <li>Toque cara, brazo, tronco y pierna en ambos lados</li>
+                <li>Compare lado derecho vs izquierdo</li>
+                <li>Pregunte: <em>"¿Siente esto igual en ambos lados?"</em></li>
+                <li>Pruebe con ojos cerrados para evitar sesgos visuales</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Aplique estímulo doloroso bilateral (pinchazo en brazo o pierna de cada lado). Observe asimetría en la mueca facial de dolor o en la retirada de la extremidad. Ausencia de reacción unilateral = pérdida severa (puntúa 2).</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Solo puntúe déficit claro que afecte cara + brazo + pierna (hemianestesia). Pérdida aislada de un segmento puede ser previa o artefactual. Paciente afásico grave que no reacciona al dolor = puntúe 2.</p>
+            </div>`
+    },
+    language: {
+        title: '9. Mejor Lenguaje (Afasia)',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li><strong>Fluidez:</strong> pida que describa lo que ve en una imagen o su día</li>
+                <li><strong>Denominación:</strong> muestre objetos: reloj, lápiz, llave — <em>"¿Qué es esto?"</em></li>
+                <li><strong>Comprensión:</strong> órdenes simples y complejas (<em>"Señale el techo, luego la puerta"</em>)</li>
+                <li><strong>Lectura:</strong> entregue papel con "Cierre los ojos"</li>
+                <li><strong>Repetición:</strong> <em>"Ni sí, ni no, ni pero"</em></li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Si no hay respuesta verbal ni intento comunicativo y no sigue órdenes = puntúe 3 (mutismo). No confunda disartria (articulación defectuosa) con afasia (problema del lenguaje en sí). Use comunicación escrita si la disartria impide la expresión oral.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;"><strong>Broca:</strong> comprende, habla telegráfico, se frustra. <strong>Wernicke:</strong> habla fluido e incoherente, no comprende. <strong>Global:</strong> no comprende ni habla. Broca = frontal dominante; Wernicke = temporal dominante.</p>
+            </div>`
+    },
+    dysarthria: {
+        title: '10. Disartria',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li>Pida que repita palabras: <em>"Artillería"</em>, <em>"Transmisor"</em>, <em>"Caballero"</em></li>
+                <li>Pida que repita frases: <em>"Me gustaría ir de compras mañana"</em></li>
+                <li>Observe claridad de articulación, <strong>no el contenido</strong></li>
+                <li>Inteligible pero con esfuerzo visible = leve-moderada (puntúa 1)</li>
+                <li>Ininteligible o ausencia de producción verbal = severa (puntúa 2)</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Si el nivel de consciencia impide la cooperación: observe si produce vocalizaciones. Vocalización incomprensible que no corresponde a confusión = disartria severa (puntúa 2). Paciente intubado: marque 9 (no evaluable).</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;"><strong>Disartria:</strong> problema de la musculatura articulatoria (labios, lengua, paladar). <strong>Afasia:</strong> problema del lenguaje como función cortical. Un paciente afásico puede tener articulación perfectamente normal.</p>
+            </div>`
+    },
+    extinction: {
+        title: '11. Extinción e Inatención',
+        content: `
+            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px;">Pasos de exploración</p>
+            <ol style="margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.9;">
+                <li><strong>Táctil:</strong> toque simultáneamente ambas manos — <em>"¿Dónde lo toqué?"</em></li>
+                <li><strong>Visual:</strong> presente dedos simultáneamente en ambos campos visuales</li>
+                <li><strong>Auditivo:</strong> chasquee los dedos a ambos lados de la cabeza</li>
+                <li>Observe si ignora sistemáticamente estímulos de un lado cuando son bilaterales</li>
+                <li>Evalúe si el paciente reconoce su extremidad parética</li>
+            </ol>
+            <div style="background:#7c3aed11;border-left:3px solid #7c3aed;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+                <p style="font-size:12px;font-weight:700;color:#7c3aed;margin:0 0 4px;">🧠 Paciente con consciencia alterada</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Observe si gira los ojos/cabeza hacia estímulos de un solo lado e ignora el otro. Evalúe si interactúa con personas a ambos lados de la cama o solo a uno. La estimulación auditiva (chasquidos) es útil en pacientes con bajo nivel de respuesta.</p>
+            </div>
+            <div style="background:#f59e0b11;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:0 6px 6px 0;">
+                <p style="font-size:12px;font-weight:700;color:#f59e0b;margin:0 0 4px;">💡 Perla clínica</p>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">Heminegligencia sugiere lesión del hemisferio no dominante (derecho en el 90%). Un paciente puede ver cada campo visual perfectamente por separado, pero ignorar el izquierdo en estimulación bilateral simultánea (extinción). Indica peor pronóstico funcional y rehabilitación más compleja.</p>
+            </div>`
+    }
+};
+
+function showNIHSSHelp(key) {
+    const h = NIHSS_HELP[key];
+    if (!h) return;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.6);
+        display:flex;align-items:flex-start;justify-content:center;z-index:10000;
+        backdrop-filter:blur(4px);padding:20px;animation:fadeIn 0.2s ease;overflow-y:auto;`;
+
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border-radius:var(--radius-xl);padding:24px;
+                    max-width:520px;width:100%;margin:auto;box-shadow:var(--shadow-xl);
+                    animation:scaleIn 0.3s ease;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0;padding-right:12px;">
+                    🔍 ${h.title}
+                </h3>
+                <button onclick="this.closest('.nihss-help-overlay').remove()"
+                        style="background:var(--bg-secondary);border:none;width:32px;height:32px;
+                               border-radius:8px;cursor:pointer;font-size:18px;flex-shrink:0;
+                               display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">✕</button>
+            </div>
+            ${h.content}
+        </div>`;
+
+    overlay.classList.add('nihss-help-overlay');
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+}
+
 function createNIHSSForm() {
     const select = (id, options) => `
         <select id="${id}" class="form-input" style="margin-bottom: 0;">
             ${options.map((o, i) => `<option value="${i}">${i} – ${o}</option>`).join('')}
         </select>`;
 
-    const item = (label, id, options) => `
+    const item = (label, id, options, helpKey) => `
         <div style="margin-bottom: 14px;">
-            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">${label}</label>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="font-weight:600;font-size:13px;color:var(--text-primary);">${label}</label>
+                ${helpKey ? `<button type="button" onclick="showNIHSSHelp('${helpKey}')"
+                    style="font-size:11px;background:#3b82f611;border:1px solid #3b82f644;color:#3b82f6;
+                           padding:3px 10px;border-radius:12px;cursor:pointer;font-weight:600;
+                           white-space:nowrap;flex-shrink:0;">
+                    🔍 ¿Cómo explorar?
+                </button>` : ''}
+            </div>
             ${select(id, options)}
         </div>`;
 
@@ -500,38 +801,38 @@ function createNIHSSForm() {
         <form id="nihssForm" onsubmit="calculateNIHSS(event)">
             <div class="alert-box" style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
                 <p style="font-size: 13px; color: #1e3a8a; margin: 0;">
-                    <strong>ℹ️ Nota:</strong> NIHSS evalúa la severidad del ACV isquémico. Escala validada para guiar decisión de trombolisis y trombectomía mecánica.
+                    <strong>ℹ️ Nota:</strong> NIHSS evalúa la severidad del ACV isquémico. Escala validada para guiar decisión de trombolisis y trombectomía mecánica. Pulse <strong>🔍 ¿Cómo explorar?</strong> en cada ítem para ver la guía de exploración neurológica.
                 </p>
             </div>
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Conciencia</div>
-            ${item('1a. Nivel de conciencia', 'nihssLOC', ['Alerta', 'Somnoliento (estimulación menor)', 'Estuporoso (estímulo repetido)', 'Coma (sólo reflejos)'])}
-            ${item('1b. Preguntas de orientación (mes y edad)', 'nihssLOCQ', ['Ambas correctas', 'Una correcta', 'Ninguna / intubado / afásico'])}
-            ${item('1c. Órdenes motoras (ojos y mano)', 'nihssLOCC', ['Ambas correctas', 'Una correcta', 'Ninguna'])}
+            ${item('1a. Nivel de conciencia', 'nihssLOC', ['Alerta', 'Somnoliento (estimulación menor)', 'Estuporoso (estímulo repetido)', 'Coma (sólo reflejos)'], 'loc')}
+            ${item('1b. Preguntas de orientación (mes y edad)', 'nihssLOCQ', ['Ambas correctas', 'Una correcta', 'Ninguna / intubado / afásico'], 'locQ')}
+            ${item('1c. Órdenes motoras (ojos y mano)', 'nihssLOCC', ['Ambas correctas', 'Una correcta', 'Ninguna'], 'locC')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Oculomotor y Visual</div>
-            ${item('2. Mirada conjugada', 'nihssGaze', ['Normal', 'Paresia parcial (puede ser superada)', 'Desviación forzada o parálisis completa'])}
-            ${item('3. Campos visuales', 'nihssVisual', ['Sin pérdida', 'Hemianopsia parcial', 'Hemianopsia completa', 'Ceguera bilateral'])}
+            ${item('2. Mirada conjugada', 'nihssGaze', ['Normal', 'Paresia parcial (puede ser superada)', 'Desviación forzada o parálisis completa'], 'gaze')}
+            ${item('3. Campos visuales', 'nihssVisual', ['Sin pérdida', 'Hemianopsia parcial', 'Hemianopsia completa', 'Ceguera bilateral'], 'visual')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Motricidad Facial</div>
-            ${item('4. Parálisis facial', 'nihssFacial', ['Normal', 'Leve (borramiento surco nasogeniano)', 'Parcial (parálisis inferior)', 'Completa (hemiplejia facial)'])}
+            ${item('4. Parálisis facial', 'nihssFacial', ['Normal', 'Leve (borramiento surco nasogeniano)', 'Parcial (parálisis inferior)', 'Completa (hemiplejia facial)'], 'facial')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Motor Extremidades (10 s brazo / 5 s pierna)</div>
-            ${item('5a. Motor brazo izquierdo', 'nihssMAL', ['Sin caída (10 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'])}
-            ${item('5b. Motor brazo derecho', 'nihssMAR', ['Sin caída (10 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'])}
-            ${item('6a. Motor pierna izquierda', 'nihssMLegL', ['Sin caída (5 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'])}
-            ${item('6b. Motor pierna derecha', 'nihssMLegR', ['Sin caída (5 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'])}
+            ${item('5a. Motor brazo izquierdo', 'nihssMAL', ['Sin caída (10 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'], 'motorArm')}
+            ${item('5b. Motor brazo derecho', 'nihssMAR', ['Sin caída (10 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'], 'motorArm')}
+            ${item('6a. Motor pierna izquierda', 'nihssMLegL', ['Sin caída (5 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'], 'motorLeg')}
+            ${item('6b. Motor pierna derecha', 'nihssMLegR', ['Sin caída (5 s)', 'Caída sin tocar cama', 'Algo contra gravedad', 'Sin movimiento contra gravedad', 'Sin movimiento'], 'motorLeg')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Coordinación y Sensibilidad</div>
-            ${item('7. Ataxia de extremidades', 'nihssAtaxia', ['Ausente', 'En una extremidad', 'En dos extremidades'])}
-            ${item('8. Sensibilidad', 'nihssSensory', ['Normal', 'Pérdida leve-moderada (siente el pinchazo)', 'Pérdida severa o bilateral (no siente)'])}
+            ${item('7. Ataxia de extremidades', 'nihssAtaxia', ['Ausente', 'En una extremidad', 'En dos extremidades'], 'ataxia')}
+            ${item('8. Sensibilidad', 'nihssSensory', ['Normal', 'Pérdida leve-moderada (siente el pinchazo)', 'Pérdida severa o bilateral (no siente)'], 'sensory')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Lenguaje y Habla</div>
-            ${item('9. Mejor lenguaje', 'nihssLanguage', ['Normal', 'Afasia leve-moderada', 'Afasia severa (comunicación fragmentada)', 'Mutismo / afasia global'])}
-            ${item('10. Disartria', 'nihssDysarthria', ['Normal', 'Leve-moderada (inteligible)', 'Severa (ininteligible) o intubado'])}
+            ${item('9. Mejor lenguaje', 'nihssLanguage', ['Normal', 'Afasia leve-moderada', 'Afasia severa (comunicación fragmentada)', 'Mutismo / afasia global'], 'language')}
+            ${item('10. Disartria', 'nihssDysarthria', ['Normal', 'Leve-moderada (inteligible)', 'Severa (ininteligible) o intubado'], 'dysarthria')}
 
             <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 14px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;">Inatención</div>
-            ${item('11. Extinción e inatención', 'nihssExtinction', ['Normal', 'Inatención en una modalidad', 'Hemineglect severo (>1 modalidad)'])}
+            ${item('11. Extinción e inatención', 'nihssExtinction', ['Normal', 'Inatención en una modalidad', 'Hemineglect severo (>1 modalidad)'], 'extinction')}
 
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px; margin-top: 8px;">
                 🧮 Calcular NIHSS
