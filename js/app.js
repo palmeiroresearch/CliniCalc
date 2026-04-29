@@ -213,6 +213,8 @@ function loadCalculatorForm(calc) {
         case 26: container.innerHTML = createHEARTForm(); break;
         case 27: container.innerHTML = createPERCForm(); break;
         case 28: container.innerHTML = createDKAForm(); break;
+        case 29: container.innerHTML = createIVCalculatorForm(); break;
+        case 30: container.innerHTML = createAntibioticsForm(); _abShowInitial(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">

@@ -3,7 +3,7 @@
 // Metadata de las 22 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.2.6';
+const APP_VERSION = '1.2.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -313,6 +313,26 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'UCI / Crítico',
         description: 'Reposición de fluidos, electrolitos e insulina en cetoacidosis diabética (ADA 2024)',
         formulas: ['Fluidos IV', 'Potasio', 'Insulina', 'Bicarbonato']
+    },
+    {
+        id: 29,
+        name: 'Vasoactivos IV',
+        fullName: 'Calculadora de Vasoactivos IV',
+        icon: '💉',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Cálculo de tasa de infusión para 12 fármacos vasoactivos (vasopresores, inotrópicos, vasodilatadores) con dosis recomendadas y perlas clínicas',
+        formulas: ['ml/hr', 'gtt/min', 'ml/min']
+    },
+    {
+        id: 30,
+        name: 'Guía Antibiótica',
+        fullName: 'Guía de Antibioterapia Empírica',
+        icon: '💊',
+        category: 'infecciones',
+        categoryLabel: 'Infecciones',
+        description: 'Antibioterapia empírica para 29 patologías infecciosas según Sanford Guide 2024 e IDSA. Primera línea, segunda línea y alternativas en alergia.',
+        formulas: ['Primera línea', 'Segunda línea', 'Alergia']
     }
 ];
 
