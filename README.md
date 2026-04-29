@@ -87,7 +87,7 @@ Cada calculadora tiene un color de acento propio según su categoría (renal=azu
 
 ### 🎯 Pantalla Principal Personalizable
 - ⭐ Favoritos por calculadora
-- 📱 Selección de 1-10 calculadoras para pantalla principal
+- 📱 Selección de 1-15 calculadoras para pantalla principal
 - 💾 Configuración persistente en LocalStorage
 
 ---
@@ -118,7 +118,7 @@ npx http-server
 ### Configuración Inicial
 
 1. **Configura unidades** — Ajustes → Unidades de Medida → selecciona según tu región (la creatinina por defecto es µmol/L para sistema SI)
-2. **Personaliza pantalla principal** — Ajustes → Pantalla Principal → selecciona hasta 10 calculadoras
+2. **Personaliza pantalla principal** — Ajustes → Pantalla Principal → selecciona hasta 15 calculadoras
 3. **Añade favoritos** — toca ⭐ en cualquier calculadora de la biblioteca
 
 ### Historial con Datos de Paciente
@@ -244,7 +244,7 @@ El próximo ID libre es **23**.
 
 **App no funciona offline** — F12 → Application → Service Workers → "Update" para forzar actualización.
 
-**Calculadora no aparece** — Ajustes → Pantalla Principal → verificar que esté seleccionada (máx. 10).
+**Calculadora no aparece** — Ajustes → Pantalla Principal → verificar que esté seleccionada (máx. 15).
 
 **Unidades incorrectas** — Ajustes → Unidades de Medida → verificar configuración regional.
 
