@@ -1,5 +1,5 @@
 # Guía Antibiótica — Índice de Patologías
-**Total: 47 enfermedades · Última actualización: 2026-04-29**
+**Total: 67 enfermedades · Última actualización: 2026-04-29**
 Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines · WHO 2022
 
 ---
@@ -155,26 +155,25 @@ Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines 
 - [x] Fúngicas superficiales (Candidiasis oral/vaginal · Dermatofitosis/onicomicosis · Pitiriasis versicolor)
 - [x] PCP en no-VIH (trasplante + corticoides/biológicos/oncológico)
 
-### Lote 4 — `antibiotics-data-tropical.js`
-- [ ] Paludismo / Malaria (importada)
-- [ ] Leptospirosis
-- [ ] Enfermedad de Lyme
-- [ ] Rickettsiosis
-- [ ] Brucelosis
-- [ ] Fiebre Q (Coxiella burnetii)
-- [ ] Rabia (profilaxis post-exposición)
-- [ ] Tétanos (profilaxis y tratamiento)
-- [ ] Ántrax (Bacillus anthracis)
-- [ ] Tularemia
-- [ ] Leishmaniasis visceral
+### ✅ Lote 4 — `antibiotics-data-tropical.js` (COMPLETADO)
+- [x] Paludismo / Malaria (P. falciparum no complicado · grave · P. vivax/ovale con cura radical)
+- [x] Leptospirosis (leve · Enfermedad de Weil grave)
+- [x] Enfermedad de Lyme (eritema migratorio · diseminado: neuro/artritis/carditis)
+- [x] Rickettsiosis (fiebre manchada · tifus murino)
+- [x] Brucelosis (no complicada · complicada: espondilodiscitis/endocarditis)
+- [x] Fiebre Q (aguda · crónica/endocarditis — BPaLM con hidroxicloroquina)
+- [x] Rabia — PEP (no vacunado · vacunado/booster)
+- [x] Tétanos (profilaxis post-herida · tétanos establecido)
+- [x] Ántrax (cutáneo · inhalado/bioterrorismo)
+- [x] Tularemia (ulceroglandular · pulmonar/grave)
+- [x] Leishmaniasis visceral (inmunocompetente · coinfección VIH)
 
-### Lote 5 — `antibiotics-data-misc.js`
-- [ ] Gastroenteritis infecciosa (Salmonella, Campylobacter, Shigella, E. coli, Giardia, Cryptosporidium)
-- [ ] Úlcera péptica / H. pylori (triple/cuádruple terapia)
-- [ ] Pericarditis infecciosa
-- [ ] Miocarditis viral
-- [ ] Paroniquia
-- [ ] Panadizo (Whitlow)
-- [ ] Empiema subdural
-- [ ] Trombosis séptica del seno cavernoso
-- [ ] Peritonitis en diálisis peritoneal
+### ✅ Lote 5 — `antibiotics-data-misc.js` (COMPLETADO)
+- [x] Gastroenteritis bacteriana (Salmonella, Campylobacter, Shigella) + parasitaria (Giardia, Cryptosporidium, E. histolytica) + H. pylori (cuádruple terapia)
+- [x] Pericarditis infecciosa (viral/idiopática · bacteriana purulenta)
+- [x] Miocarditis viral (aguda/subaguda)
+- [x] Paroniquia (aguda bacteriana · crónica fúngica)
+- [x] Panadizo / Felón digital (bacteriano · herpético — NO incidir)
+- [x] Empiema/Absceso subdural intracraneal (post-sinusal · post-quirúrgico)
+- [x] Trombosis séptica del seno cavernoso
+- [x] Peritonitis en diálisis peritoneal (empírica IP · dirigida por cultivo)

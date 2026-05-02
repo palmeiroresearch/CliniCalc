@@ -215,6 +215,11 @@ function loadCalculatorForm(calc) {
         case 28: container.innerHTML = createDKAForm(); break;
         case 29: container.innerHTML = createIVCalculatorForm(); break;
         case 30: container.innerHTML = createAntibioticsForm(); _abShowInitial(); break;
+        case 31: container.innerHTML = createAsmaForm(); break;
+        case 32: container.innerHTML = createAsmaControlForm(); break;
+        case 33: container.innerHTML = createLESForm(); break;
+        case 34: container.innerHTML = createPAMForm(); break;
+        case 35: container.innerHTML = createCalculadoraForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
@@ -722,6 +727,15 @@ function showFullResult(itemId) {
     if (item.calculatorId === 28) {
         const r = Calculators.calculateDKA(item.inputs);
         bodyHTML = buildDKAProtocolHTML(r, item.inputs);
+    } else if (item.calculatorId === 31) {
+        const r = Calculators.calculateAsma(item.inputs);
+        bodyHTML = buildAsmaProtocolHTML(r, item.inputs);
+    } else if (item.calculatorId === 32) {
+        const r = Calculators.calculateAsmaControl(item.inputs);
+        bodyHTML = buildAsmaControlProtocolHTML(r, item.inputs);
+    } else if (item.calculatorId === 33) {
+        const r = Calculators.calculateLES(item.inputs);
+        bodyHTML = buildLESResultHTML(r, item.inputs);
     } else {
         const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
         const c = colorMap[item.interpretation?.color] || 'var(--brand-accent)';

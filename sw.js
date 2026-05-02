@@ -3,7 +3,7 @@
 // Funcionalidad Offline Completa
 // ============================================
 
-const CACHE_NAME = 'clinicalc-v1.2.7';
+const CACHE_NAME = 'clinicalc-v1.2.0';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -25,6 +25,8 @@ const ASSETS_TO_CACHE = [
     './js/antibioticos/antibiotics-data-orl.js',
     './js/antibioticos/antibiotics-data-its2.js',
     './js/antibioticos/antibiotics-data-fungal.js',
+    './js/antibioticos/antibiotics-data-tropical.js',
+    './js/antibioticos/antibiotics-data-misc.js',
     './js/antibioticos/antibiotics-index.js',
     './js/antibioticos/antibiotics-calculator.js',
     './js/ivcalc/iv-calculator.js',

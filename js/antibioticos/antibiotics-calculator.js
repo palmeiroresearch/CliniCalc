@@ -94,12 +94,12 @@ function _abAllergyCard(entry) {
         <div style="background:var(--bg-card);border:1px solid var(--border-color);
                     border-left:4px solid #ef4444;border-radius:var(--radius-md);
                     padding:12px 14px;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <p style="font-size:14px;font-weight:700;color:var(--text-primary);margin:0;">
+            <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                <p style="font-size:14px;font-weight:700;color:var(--text-primary);margin:0;flex:1;min-width:0;">
                     ${entry.drug}
                 </p>
                 <span style="font-size:10px;font-weight:700;color:#ef4444;background:#ef444420;
-                             padding:2px 8px;border-radius:20px;white-space:nowrap;">
+                             padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;">
                     Alergia a ${entry.allergyTo}
                 </span>
             </div>

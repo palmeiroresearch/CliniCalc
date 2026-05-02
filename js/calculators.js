@@ -1008,5 +1008,536 @@ const Calculators = {
             unit: 'kg',
             interpretation: { label: severity.label, color: 'danger', description: 'Protocolo CAD/CADE generado.' }
         };
+    },
+
+    // === 31. ASMA AGUDA — CRISIS BRONQUIAL === //
+    calculateAsma(inputs) {
+        let { age, weight, spo2, hr, rr, speech, accessory, wheeze, consciousness, cyanosis, fem, paco2 } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+        weight = Math.round(weight * 10) / 10;
+
+        // Criterios potencialmente fatal (GINA 2024 / BTS-SIGN 2023)
+        const fatalCriteria = [];
+        if (spo2 < 90)                              fatalCriteria.push('SpO₂ < 90%');
+        if (fem !== null && fem < 33)               fatalCriteria.push('FEM < 33%');
+        if (wheeze === 'silent')                    fatalCriteria.push('Silencio torácico');
+        if (cyanosis === 'si')                      fatalCriteria.push('Cianosis');
+        if (consciousness === 'confused')           fatalCriteria.push('Confusión / somnolencia');
+        if (paco2 !== null && paco2 >= 45)          fatalCriteria.push(`PaCO₂ ${paco2} mmHg ≥ 45 (agotamiento ventilatorio)`);
+        const isFatal = fatalCriteria.length > 0;
+
+        // Criterios graves
+        const severeCriteria = [];
+        if (!isFatal) {
+            if (spo2 >= 90 && spo2 <= 93)                       severeCriteria.push('SpO₂ 90-93%');
+            if (fem !== null && fem >= 33 && fem <= 50)          severeCriteria.push('FEM 33-50%');
+            if (speech === 'words' || speech === 'unable')       severeCriteria.push('Solo palabras / Incapaz de hablar');
+            if (hr >= 120)                                       severeCriteria.push(`FC ${hr} lpm ≥ 120`);
+            if (rr >= 25)                                        severeCriteria.push(`FR ${rr} rpm ≥ 25`);
+            if (accessory === 'si')                              severeCriteria.push('Músculos accesorios activos');
+        }
+        const isSevere = severeCriteria.length > 0;
+
+        // Criterios moderados
+        const moderateCriteria = [];
+        if (!isFatal && !isSevere) {
+            if (spo2 >= 94 && spo2 <= 96)                        moderateCriteria.push('SpO₂ 94-96%');
+            if (fem !== null && fem >= 51 && fem <= 75)          moderateCriteria.push('FEM 51-75%');
+            if (speech === 'phrases')                             moderateCriteria.push('Solo frases cortas');
+            if (hr >= 100 && hr < 120)                           moderateCriteria.push(`FC ${hr} lpm (100-119)`);
+            if (rr >= 20 && rr < 25)                             moderateCriteria.push(`FR ${rr} rpm (20-24)`);
+        }
+        const isModerate = moderateCriteria.length > 0;
+        const isMild = !isFatal && !isSevere && !isModerate;
+
+        let severity;
+        if (isFatal)         severity = { label: 'Potencialmente Fatal', colorHex: '#dc2626', badge: '🔴', level: 4 };
+        else if (isSevere)   severity = { label: 'Crisis Grave',         colorHex: '#ea580c', badge: '🟠', level: 3 };
+        else if (isModerate) severity = { label: 'Crisis Moderada',      colorHex: '#ca8a04', badge: '🟡', level: 2 };
+        else                 severity = { label: 'Crisis Leve',          colorHex: '#16a34a', badge: '🟢', level: 1 };
+
+        // Oxigenoterapia
+        const o2 = {
+            needed: spo2 < 94,
+            target: '94-98%',
+            device: (isFatal || isSevere)
+                ? 'Mascarilla Venturi 35-40% o mascarilla con reservorio'
+                : 'Gafas nasales 2-4 L/min'
+        };
+
+        // SABA — Salbutamol
+        let saba;
+        if (isFatal) {
+            saba = {
+                ivDose: '5 mcg/min → aumentar hasta 20 mcg/min si no respuesta',
+                ivPrep: '50 mg en 50 mL SF (1 mg/mL) → iniciar 0.3 mL/h · máx 1.2 mL/h',
+                nebDose: '5 mg nebulizado c/20 min (o continuo 10-15 mg/h en UCI)',
+                note: 'Monitorizar K⁺ (riesgo hipopotasemia con salbutamol IV)'
+            };
+        } else if (isSevere) {
+            saba = {
+                nebDose: '5 mg c/20 min × 3 dosis; continuo 10 mg/h si no respuesta',
+                mdiDose: '8 puffs (100 mcg/puff) c/20 min × 3 (MDI + cámara)'
+            };
+        } else {
+            saba = {
+                mdiDose: '4-8 puffs (100 mcg/puff) c/20 min × 3, luego c/1-4h según respuesta',
+                nebDose: '2.5 mg nebulizado c/20 min × 3 dosis'
+            };
+        }
+
+        // Ipratropio (grave y fatal)
+        const ipratropium = (isSevere || isFatal) ? {
+            indicated: true,
+            nebDose: '0.5 mg c/20 min × 3 dosis (primeras horas)',
+            mdiDose: '4-8 puffs (20 mcg/puff) c/20 min × 3'
+        } : { indicated: false };
+
+        // Corticosteroides
+        let cortico;
+        if (isFatal || isSevere) {
+            const mpMin = Math.round(weight * 1);
+            const mpMax = Math.min(Math.round(weight * 2), 125);
+            cortico = {
+                drug1: 'Hidrocortisona 200 mg IV c/6h',
+                drug2: `Metilprednisolona ${mpMin}-${mpMax} mg IV c/6h (1-2 mg/kg · máx 125 mg)`,
+                duration: 'Hasta tolerar VO → prednisolona 40-50 mg VO × 5-7 días',
+                note: 'Iniciar en la primera hora'
+            };
+        } else {
+            cortico = {
+                drug1: 'Prednisolona 40-50 mg VO c/24h × 5-7 días',
+                drug2: null,
+                duration: '5-7 días (no precisa pauta descendente si duración < 3 semanas)',
+                note: 'Iniciar lo antes posible'
+            };
+        }
+
+        // Sulfato de magnesio
+        const magnesio = (isSevere || isFatal) ? {
+            indicated: true,
+            dose: 'MgSO₄ 2 g IV en 20 min (diluido en 100 mL SF)',
+            when: 'Sin respuesta a broncodilatadores + corticoides en 30-60 min',
+            caution: 'Precaución en insuficiencia renal severa'
+        } : { indicated: false };
+
+        // Aminofilina (rescate, solo fatal)
+        const aminofilina = isFatal ? {
+            indicated: true,
+            loading: `${Math.round(weight * 5)} mg IV en 20 min (${weight} kg × 5 mg/kg)`,
+            loadingNote: 'Si toma teofilina: OMITIR la carga o reducir al 50%',
+            maintenance: `${Math.round(weight * 0.5 * 10) / 10} mg/h IV continua (0.5 mg/kg/h)`,
+            warning: 'Índice terapéutico estrecho · Niveles objetivo 10-20 mcg/mL · Vigilar arritmias'
+        } : { indicated: false };
+
+        // Destino
+        const admision = {
+            icu: isFatal,
+            required: isFatal || isSevere,
+            criteria: isFatal
+                ? 'UCI / Área de Críticos — Crisis potencialmente fatal'
+                : isSevere
+                ? 'Hospitalización — Crisis grave'
+                : 'Observación 1h · Alta si FEM > 75% y SpO₂ ≥ 94% en aire ambiente'
+        };
+
+        const alta = !admision.required ? {
+            applicable: true,
+            criteria: [
+                'SpO₂ ≥ 94% en aire ambiente',
+                'FEM ≥ 75% del mejor personal',
+                'Habla en frases completas',
+                'Técnica de inhalador verificada',
+                'Plan de acción escrito entregado',
+                'Control ambulatorio en 48-72h'
+            ]
+        } : { applicable: false };
+
+        return {
+            severity, o2, saba, ipratropium, cortico, magnesio, aminofilina, admision, alta,
+            isFatal, isSevere, isModerate, isMild,
+            fatalCriteria, severeCriteria, moderateCriteria,
+            weightKg: weight,
+            value: spo2, unit: '%',
+            interpretation: {
+                label: severity.label,
+                color: 'danger',
+                description: `Crisis aguda de asma: ${severity.label}. Protocolo GINA 2024 / BTS-SIGN 2023 generado.`
+            }
+        };
+    },
+
+    // === 32. CONTROL ASMA CRÓNICA — CLASIFICACIÓN Y ESCALÓN === //
+    calculateAsmaControl(inputs) {
+        const { enTratamiento, escalon, tiempoEscalon, sintomasDiurnos, sintomasNocturnos,
+                limitacion, rescate, fev1fem, exacerbaciones, ocs, tabaco } = inputs;
+
+        // ────────────────────────────────────────────────────────────
+        // A) EVALUACIÓN DE CONTROL (si en tratamiento — GINA 2024)
+        // ────────────────────────────────────────────────────────────
+        let controlScore = 0;
+        if (sintomasDiurnos === 'gt2' || sintomasDiurnos === 'daily') controlScore++;
+        if (limitacion === 'alguna' || limitacion === 'bastante' || limitacion === 'total') controlScore++;
+        if (sintomasNocturnos === 'gt2' || sintomasNocturnos === 'frequent') controlScore++;
+        if (rescate === 'gt2') controlScore++;
+
+        let control;
+        if (controlScore === 0) {
+            control = { label: 'Bien controlado', badge: '✅', colorHex: '#16a34a', level: 0 };
+        } else if (controlScore <= 2) {
+            control = { label: 'Parcialmente controlado', badge: '⚠️', colorHex: '#ca8a04', level: 1 };
+        } else {
+            control = { label: 'No controlado', badge: '🔴', colorHex: '#dc2626', level: 2 };
+        }
+
+        const femRiesgo = fev1fem === 'lt60' || fev1fem === '60-79';
+
+        // ────────────────────────────────────────────────────────────
+        // B) CLASIFICACIÓN DE SEVERIDAD (si no en tratamiento)
+        // ────────────────────────────────────────────────────────────
+        // Regla: el síntoma más grave determina la severidad
+        let severidadLevel = 0; // 0=intermitente, 1=leve, 2=moderada, 3=grave
+
+        // Síntomas diurnos
+        if (sintomasDiurnos === 'daily') severidadLevel = Math.max(severidadLevel, 3);
+        else if (sintomasDiurnos === 'gt2') severidadLevel = Math.max(severidadLevel, 2);
+        else if (sintomasDiurnos === 'lte2') severidadLevel = Math.max(severidadLevel, 1);
+
+        // Síntomas nocturnos
+        if (sintomasNocturnos === 'frequent') severidadLevel = Math.max(severidadLevel, 3);
+        else if (sintomasNocturnos === 'gt2') severidadLevel = Math.max(severidadLevel, 2);
+        else if (sintomasNocturnos === 'lte2') severidadLevel = Math.max(severidadLevel, 1);
+
+        // Limitación de actividad
+        if (limitacion === 'total') severidadLevel = Math.max(severidadLevel, 3);
+        else if (limitacion === 'bastante') severidadLevel = Math.max(severidadLevel, 2);
+        else if (limitacion === 'alguna') severidadLevel = Math.max(severidadLevel, 1);
+
+        // FEV1/FEM
+        if (fev1fem === 'lt60') severidadLevel = Math.max(severidadLevel, 3);
+        else if (fev1fem === '60-79') severidadLevel = Math.max(severidadLevel, 2);
+
+        const SEVERIDADES = [
+            { label: 'Intermitente',        colorHex: '#16a34a', badge: '🟢', escalon: 1 },
+            { label: 'Persistente Leve',    colorHex: '#ca8a04', badge: '🟡', escalon: 2 },
+            { label: 'Persistente Moderada',colorHex: '#ea580c', badge: '🟠', escalon: 3 },
+            { label: 'Persistente Grave',   colorHex: '#dc2626', badge: '🔴', escalon: 4 }
+        ];
+        const severidad = SEVERIDADES[severidadLevel];
+
+        // ────────────────────────────────────────────────────────────
+        // C) ESCALÓN RECOMENDADO
+        // ────────────────────────────────────────────────────────────
+        let escalonRec;
+        const escalonActual = enTratamiento === 'si' ? parseInt(escalon) : null;
+
+        if (enTratamiento === 'no') {
+            // Diagnóstico inicial: escalón según severidad
+            escalonRec = severidadLevel === 3 ? 4 : severidad.escalon;
+        } else {
+            // En tratamiento: ajustar según control
+            if (control.level === 2) {
+                // No controlado → subir
+                escalonRec = Math.min(escalonActual + 1, 5);
+            } else if (control.level === 0 && tiempoEscalon === 'gte3' && escalonActual > 1) {
+                // Bien controlado ≥ 3 meses → considerar bajar
+                escalonRec = escalonActual - 1;
+            } else {
+                // Parcialmente controlado o bien controlado < 3 meses → mantener
+                escalonRec = escalonActual;
+            }
+            // Factores de riesgo fuerzan al menos escalón actual
+            if ((exacerbaciones === 'gte2' || ocs === 'si') && escalonRec < escalonActual) {
+                escalonRec = escalonActual;
+            }
+        }
+
+        // Indicador de cambio
+        const cambio = escalonActual === null ? 'nuevo'
+            : escalonRec > escalonActual ? 'subir'
+            : escalonRec < escalonActual ? 'bajar'
+            : 'mantener';
+
+        // ────────────────────────────────────────────────────────────
+        // D) CONTENIDO DE CADA ESCALÓN
+        // ────────────────────────────────────────────────────────────
+        const ESCALONES = {
+            1: {
+                label: 'Escalón 1',
+                colorHex: '#16a34a',
+                controlador: null,
+                controladorAlt: null,
+                rescatador: 'ICS-Formoterol dosis baja PRN (preferido GINA 2024)',
+                rescatadorDetalle: 'Budesonida/Formoterol 160/4.5 mcg 1 inh según necesidad',
+                rescatadorAlt: 'Alternativa: Salbutamol 100 mcg 2 inh PRN (si ICS-formoterol no disponible)',
+                smart: false,
+                nota: 'Sin controlador diario necesario. Máx 2 usos/sem de rescate — si más → subir escalón.'
+            },
+            2: {
+                label: 'Escalón 2',
+                colorHex: '#16a34a',
+                controlador: 'ICS dosis baja diario (primera línea)',
+                controladorDetalle: '• Budesonida 200-400 mcg/día (1-2 inh)\n• Fluticasona propionato 100-200 mcg/día\n• Beclometasona 100-200 mcg/día',
+                controladorAlt: 'Alternativas: Montelukast 10 mg/noche (si ICS no tolerado) · ICS dosis baja antes de ejercicio',
+                rescatador: 'SABA PRN o ICS-Formoterol PRN',
+                rescatadorDetalle: 'Salbutamol 100 mcg 2 inh PRN  o  Budesonida/Formoterol 160/4.5 mcg 1 inh PRN',
+                smart: false,
+                nota: null
+            },
+            3: {
+                label: 'Escalón 3',
+                colorHex: '#ca8a04',
+                controlador: 'ICS dosis baja + LABA (primera línea)',
+                controladorDetalle: '• Budesonida/Formoterol 160/4.5 mcg 2 inh BID\n• Fluticasona/Salmeterol 100/50 mcg 1 inh BID\n• Beclometasona/Formoterol 100/6 mcg 2 inh BID',
+                controladorAlt: 'Alternativas: ICS dosis media diario · ICS + Montelukast 10 mg/noche',
+                rescatador: 'SABA PRN  o  SMART (BUD/FORM como mantenimiento y rescate)',
+                rescatadorDetalle: 'SMART — Budesonida/Formoterol 160/4.5 mcg: mismo inhalador como controlador y rescate. Reduce exacerbaciones.',
+                smart: true,
+                nota: null
+            },
+            4: {
+                label: 'Escalón 4',
+                colorHex: '#ea580c',
+                controlador: 'ICS dosis media-alta + LABA',
+                controladorDetalle: '• Budesonida 400-800 mcg/día + Formoterol\n• Fluticasona propionato 250-500 mcg/día + Salmeterol\n• Fluticasona furoato/Vilanterol 92/22 mcg 1 inh/día',
+                controladorAlt: 'Add-ons: Tiotropio 2.5 mcg/día (≥ 12a, con exacerbaciones) · Montelukast · Azitromicina 250 mg/día (asma no alérgica — requiere ECG previo)',
+                rescatador: 'SABA PRN  o  SMART si usa BUD/FORM',
+                rescatadorDetalle: 'Salbutamol 100 mcg 2 inh PRN  o  Budesonida/Formoterol PRN (SMART)',
+                smart: true,
+                nota: '⚠️ Derivar a especialista en Neumología / Alergología'
+            },
+            5: {
+                label: 'Escalón 5',
+                colorHex: '#dc2626',
+                controlador: 'ICS dosis alta + LABA + Tiotropio',
+                controladorDetalle: '• ICS alta dosis + LABA (continuar)\n• Tiotropio 2.5 mcg/día add-on\n• OCS (Prednisolona ≤ 7.5 mg/día) solo si sin otras opciones',
+                controladorAlt: null,
+                rescatador: 'SABA PRN  o  ICS-Formoterol PRN',
+                rescatadorDetalle: 'Salbutamol 100 mcg 2 inh PRN  o  Budesonida/Formoterol 160/4.5 mcg 1 inh PRN',
+                smart: false,
+                biologicos: {
+                    alergico: {
+                        fenotipo: 'Asma alérgica (IgE elevada + sensibilización alérgeno perenne)',
+                        farmacos: 'Omalizumab',
+                        indicacion: 'IgE total 30-1500 UI/mL · Sensibilización a alérgeno perenne · ≥ 6 años'
+                    },
+                    eosinofilico: {
+                        fenotipo: 'Asma eosinofílica (Eos ≥ 300/µL en sangre)',
+                        farmacos: 'Mepolizumab · Benralizumab · Tezepelumab',
+                        indicacion: 'Eos ≥ 300/µL (o ≥ 150 si corticodependiente) · Mepolizumab también en Eos < 300 si OCS-dependiente'
+                    },
+                    tipo2: {
+                        fenotipo: 'Asma tipo 2 (Eos elevados y/o FeNO alto)',
+                        farmacos: 'Dupilumab',
+                        indicacion: 'Eos ≥ 150/µL o FeNO ≥ 25 ppb · También si rinitis alérgica o dermatitis atópica comórbida'
+                    }
+                },
+                nota: '⚠️ Derivación OBLIGATORIA a Neumología / Alergología'
+            }
+        };
+
+        const escalonData = ESCALONES[escalonRec];
+
+        // Factores de riesgo adicionales
+        const riesgos = [];
+        if (exacerbaciones === 'gte2') riesgos.push('≥ 2 exacerbaciones en el último año (alto riesgo)');
+        else if (exacerbaciones === '1') riesgos.push('1 exacerbación en el último año (riesgo moderado)');
+        if (ocs === 'si') riesgos.push('Uso de OCS sistémicos en el último año');
+        if (tabaco === 'si') riesgos.push('Tabaquismo activo — reduce respuesta a ICS');
+        if (femRiesgo && enTratamiento === 'si') riesgos.push('FEV1/FEM reducido — riesgo de limitación fija del flujo');
+
+        const derivar = escalonRec >= 4 || exacerbaciones === 'gte2' || (enTratamiento === 'si' && control.level === 2 && escalonActual >= 3);
+
+        return {
+            enTratamiento, control, severidad, severidadLevel,
+            escalonActual, escalonRec, cambio,
+            escalonData, riesgos, derivar, femRiesgo, controlScore,
+            value: escalonRec, unit: `Escalón ${escalonRec}`,
+            interpretation: {
+                label: enTratamiento === 'no' ? severidad.label : control.label,
+                color: 'info',
+                description: `Asma crónica: ${enTratamiento === 'no' ? severidad.label : control.label}. Escalón recomendado: ${escalonRec}.`
+            }
+        };
+    },
+
+    // === 34. PAM — PRESIÓN ARTERIAL MEDIA === //
+    calculatePAM(inputs) {
+        const { pas, pad } = inputs;
+        const pam = Math.round((pad + (pas - pad) / 3) * 10) / 10;
+
+        let stage, label, color, description;
+        if (pam < 60) {
+            stage = '< 60 mmHg'; label = 'Hipoperfusión grave'; color = 'danger';
+            description = 'PAM crítica — perfusión de órganos comprometida. Requiere intervención inmediata: vasopresores y/o reanimación con fluidos.';
+        } else if (pam < 65) {
+            stage = '60-64 mmHg'; label = 'Límite inferior'; color = 'warning';
+            description = 'PAM en límite crítico. Por debajo del objetivo mínimo en sepsis (≥65 mmHg). Evaluar estado hemodinámico y necesidad de vasopresores.';
+        } else if (pam <= 100) {
+            stage = '65-100 mmHg'; label = 'Normal'; color = 'success';
+            description = 'PAM dentro del rango normal. Adecuada para la mayoría de pacientes. Verificar objetivos específicos según contexto clínico.';
+        } else if (pam <= 110) {
+            stage = '101-110 mmHg'; label = 'Hipertensión leve'; color = 'warning';
+            description = 'PAM elevada. Aumenta la poscarga cardíaca. Evaluar en contexto de HTA crónica, ansiedad o dolor.';
+        } else {
+            stage = '> 110 mmHg'; label = 'Hipertensión moderada-grave'; color = 'danger';
+            description = 'PAM muy elevada. Riesgo de daño de órgano diana. Evaluar urgencia/emergencia hipertensiva y necesidad de tratamiento.';
+        }
+
+        return {
+            value: pam, unit: 'mmHg',
+            interpretation: { stage, label, color, description }
+        };
+    },
+
+    // === 33. DIAGNÓSTICO LES — CRITERIOS ACR/EULAR 2019 === //
+    calculateLES(inputs) {
+        const { ana, fever, leukopenia, thrombocytopenia, hemolysis,
+                delirium, psychosis, seizures,
+                alopecia, oralUlcers, subacuteDiscoid, acuteCutaneous,
+                effusion, pericarditis, joints,
+                proteinuria, biopsy25, biopsy34,
+                antiphospholipid, complement, specificAb } = inputs;
+
+        function domMax(criteria) {
+            const pts = criteria.filter(c => c.checked).map(c => c.pts);
+            return pts.length ? Math.max(...pts) : 0;
+        }
+
+        function markDomain(criteria, domScore) {
+            let countedYet = false;
+            criteria.slice().sort((a, b) => b.pts - a.pts).forEach(cr => {
+                if (!cr.checked) { cr.counts = null; return; }
+                if (cr.pts === domScore && !countedYet) { cr.counts = true; countedYet = true; }
+                else { cr.counts = false; }
+            });
+        }
+
+        const domainDefs = [
+            {
+                key: 'constitutional', name: 'Constitucional', max: 2, icon: '🌡️',
+                criteria: [{ label: 'Fiebre >38.3°C inexplicada', pts: 2, checked: !!fever }]
+            },
+            {
+                key: 'hematological', name: 'Hematológico', max: 4, icon: '🩸',
+                criteria: [
+                    { label: 'Leucopenia <4.000/µL', pts: 3, checked: !!leukopenia },
+                    { label: 'Trombocitopenia <100.000/µL', pts: 4, checked: !!thrombocytopenia },
+                    { label: 'Hemólisis autoinmune — Coombs directo + anemia', pts: 4, checked: !!hemolysis }
+                ]
+            },
+            {
+                key: 'neuropsychiatric', name: 'Neuropsiquiátrico', max: 5, icon: '🧠',
+                criteria: [
+                    { label: 'Delirium', pts: 2, checked: !!delirium },
+                    { label: 'Psicosis', pts: 3, checked: !!psychosis },
+                    { label: 'Convulsiones', pts: 5, checked: !!seizures }
+                ]
+            },
+            {
+                key: 'mucocutaneous', name: 'Mucocutáneo', max: 6, icon: '🔴',
+                criteria: [
+                    { label: 'Alopecia no cicatricial (parcheada o difusa)', pts: 2, checked: !!alopecia },
+                    { label: 'Úlceras orales (paladar o mucosa oral)', pts: 2, checked: !!oralUlcers },
+                    { label: 'Lupus cutáneo subagudo o discoide', pts: 4, checked: !!subacuteDiscoid },
+                    { label: 'Lupus cutáneo agudo / eritema malar / fotosensibilidad', pts: 6, checked: !!acuteCutaneous }
+                ]
+            },
+            {
+                key: 'serosal', name: 'Seroso', max: 6, icon: '💧',
+                criteria: [
+                    { label: 'Derrame pleural o pericárdico', pts: 5, checked: !!effusion },
+                    { label: 'Pericarditis aguda', pts: 6, checked: !!pericarditis }
+                ]
+            },
+            {
+                key: 'musculoskeletal', name: 'Musculoesquelético', max: 6, icon: '🦴',
+                criteria: [{ label: 'Sinovitis ≥2 articulaciones o rigidez matutina ≥30 min', pts: 6, checked: !!joints }]
+            },
+            {
+                key: 'renal', name: 'Renal', max: 10, icon: '🫘',
+                criteria: [
+                    { label: 'Proteinuria >0.5 g/24h o cociente Pr/Cr >0.5', pts: 4, checked: !!proteinuria },
+                    { label: 'Biopsia renal: Nefritis lúpica clase II o V', pts: 8, checked: !!biopsy25 },
+                    { label: 'Biopsia renal: Nefritis lúpica clase III o IV', pts: 10, checked: !!biopsy34 }
+                ]
+            }
+        ];
+
+        domainDefs.forEach(d => {
+            d.score = domMax(d.criteria);
+            markDomain(d.criteria, d.score);
+        });
+
+        const sAphospho = antiphospholipid === 'positive' ? 2 : 0;
+        const sComp     = complement === 'both_low' ? 4 : complement === 'one_low' ? 3 : 0;
+        const sSpecAb   = specificAb === 'positive' ? 6 : 0;
+        const sImmuno   = sAphospho + sComp + sSpecAb;
+
+        const immunoDef = {
+            key: 'immunological', name: 'Inmunológico', max: 12, icon: '🔬',
+            score: sImmuno, isAdditive: true,
+            criteria: [
+                { label: 'Anticuerpos antifosfolípidos', pts: 2, score: sAphospho, state: antiphospholipid },
+                {
+                    label: complement === 'both_low' ? 'Complemento C3 Y C4 bajos' :
+                           complement === 'one_low'  ? 'Complemento C3 O C4 bajo'  :
+                           complement === 'normal'   ? 'Complemento normal' : 'Complemento',
+                    pts: complement === 'both_low' ? 4 : 3, score: sComp,
+                    state: complement === 'not_done' ? 'not_done' : sComp > 0 ? 'positive' : 'negative'
+                },
+                { label: 'Anti-dsDNA o Anti-Sm', pts: 6, score: sSpecAb, state: specificAb }
+            ]
+        };
+
+        const allDomains = [...domainDefs, immunoDef];
+        const totalScore = allDomains.reduce((sum, d) => sum + d.score, 0);
+
+        const anaPositive = ana === 'positive';
+        const anaNotDone  = ana === 'not_done';
+        const anaNegative = ana === 'negative';
+
+        let classification;
+        if (anaNotDone)                           classification = 'incomplete';
+        else if (anaNegative)                     classification = 'ana_negative';
+        else if (anaPositive && totalScore >= 10) classification = 'met';
+        else if (anaPositive && totalScore >= 7)  classification = 'possible';
+        else                                      classification = 'not_met';
+
+        const pendingTests = [];
+        if (anaNotDone)                           pendingTests.push({ test: 'ANA (HEp-2 ≥1:80)',                                                                pts: 'Criterio de entrada obligatorio' });
+        if (antiphospholipid === 'not_done')      pendingTests.push({ test: 'Anticuerpos antifosfolípidos (anti-CL IgG, anti-β2GPI IgG, anticoagulante lúpico)', pts: '+2 pts si positivo' });
+        if (complement === 'not_done')            pendingTests.push({ test: 'Complemento C3 y C4',                                                              pts: '+3-4 pts si bajos' });
+        if (specificAb === 'not_done')            pendingTests.push({ test: 'Anti-dsDNA y Anti-Sm',                                                             pts: '+6 pts si positivo' });
+        if (!proteinuria && !biopsy25 && !biopsy34) pendingTests.push({ test: 'Proteinuria 24h o cociente Pr/Cr',                                               pts: '+4 pts si >0.5 g/24h' });
+
+        let maxAdditional = 0;
+        if (antiphospholipid === 'not_done')      maxAdditional += 2;
+        if (complement === 'not_done')            maxAdditional += 4;
+        if (specificAb === 'not_done')            maxAdditional += 6;
+        if (!proteinuria && !biopsy25 && !biopsy34) maxAdditional += 4;
+
+        const classMap = {
+            'met':          'Cumple criterios ACR/EULAR 2019 para LES',
+            'possible':     'Score elevado — completar evaluación antes de clasificar',
+            'not_met':      'No cumple criterios ACR/EULAR 2019',
+            'incomplete':   'Score parcial — ANA pendiente',
+            'ana_negative': 'LES muy improbable (ANA negativo, sensibilidad 97-99%)'
+        };
+
+        return {
+            totalScore, classification, classLabel: classMap[classification],
+            anaPositive, anaNotDone, anaNegative,
+            pendingTests, maxAdditional,
+            domains: allDomains,
+            value: totalScore, unit: 'pts',
+            interpretation: {
+                label: classMap[classification],
+                color: classification === 'met' ? 'danger' : 'info',
+                description: `Score ACR/EULAR 2019: ${totalScore} pts. ${classMap[classification]}.`
+            }
+        };
     }
 };

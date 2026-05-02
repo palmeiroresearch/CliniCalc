@@ -3,7 +3,7 @@
 // Metadata de las 22 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.2.7';
+const APP_VERSION = '1.2.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -333,6 +333,56 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Infecciones',
         description: 'Antibioterapia empírica para 29 patologías infecciosas según Sanford Guide 2024 e IDSA. Primera línea, segunda línea y alternativas en alergia.',
         formulas: ['Primera línea', 'Segunda línea', 'Alergia']
+    },
+    {
+        id: 31,
+        name: 'Asma Aguda',
+        fullName: 'Crisis Aguda de Asma Bronquial',
+        icon: '🌬️',
+        category: 'pulmonar',
+        categoryLabel: 'Pulmonar',
+        description: 'Clasificación y protocolo de tratamiento de la crisis aguda de asma. Leve · Moderada · Grave · Potencialmente Fatal (GINA 2024, BTS-SIGN 2023).',
+        formulas: ['Severidad', 'O₂', 'Salbutamol', 'Corticoides', 'MgSO₄']
+    },
+    {
+        id: 32,
+        name: 'Control Asma',
+        fullName: 'Clasificación y Tratamiento del Asma Crónica',
+        icon: '🫁',
+        category: 'pulmonar',
+        categoryLabel: 'Pulmonar',
+        description: 'Clasifica severidad (intermitente/persistente) y recomienda escalón terapéutico 1-5 con fármacos. Dual: diagnóstico inicial + evaluación de control en seguimiento (GINA 2024).',
+        formulas: ['Severidad', 'Control GINA', 'Escalón 1-5', 'Biológicos']
+    },
+    {
+        id: 33,
+        name: 'Diagnóstico LES',
+        fullName: 'Criterios ACR/EULAR 2019 — Lupus Eritematoso Sistémico',
+        icon: '🧬',
+        category: 'otros',
+        categoryLabel: 'Otros',
+        description: 'Score ACR/EULAR 2019 para clasificación de LES. 8 dominios clínico-inmunológicos. Manejo del ANA como criterio de entrada: positivo / negativo / pendiente.',
+        formulas: ['ACR/EULAR 2019', '8 dominios', 'ANA entrada', '≥10 pts = LES']
+    },
+    {
+        id: 34,
+        name: 'PAM',
+        fullName: 'Presión Arterial Media',
+        icon: '🩸',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Presión Arterial Media (MAP). Fórmula: PAD + (PAS − PAD) / 3. Interpretación clínica con objetivos para sepsis, TCE y shock.',
+        formulas: ['PAD + (PAS − PAD) / 3']
+    },
+    {
+        id: 35,
+        name: 'Calculadora',
+        fullName: 'Calculadora General',
+        icon: '🧮',
+        category: 'otros',
+        categoryLabel: 'Otros',
+        description: 'Calculadora de uso general. Operaciones básicas, porcentaje y cambio de signo.',
+        formulas: ['+', '−', '×', '÷', '%', '±']
     }
 ];
 

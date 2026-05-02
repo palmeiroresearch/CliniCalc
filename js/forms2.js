@@ -2125,6 +2125,1325 @@ function calculateDKAProtocol(event) {
     Storage.addToHistory({ calculatorId: 28, calculatorName: 'CAD / CADE', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 31. ASMA AGUDA — CRISIS BRONQUIAL === //
+function createAsmaForm() {
+    const wUnit = Storage.getSetting('units.weight') || 'kg';
+    return `
+        <form id="asmaForm" onsubmit="calculateAsmaProtocol(event)">
+
+            <!-- Sección 1: Paciente -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Datos del Paciente</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Edad (años)</label>
+                        <input type="number" id="asmaAge" min="14" max="120" class="form-input" placeholder="ej: 35">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                        <input type="number" id="asmaWeight" required step="any" min="20" max="300" class="form-input" placeholder="ej: 70" oninput="updateAsmaLiveCalcs()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Evaluación clínica -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">⚡ Evaluación Clínica</div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">SpO₂ (%)</label>
+                        <input type="number" id="asmaSpo2" required min="60" max="100" class="form-input" placeholder="ej: 95" oninput="updateAsmaLiveCalcs()">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">FC (lpm)</label>
+                        <input type="number" id="asmaHr" required min="40" max="250" class="form-input" placeholder="ej: 110" oninput="updateAsmaLiveCalcs()">
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">FR (rpm)</label>
+                        <input type="number" id="asmaRr" required min="8" max="80" class="form-input" placeholder="ej: 22" oninput="updateAsmaLiveCalcs()">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">
+                            FEM (% mejor personal)
+                            <span style="font-size:11px; font-weight:400; color:var(--text-tertiary);">opcional</span>
+                        </label>
+                        <input type="number" id="asmaFem" min="0" max="100" class="form-input" placeholder="ej: 60" oninput="updateAsmaLiveCalcs()">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Habla</label>
+                    <select id="asmaSpeech" required class="form-input" onchange="updateAsmaLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="sentences">Frases completas</option>
+                        <option value="phrases">Solo frases cortas</option>
+                        <option value="words">Solo palabras</option>
+                        <option value="unable">Incapaz de hablar</option>
+                    </select>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Músculos accesorios</label>
+                        <select id="asmaAccessory" required class="form-input" onchange="updateAsmaLiveCalcs()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="no">No</option>
+                            <option value="si">Sí (uso activo)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Sibilancias</label>
+                        <select id="asmaWheeze" required class="form-input" onchange="updateAsmaLiveCalcs()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="expiratory">Espiratorias</option>
+                            <option value="biphasic">Bifásicas (insp + esp)</option>
+                            <option value="silent">Silencio torácico ⚠️</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Nivel de conciencia</label>
+                        <select id="asmaConsciousness" required class="form-input" onchange="updateAsmaLiveCalcs()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="alert">Alerta</option>
+                            <option value="confused">Confuso / somnoliento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Cianosis</label>
+                        <select id="asmaCyanosis" required class="form-input" onchange="updateAsmaLiveCalcs()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="no">No</option>
+                            <option value="si">Sí</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 3: Gasometría (opcional) -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">
+                    Gasometría <span style="font-size:11px; font-weight:500; text-transform:none;">(opcional)</span>
+                </div>
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PaCO₂ (mmHg)</label>
+                    <input type="number" id="asmaPaco2" min="10" max="100" step="0.1" class="form-input" placeholder="ej: 38 — ≥ 45 indica agotamiento ventilatorio" oninput="updateAsmaLiveCalcs()">
+                    <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">PaCO₂ normal o elevada en crisis grave = fallo ventilatorio inminente</p>
+                </div>
+            </div>
+
+            <!-- Clasificación en tiempo real -->
+            <div id="asmaLiveCalcs"></div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en GINA 2024 · BTS-SIGN 2023 · ERS/ATS 2022.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                ⚡ Generar Protocolo de Tratamiento
+            </button>
+        </form>
+        <div id="asmaResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function updateAsmaLiveCalcs() {
+    const container = document.getElementById('asmaLiveCalcs');
+    if (!container) return;
+
+    const spo2Val  = document.getElementById('asmaSpo2').value;
+    const hrVal    = document.getElementById('asmaHr').value;
+    const rrVal    = document.getElementById('asmaRr').value;
+    const femVal   = document.getElementById('asmaFem').value;
+    const paco2Val = document.getElementById('asmaPaco2').value;
+    const speech        = document.getElementById('asmaSpeech').value;
+    const accessory     = document.getElementById('asmaAccessory').value;
+    const wheeze        = document.getElementById('asmaWheeze').value;
+    const consciousness = document.getElementById('asmaConsciousness').value;
+    const cyanosis      = document.getElementById('asmaCyanosis').value;
+
+    const spo2  = spo2Val  !== '' ? parseFloat(spo2Val)  : null;
+    const hr    = hrVal    !== '' ? parseFloat(hrVal)    : null;
+    const rr    = rrVal    !== '' ? parseFloat(rrVal)    : null;
+    const fem   = femVal   !== '' ? parseFloat(femVal)   : null;
+    const paco2 = paco2Val !== '' ? parseFloat(paco2Val) : null;
+
+    const anyFilled = spo2 !== null || hr !== null || rr !== null || fem !== null || speech || wheeze || consciousness || cyanosis;
+    if (!anyFilled) { container.innerHTML = ''; return; }
+
+    const fatal = [];
+    if (spo2 !== null && spo2 < 90)    fatal.push(`SpO₂ ${spo2}% (<90%)`);
+    if (fem !== null && fem < 33)       fatal.push(`FEM ${fem}% (<33%)`);
+    if (wheeze === 'silent')            fatal.push('Silencio torácico');
+    if (cyanosis === 'si')              fatal.push('Cianosis');
+    if (consciousness === 'confused')   fatal.push('Confuso/somnoliento');
+    if (paco2 !== null && paco2 >= 45)  fatal.push(`PaCO₂ ${paco2} mmHg (≥45)`);
+
+    const severe = [];
+    if (!fatal.length) {
+        if (spo2 !== null && spo2 >= 90 && spo2 <= 93)     severe.push(`SpO₂ ${spo2}% (90-93%)`);
+        if (fem !== null && fem >= 33 && fem <= 50)          severe.push(`FEM ${fem}% (33-50%)`);
+        if (speech === 'words' || speech === 'unable')        severe.push('Solo palabras / Incapaz de hablar');
+        if (hr !== null && hr >= 120)                         severe.push(`FC ${hr} lpm (≥120)`);
+        if (rr !== null && rr >= 25)                          severe.push(`FR ${rr} rpm (≥25)`);
+        if (accessory === 'si')                               severe.push('Músculos accesorios activos');
+    }
+
+    const moderate = [];
+    if (!fatal.length && !severe.length) {
+        if (spo2 !== null && spo2 >= 94 && spo2 <= 96)      moderate.push(`SpO₂ ${spo2}% (94-96%)`);
+        if (fem !== null && fem >= 51 && fem <= 75)           moderate.push(`FEM ${fem}% (51-75%)`);
+        if (speech === 'phrases')                              moderate.push('Solo frases cortas');
+        if (hr !== null && hr >= 100 && hr < 120)             moderate.push(`FC ${hr} lpm (100-119)`);
+        if (rr !== null && rr >= 20 && rr < 25)               moderate.push(`FR ${rr} rpm (20-24)`);
+    }
+
+    let badge, label, color, criteria;
+    if (fatal.length)        { badge = '🔴'; label = 'POTENCIALMENTE FATAL'; color = '#dc2626'; criteria = fatal; }
+    else if (severe.length)  { badge = '🟠'; label = 'GRAVE';                color = '#ea580c'; criteria = severe; }
+    else if (moderate.length){ badge = '🟡'; label = 'MODERADA';             color = '#ca8a04'; criteria = moderate; }
+    else                     { badge = '🟢'; label = 'LEVE';                 color = '#16a34a'; criteria = []; }
+
+    container.innerHTML = `
+        <div style="background:${color}22; border:1px solid ${color}55; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:700; color:${color}; margin-bottom:${criteria.length ? 6 : 0}px;">${badge} Clasificación estimada: ${label}</div>
+            ${criteria.length
+                ? `<div style="font-size:12px; color:${color}cc; line-height:1.6;">Criterios: ${criteria.join(' · ')}</div>`
+                : '<div style="font-size:12px; color:#9ca3af;">Complete los campos para refinar la clasificación</div>'
+            }
+        </div>`;
+}
+
+function buildAsmaProtocolHTML(r, inputs) {
+    const { severity, o2, saba, ipratropium, cortico, magnesio, aminofilina, admision, alta, isFatal, isSevere } = r;
+    const c = severity.colorHex;
+    let sn = 1;
+
+    function section(icon, title, color, content) {
+        return `
+        <div style="background:${color}18; border:1px solid ${color}33; border-radius:10px; margin-bottom:12px; overflow:hidden;">
+            <div style="background:${color}28; border-bottom:1px solid ${color}33; padding:11px 16px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:17px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:13px 16px; font-size:13px; line-height:1.85; color:var(--text-primary);">${content}</div>
+        </div>`;
+    }
+
+    // Header
+    let html = `
+    <div style="background:${c}; border-radius:12px; padding:20px; margin-bottom:16px; color:white;">
+        <div style="font-size:12px; font-weight:600; opacity:0.85; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Crisis Aguda de Asma Bronquial</div>
+        <div style="font-size:22px; font-weight:800; margin-bottom:12px;">${severity.badge} ${severity.label}</div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; font-size:12px;">
+            ${inputs.spo2   ? `<div><div style="opacity:0.75;">SpO₂</div><div style="font-weight:700;">${inputs.spo2}%</div></div>` : ''}
+            ${inputs.hr     ? `<div><div style="opacity:0.75;">FC</div><div style="font-weight:700;">${inputs.hr} lpm</div></div>` : ''}
+            ${inputs.rr     ? `<div><div style="opacity:0.75;">FR</div><div style="font-weight:700;">${inputs.rr} rpm</div></div>` : ''}
+            ${inputs.fem    ? `<div><div style="opacity:0.75;">FEM</div><div style="font-weight:700;">${inputs.fem}%</div></div>` : ''}
+            ${inputs.paco2  ? `<div><div style="opacity:0.75;">PaCO₂</div><div style="font-weight:700;">${inputs.paco2} mmHg</div></div>` : ''}
+            ${r.weightKg    ? `<div><div style="opacity:0.75;">Peso</div><div style="font-weight:700;">${r.weightKg} kg</div></div>` : ''}
+        </div>
+    </div>`;
+
+    if (isFatal) {
+        html += `<div style="background:#7f1d1d; border:1px solid #ef4444; border-radius:10px; padding:14px; margin-bottom:12px; color:#fca5a5;">
+            🚨 <strong>CRISIS POTENCIALMENTE FATAL</strong> — Activar equipo de emergencias · Preparar vía aérea · Ingreso en UCI inmediato
+        </div>`;
+    }
+
+    if (inputs.wheeze === 'silent') {
+        html += `<div style="background:#431407; border:1px solid #f97316; border-radius:10px; padding:14px; margin-bottom:12px; color:#fdba74;">
+            ⚠️ <strong>Silencio torácico:</strong> Obstrucción crítica — ausencia de sibilancias NO indica mejoría. Fallo ventilatorio inminente. Evaluar intubación de urgencia.
+        </div>`;
+    }
+
+    // 1. Oxigenoterapia
+    html += section('💨', `${sn++}. Oxigenoterapia`, '#3b82f6',
+        o2.needed
+            ? `<b>Iniciar O₂</b> — Objetivo: SpO₂ ${o2.target}<br><b>Dispositivo:</b> ${o2.device}`
+            : `SpO₂ ${inputs.spo2}% — O₂ suplementario no requerido inicialmente. Monitorizar SpO₂ continuamente.`
+    );
+
+    // 2. Salbutamol
+    let sabaContent;
+    if (isFatal) {
+        sabaContent = `<b>Salbutamol IV:</b> ${saba.ivDose}<br>
+            <b>Preparación:</b> ${saba.ivPrep}<br>
+            <b>Nebulizado simultáneo:</b> ${saba.nebDose}<br>
+            <span style="color:#f87171;">⚠️ ${saba.note}</span>`;
+    } else if (isSevere) {
+        sabaContent = `<b>Nebulizado:</b> ${saba.nebDose}<br>
+            <b>Alternativa MDI + cámara:</b> ${saba.mdiDose}`;
+    } else {
+        sabaContent = `<b>MDI + cámara espaciadora:</b> ${saba.mdiDose}<br>
+            <b>Alternativa nebulizado:</b> ${saba.nebDose}`;
+    }
+    html += section('🫁', `${sn++}. Salbutamol (SABA)`, '#22c55e', sabaContent);
+
+    // 3. Ipratropio (condicional)
+    if (ipratropium.indicated) {
+        html += section('🔵', `${sn++}. Ipratropio (Anticolinérgico)`, '#8b5cf6',
+            `<b>Nebulizado:</b> ${ipratropium.nebDose}<br>
+             <b>MDI + cámara:</b> ${ipratropium.mdiDose}<br>
+             Puede combinarse con salbutamol en el mismo nebulizador`);
+    }
+
+    // 4. Corticosteroides
+    let corticoContent = `<b>${cortico.drug1}</b>`;
+    if (cortico.drug2) corticoContent += `<br>o bien <b>${cortico.drug2}</b>`;
+    corticoContent += `<br><b>Duración:</b> ${cortico.duration}<br><span style="color:#fbbf24;">⏱️ ${cortico.note}</span>`;
+    html += section('💊', `${sn++}. Corticosteroides`, '#f59e0b', corticoContent);
+
+    // 5. MgSO4 (condicional)
+    if (magnesio.indicated) {
+        html += section('🧲', `${sn++}. Sulfato de Magnesio`, '#06b6d4',
+            `<b>Dosis:</b> ${magnesio.dose}<br>
+             <b>Cuándo:</b> ${magnesio.when}<br>
+             <b>Precaución:</b> ${magnesio.caution}`);
+    }
+
+    // 6. Aminofilina (condicional, solo fatal)
+    if (aminofilina.indicated) {
+        html += section('⚠️', `${sn++}. Aminofilina (2ª línea — rescate)`, '#dc2626',
+            `<b>Carga:</b> ${aminofilina.loading}<br>
+             <span style="color:#f87171;">${aminofilina.loadingNote}</span><br>
+             <b>Mantenimiento:</b> ${aminofilina.maintenance}<br>
+             <span style="color:#fbbf24;">⚠️ ${aminofilina.warning}</span>`);
+    }
+
+    // Destino y monitorización
+    let admiContent;
+    if (admision.icu) {
+        admiContent = `🔴 <b>INGRESO EN UCI / ÁREA DE CRÍTICOS</b><br>${admision.criteria}<br><br>
+            <b>Monitorización:</b> ECG continuo · SpO₂ · Capnografía · Gasometría seriada · IOT si deterioro`;
+    } else if (admision.required) {
+        admiContent = `🟠 <b>INGRESO HOSPITALARIO</b><br>${admision.criteria}<br><br>
+            <b>Reevaluar a los 30-60 min:</b> SpO₂ · FC · FR · FEM<br>
+            <b>Criterios de alta diferida:</b> FEM ≥ 50% + SpO₂ ≥ 94% estable`;
+    } else {
+        admiContent = `🟢 <b>Alta a domicilio</b> si cumple todos los criterios tras observación:<br>
+            ${alta.criteria.map(x => `• ${x}`).join('<br>')}`;
+    }
+    html += section('📋', `${sn++}. Destino y Monitorización`, '#64748b', admiContent);
+
+    html += `<div style="font-size:11px; color:#64748b; text-align:right; margin-top:4px; padding:0 4px;">
+        GINA 2024 · BTS-SIGN 2023 · ERS/ATS 2022</div>`;
+
+    return html;
+}
+
+function calculateAsmaProtocol(event) {
+    event.preventDefault();
+    const ageRaw   = document.getElementById('asmaAge').value;
+    const femRaw   = document.getElementById('asmaFem').value;
+    const paco2Raw = document.getElementById('asmaPaco2').value;
+    const inputs = {
+        age:           ageRaw   !== '' ? parseFloat(ageRaw)   : null,
+        weight:        parseFloat(document.getElementById('asmaWeight').value),
+        spo2:          parseFloat(document.getElementById('asmaSpo2').value),
+        hr:            parseFloat(document.getElementById('asmaHr').value),
+        rr:            parseFloat(document.getElementById('asmaRr').value),
+        speech:        document.getElementById('asmaSpeech').value,
+        accessory:     document.getElementById('asmaAccessory').value,
+        wheeze:        document.getElementById('asmaWheeze').value,
+        consciousness: document.getElementById('asmaConsciousness').value,
+        cyanosis:      document.getElementById('asmaCyanosis').value,
+        fem:           femRaw   !== '' ? parseFloat(femRaw)   : null,
+        paco2:         paco2Raw !== '' ? parseFloat(paco2Raw) : null,
+    };
+    const r = Calculators.calculateAsma(inputs);
+    const container = document.getElementById('asmaResult');
+    container.innerHTML = buildAsmaProtocolHTML(r, inputs) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('asmaForm').reset(); document.getElementById('asmaResult').style.display='none'; document.getElementById('asmaLiveCalcs').innerHTML='';" style="width:100%; margin-top:12px;">
+            🔄 Nueva Evaluación
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 31, calculatorName: 'Asma Aguda', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 32. CONTROL ASMA CRÓNICA — CLASIFICACIÓN Y ESCALÓN === //
+function createAsmaControlForm() {
+    return `
+        <form id="asmaControlForm" onsubmit="calculateAsmaControlProtocol(event)">
+
+            <!-- Sección 1: Situación actual -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Situación Actual</div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">¿El paciente está actualmente en tratamiento para asma?</label>
+                    <select id="acEnTratamiento" required class="form-input" onchange="updateAsmaControlLiveCalcs(); _acToggleTratamiento(this.value)">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="no">No — Diagnóstico inicial / Virgen a tratamiento</option>
+                        <option value="si">Sí — Ya está en tratamiento</option>
+                    </select>
+                </div>
+
+                <div id="acTratamientoFields" style="display:none;">
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Escalón actual</label>
+                            <select id="acEscalon" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                                <option value="1">Escalón 1 — Solo rescate PRN</option>
+                                <option value="2">Escalón 2 — ICS dosis baja</option>
+                                <option value="3">Escalón 3 — ICS + LABA</option>
+                                <option value="4">Escalón 4 — ICS alta dosis + LABA</option>
+                                <option value="5">Escalón 5 — Biológicos / add-ons</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Tiempo en escalón actual</label>
+                            <select id="acTiempoEscalon" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                                <option value="lt3">< 3 meses</option>
+                                <option value="gte3">≥ 3 meses</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Síntomas últimas 4 semanas -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Síntomas — Últimas 4 Semanas</div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Síntomas diurnos</label>
+                    <select id="acSintomasDiurnos" required class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="none">Ninguno</option>
+                        <option value="lte2">≤ 2 días/semana</option>
+                        <option value="gt2">> 2 días/sem (pero no diarios)</option>
+                        <option value="daily">Diarios o continuos</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Despertares nocturnos</label>
+                    <select id="acSintomasNocturnos" required class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="none">Ninguno</option>
+                        <option value="lte2">≤ 2 veces/mes</option>
+                        <option value="gt2">> 2 veces/mes (pero no semanales)</option>
+                        <option value="frequent">Frecuentes — ≥ 1 vez/semana</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Limitación de actividad</label>
+                    <select id="acLimitacion" required class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="none">Ninguna</option>
+                        <option value="alguna">Alguna</option>
+                        <option value="bastante">Bastante</option>
+                        <option value="total">Importante / Total</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Uso de inhalador de rescate</label>
+                    <select id="acRescate" required class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="lte2">≤ 2 días/semana</option>
+                        <option value="gt2">> 2 días/semana</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sección 3: Función pulmonar (opcional) -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">
+                    Función Pulmonar <span style="font-size:11px; font-weight:500; text-transform:none;">(opcional)</span>
+                </div>
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">FEV1 o FEM (% del predicho)</label>
+                    <select id="acFev1fem" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="none">No disponible / No medido</option>
+                        <option value="gte80">≥ 80% — Normal</option>
+                        <option value="60-79">60-79% — Reducido</option>
+                        <option value="lt60">< 60% — Muy reducido</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sección 4: Factores de riesgo -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Factores de Riesgo</div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Exacerbaciones en el último año</label>
+                    <select id="acExacerbaciones" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                        <option value="none">Ninguna</option>
+                        <option value="1">1 exacerbación</option>
+                        <option value="gte2">≥ 2 exacerbaciones</option>
+                    </select>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">OCS sistémicos en el último año</label>
+                        <select id="acOcs" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                            <option value="no">No</option>
+                            <option value="si">Sí</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Tabaquismo activo</label>
+                        <select id="acTabaco" class="form-input" onchange="updateAsmaControlLiveCalcs()">
+                            <option value="no">No</option>
+                            <option value="si">Sí (fumador activo)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live calcs -->
+            <div id="acLiveCalcs"></div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚕️ Herramienta de apoyo clínico</strong> — Verificar siempre la técnica inhalatoria y adherencia antes de subir escalón. Fuentes: GINA 2024 · SEPAR 2023 · ALAT 2023.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🫁 Generar Recomendación de Tratamiento
+            </button>
+        </form>
+        <div id="acResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function _acToggleTratamiento(val) {
+    const el = document.getElementById('acTratamientoFields');
+    if (el) el.style.display = val === 'si' ? 'block' : 'none';
+}
+
+function updateAsmaControlLiveCalcs() {
+    const container = document.getElementById('acLiveCalcs');
+    if (!container) return;
+
+    const enTrat  = document.getElementById('acEnTratamiento').value;
+    const diurnos = document.getElementById('acSintomasDiurnos').value;
+    const noct    = document.getElementById('acSintomasNocturnos').value;
+    const lim     = document.getElementById('acLimitacion').value;
+    const resc    = document.getElementById('acRescate').value;
+
+    if (!enTrat || !diurnos || !noct || !lim || !resc) {
+        container.innerHTML = '';
+        return;
+    }
+
+    // Control score (GINA)
+    let score = 0;
+    if (diurnos === 'gt2' || diurnos === 'daily') score++;
+    if (lim !== 'none') score++;
+    if (noct === 'gt2' || noct === 'frequent') score++;
+    if (resc === 'gt2') score++;
+
+    let badge, label, color;
+    if (score === 0)       { badge = '✅'; label = 'Bien controlado';          color = '#16a34a'; }
+    else if (score <= 2)   { badge = '⚠️'; label = 'Parcialmente controlado'; color = '#ca8a04'; }
+    else                   { badge = '🔴'; label = 'No controlado';            color = '#dc2626'; }
+
+    const criterios = [];
+    if (score > 0) {
+        if (diurnos === 'gt2' || diurnos === 'daily') criterios.push('Síntomas diurnos > 2 días/sem');
+        if (lim !== 'none') criterios.push('Limitación de actividad');
+        if (noct === 'gt2' || noct === 'frequent') criterios.push('Despertares nocturnos');
+        if (resc === 'gt2') criterios.push('Rescate > 2 días/sem');
+    }
+
+    container.innerHTML = `
+        <div style="background:${color}22; border:1px solid ${color}55; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:700; color:${color}; margin-bottom:${criterios.length ? 6 : 0}px;">${badge} Control estimado: ${label} (${score}/4 criterios)</div>
+            ${criterios.length
+                ? `<div style="font-size:12px; color:${color}cc; line-height:1.6;">Criterios presentes: ${criterios.join(' · ')}</div>`
+                : '<div style="font-size:12px; color:#9ca3af;">Ningún criterio de mal control — asma bien controlada</div>'
+            }
+        </div>`;
+}
+
+function buildAsmaControlProtocolHTML(r, inputs) {
+    const { enTratamiento, control, severidad, escalonActual, escalonRec, cambio,
+            escalonData, riesgos, derivar, controlScore } = r;
+    const c = escalonData.colorHex;
+    let sn = 1;
+
+    function section(icon, title, color, content) {
+        return `
+        <div style="background:${color}18; border:1px solid ${color}33; border-radius:10px; margin-bottom:12px; overflow:hidden;">
+            <div style="background:${color}28; border-bottom:1px solid ${color}33; padding:11px 16px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:17px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:13px 16px; font-size:13px; line-height:1.85; color:var(--text-primary);">${content}</div>
+        </div>`;
+    }
+
+    // Header
+    const esNuevo  = enTratamiento === 'no';
+    const cambioIcon = cambio === 'subir' ? '⬆️' : cambio === 'bajar' ? '⬇️' : cambio === 'mantener' ? '↔️' : '▶️';
+    const cambioLabel = cambio === 'subir' ? 'Subir escalón' : cambio === 'bajar' ? 'Bajar escalón' : cambio === 'mantener' ? 'Mantener escalón' : 'Escalón inicial';
+
+    let html = `
+    <div style="background:${c}; border-radius:12px; padding:20px; margin-bottom:16px; color:white;">
+        <div style="font-size:12px; font-weight:600; opacity:0.85; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">
+            ${esNuevo ? 'Clasificación y Tratamiento del Asma' : 'Control del Asma — Seguimiento'}
+        </div>
+        <div style="font-size:20px; font-weight:800; margin-bottom:6px;">
+            ${esNuevo ? `${severidad.badge} ${severidad.label}` : `${control.badge} ${control.label}`}
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.9; margin-bottom:10px;">
+            ${escalonActual ? `<span>Escalón ${escalonActual}</span><span>${cambioIcon}</span>` : ''}
+            <span style="font-weight:700; font-size:16px;">${escalonData.label} ${cambioIcon} ${cambioLabel}</span>
+        </div>
+        ${!esNuevo ? `<div style="font-size:12px; opacity:0.8;">${controlScore}/4 criterios de mal control</div>` : ''}
+    </div>`;
+
+    // Derivación urgente
+    if (derivar) {
+        html += `<div style="background:#431407; border:1px solid #f97316; border-radius:10px; padding:14px; margin-bottom:12px; color:#fdba74;">
+            🏥 <strong>Derivar a Neumología / Alergología</strong> — Escalón 4-5 o asma de difícil control. Evaluar fenotipo para biológicos.
+        </div>`;
+    }
+
+    // 1. Evaluación de control (solo si en tratamiento)
+    if (!esNuevo) {
+        const ajuste = cambio === 'subir'
+            ? `Subir a ${escalonData.label}: asma no controlada con tratamiento actual. Antes de subir: verificar técnica inhalatoria y adherencia.`
+            : cambio === 'bajar'
+            ? `Considerar bajar a ${escalonData.label}: bien controlada ≥ 3 meses. Reducir 25-50% dosis ICS. Reevaluar en 4-6 semanas.`
+            : `Mantener ${escalonData.label}: continuar tratamiento actual. Reevaluar en 3-6 meses.`;
+        html += section('📊', `${sn++}. Evaluación de Control`, c,
+            `<b>Control:</b> ${control.badge} ${control.label} (${controlScore}/4 criterios)<br>
+             <b>Recomendación:</b> ${ajuste}`);
+    }
+
+    // 2. Controlador
+    if (escalonData.controlador) {
+        let ctContent = `<b>${escalonData.controlador}</b><br>
+            <div style="white-space:pre-line; margin: 6px 0 6px 8px;">${escalonData.controladorDetalle}</div>`;
+        if (escalonData.controladorAlt) {
+            ctContent += `<br><b>Opciones adicionales:</b> ${escalonData.controladorAlt}`;
+        }
+        if (escalonData.smart) {
+            ctContent += `<br><span style="color:#38bdf8;"><b>💡 SMART disponible:</b> ${escalonData.rescatadorDetalle}</span>`;
+        }
+        html += section('💊', `${sn++}. Medicación Controladora`, c, ctContent);
+    } else {
+        html += section('💊', `${sn++}. Medicación Controladora`, '#16a34a',
+            'Sin controlador diario necesario en Escalón 1. Si se usa rescate > 2 días/semana de forma consistente → subir a Escalón 2.');
+    }
+
+    // 3. Rescatador
+    const rescContent = `<b>${escalonData.rescatador}</b><br>${escalonData.rescatadorDetalle}`;
+    html += section('🫁', `${sn++}. Inhalador de Rescate (SABA / ICS-Formoterol)`, '#3b82f6', rescContent);
+
+    // 4. Biológicos (solo escalón 5)
+    if (escalonRec === 5 && escalonData.biologicos) {
+        const bio = escalonData.biologicos;
+        const bioContent = `
+            <div style="margin-bottom:10px; padding:10px; background:#7c3aed22; border-radius:8px;">
+                <div style="font-weight:700; color:#a78bfa; margin-bottom:4px;">🧬 ${bio.alergico.fenotipo}</div>
+                <b>Fármaco:</b> ${bio.alergico.farmacos}<br>
+                <b>Indicación:</b> ${bio.alergico.indicacion}
+            </div>
+            <div style="margin-bottom:10px; padding:10px; background:#dc262622; border-radius:8px;">
+                <div style="font-weight:700; color:#f87171; margin-bottom:4px;">🔬 ${bio.eosinofilico.fenotipo}</div>
+                <b>Fármacos:</b> ${bio.eosinofilico.farmacos}<br>
+                <b>Indicación:</b> ${bio.eosinofilico.indicacion}
+            </div>
+            <div style="padding:10px; background:#0284c722; border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:4px;">💉 ${bio.tipo2.fenotipo}</div>
+                <b>Fármaco:</b> ${bio.tipo2.farmacos}<br>
+                <b>Indicación:</b> ${bio.tipo2.indicacion}
+            </div>`;
+        html += section('🧬', `${sn++}. Biológicos por Fenotipo (Escalón 5)`, '#7c3aed', bioContent);
+    }
+
+    // 5. Factores de riesgo
+    if (riesgos.length) {
+        html += section('⚠️', `${sn++}. Factores de Riesgo Identificados`, '#f59e0b',
+            riesgos.map(r => `• ${r}`).join('<br>'));
+    }
+
+    // 6. Medidas no farmacológicas
+    html += section('📋', `${sn++}. Medidas No Farmacológicas`, '#64748b',
+        `• <b>Técnica inhalatoria:</b> Revisar en cada visita (hasta 80% usan mal el inhalador)<br>
+         • <b>Adherencia:</b> Clave antes de subir escalón<br>
+         • <b>Evitar desencadenantes:</b> Alérgenos (polvo, ácaros, pollen), AINE/AAS, humo de tabaco, RGE<br>
+         • <b>Vacunas:</b> Gripe anual · Neumococo (si ≥ 65a o escalón ≥ 3) · COVID<br>
+         ${inputs.tabaco === 'si' ? '• <span style="color:#f87171;"><b>🚬 Cesación tabáquica urgente</b> — reduce respuesta al tratamiento y progresión de la enfermedad</span><br>' : ''}
+         • <b>Plan de acción escrito:</b> Instrucciones para crisis leve y cuándo acudir a urgencias`);
+
+    html += `<div style="font-size:11px; color:#64748b; text-align:right; margin-top:4px; padding:0 4px;">
+        GINA 2024 · SEPAR 2023 · ALAT 2023</div>`;
+
+    return html;
+}
+
+function calculateAsmaControlProtocol(event) {
+    event.preventDefault();
+    const enTrat = document.getElementById('acEnTratamiento').value;
+    const inputs = {
+        enTratamiento:     enTrat,
+        escalon:           document.getElementById('acEscalon').value,
+        tiempoEscalon:     document.getElementById('acTiempoEscalon').value,
+        sintomasDiurnos:   document.getElementById('acSintomasDiurnos').value,
+        sintomasNocturnos: document.getElementById('acSintomasNocturnos').value,
+        limitacion:        document.getElementById('acLimitacion').value,
+        rescate:           document.getElementById('acRescate').value,
+        fev1fem:           document.getElementById('acFev1fem').value,
+        exacerbaciones:    document.getElementById('acExacerbaciones').value,
+        ocs:               document.getElementById('acOcs').value,
+        tabaco:            document.getElementById('acTabaco').value,
+    };
+    const r = Calculators.calculateAsmaControl(inputs);
+    const container = document.getElementById('acResult');
+    container.innerHTML = buildAsmaControlProtocolHTML(r, inputs) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('asmaControlForm').reset(); document.getElementById('acResult').style.display='none'; document.getElementById('acLiveCalcs').innerHTML=''; _acToggleTratamiento('');" style="width:100%; margin-top:12px;">
+            🔄 Nueva Evaluación
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 32, calculatorName: 'Control Asma', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 35. CALCULADORA GENERAL === //
+// Estado global de la calculadora
+let _cV = '0', _cPrev = null, _cOp = null, _cWait = false, _cExpr = '';
+
+function _cUpdate() {
+    const d = document.getElementById('calcDisplay');
+    if (!d) return;
+
+    // Poner el texto primero para poder medir scrollWidth
+    d.textContent = _cV;
+
+    // Reducir fuente hasta que quepa, o dejar que se salga por la izquierda (Apple)
+    const sizes = [80, 66, 52, 40, 30];
+    for (const sz of sizes) {
+        d.style.fontSize = sz + 'px';
+        if (d.scrollWidth <= d.clientWidth || sz === 30) break;
+    }
+
+    // Operator buttons: active = white bg + orange text; normal = orange bg + white text
+    const opIds = { '÷':'calcOpD', '×':'calcOpX', '−':'calcOpS', '+':'calcOpA' };
+    Object.entries(opIds).forEach(([sym, id]) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        const isActive = _cOp === sym && _cWait;
+        b.style.background = isActive ? '#ffffff' : '#FF9F0A';
+        b.style.color      = isActive ? '#FF9F0A' : '#ffffff';
+    });
+
+    // AC / C toggle
+    const acBtn = document.getElementById('calcBtnAC');
+    if (acBtn) acBtn.textContent = (_cV === '0' && _cPrev === null) ? 'AC' : 'C';
+}
+
+function calcNum(d) {
+    if (_cV === 'Error') return;
+    if (_cWait) { _cV = String(d); _cWait = false; }
+    else { _cV = _cV === '0' ? String(d) : _cV + d; }
+    if (_cV.replace(/[-.]/, '').length > 12) { _cV = _cV.slice(0, -1); return; }
+    _cUpdate();
+}
+
+function calcDot() {
+    if (_cWait) { _cV = '0.'; _cWait = false; }
+    else if (!_cV.includes('.')) { _cV += '.'; }
+    _cUpdate();
+}
+
+function calcClear() {
+    if (_cV !== '0') {
+        _cV = '0';                                              // C: solo borra entrada actual
+    } else {
+        _cPrev = null; _cOp = null; _cWait = false; _cExpr = ''; // AC: borra todo
+    }
+    _cUpdate();
+}
+
+function calcBack() {
+    if (_cWait || _cV === 'Error') { _cV = '0'; _cWait = false; _cUpdate(); return; }
+    _cV = _cV.length > 1 ? _cV.slice(0, -1) : '0';
+    _cUpdate();
+}
+
+function calcSign() {
+    if (_cV === '0' || _cV === 'Error') return;
+    _cV = _cV.startsWith('-') ? _cV.slice(1) : '-' + _cV;
+    _cUpdate();
+}
+
+function calcPct() {
+    const v = parseFloat(_cV);
+    const result = _cPrev !== null && _cOp ? _cPrev * v / 100 : v / 100;
+    _cV = String(parseFloat(result.toFixed(10)));
+    _cWait = true;
+    _cUpdate();
+}
+
+function calcOp(op) {
+    if (_cV === 'Error') return;
+    const v = parseFloat(_cV);
+    if (_cPrev !== null && !_cWait) {
+        const res = _cCalc(_cPrev, v, _cOp);
+        if (!isFinite(res)) { _cV = 'Error'; _cPrev = 0; }
+        else {
+            const abs = Math.abs(res);
+            _cV = (abs !== 0 && (abs >= 1e13 || abs < 1e-7))
+                ? parseFloat(res.toPrecision(10)).toString()
+                : String(parseFloat(res.toFixed(10)));
+            _cPrev = parseFloat(_cV);
+        }
+    } else {
+        _cPrev = v;
+    }
+    _cOp = op;
+    _cWait = true;
+    _cExpr = _cV + ' ' + op;
+    _cUpdate();
+}
+
+function calcEq() {
+    if (_cV === 'Error' || _cOp === null || _cPrev === null) return;
+    const v = parseFloat(_cV);
+    const res = _cCalc(_cPrev, v, _cOp);
+    _cExpr = '';
+    if (!isFinite(res)) {
+        _cV = res === Infinity ? 'Error' : 'Error';
+    } else {
+        const abs = Math.abs(res);
+        if (abs !== 0 && (abs >= 1e13 || abs < 1e-7)) {
+            // Notación científica para números muy grandes o muy pequeños
+            _cV = parseFloat(res.toPrecision(10)).toString();
+        } else {
+            _cV = String(parseFloat(res.toFixed(10)));
+        }
+    }
+    _cPrev = null; _cOp = null; _cWait = true;
+    _cUpdate();
+}
+
+function _cCalc(a, b, op) {
+    if (op === '+') return a + b;
+    if (op === '−') return a - b;
+    if (op === '×') return a * b;
+    if (op === '÷') return b === 0 ? Infinity : a / b;
+    return b;
+}
+
+function createCalculadoraForm() {
+    _cV = '0'; _cPrev = null; _cOp = null; _cWait = false; _cExpr = '';
+
+    // Press feedback via brightness
+    const tap = `onpointerdown="this.style.filter='brightness(1.5)'" onpointerup="this.style.filter='none'" onpointerleave="this.style.filter='none'"`;
+
+    // Base style for all buttons
+    const circle = `border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:filter 0.08s;width:100%;aspect-ratio:1/1;border-radius:50%;`;
+
+    // Number buttons — dark gray, white text
+    const nb = (lbl, fn) =>
+        `<button onclick="${fn}" ${tap} style="${circle}background:#333;color:#fff;font-size:30px;font-weight:400;">${lbl}</button>`;
+
+    // Utility buttons (AC/C, ±, %) — light gray, black text
+    const ub = (lbl, fn, id = '') =>
+        `<button ${id ? `id="${id}"` : ''} onclick="${fn}" ${tap} style="${circle}background:#a5a5a5;color:#000;font-size:${lbl.length > 1 ? '22px' : '28px'};font-weight:500;">${lbl}</button>`;
+
+    // Operator buttons — Apple orange, toggled by _cUpdate
+    const ob = (lbl, fn, id) =>
+        `<button id="${id}" onclick="${fn}" ${tap} style="${circle}background:#FF9F0A;color:#fff;font-size:34px;font-weight:300;">${lbl}</button>`;
+
+    // Wide pill 0 — spans 2 columns, left-padded
+    const wideZero = `<button onclick="calcNum('0')" ${tap}
+        style="border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
+               grid-column:span 2;background:#333;color:#fff;font-size:30px;font-weight:400;
+               border-radius:999px;display:flex;align-items:center;padding-left:28px;
+               transition:filter 0.08s;">0</button>`;
+
+    return `
+        <div style="background:#000;border-radius:20px;overflow:hidden;max-width:380px;margin:0 auto;user-select:none;">
+
+            <!-- Display -->
+            <div style="padding:28px 24px 20px;min-height:150px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;">
+                <div id="calcDisplay"
+                     style="font-size:80px;font-weight:200;color:#fff;line-height:1;
+                            white-space:nowrap;overflow:hidden;text-align:right;width:100%;">0</div>
+            </div>
+
+            <!-- Botones -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:13px;padding:4px 16px 24px;">
+
+                ${ub('AC', 'calcClear()', 'calcBtnAC')}
+                ${ub('±',  'calcSign()')}
+                ${ub('%',  'calcPct()')}
+                ${ob('÷',  "calcOp('÷')", 'calcOpD')}
+
+                ${nb('7', "calcNum('7')")}
+                ${nb('8', "calcNum('8')")}
+                ${nb('9', "calcNum('9')")}
+                ${ob('×', "calcOp('×')", 'calcOpX')}
+
+                ${nb('4', "calcNum('4')")}
+                ${nb('5', "calcNum('5')")}
+                ${nb('6', "calcNum('6')")}
+                ${ob('−', "calcOp('−')", 'calcOpS')}
+
+                ${nb('1', "calcNum('1')")}
+                ${nb('2', "calcNum('2')")}
+                ${nb('3', "calcNum('3')")}
+                ${ob('+', "calcOp('+')", 'calcOpA')}
+
+                ${wideZero}
+                ${nb('.', 'calcDot()')}
+                ${ob('=', 'calcEq()', 'calcBtnEq')}
+
+            </div>
+        </div>
+    `;
+}
+
+// === 34. PAM — PRESIÓN ARTERIAL MEDIA === //
+function createPAMForm() {
+    return `
+        <form id="pamForm" onsubmit="calculatePAM(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:14px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Tensión Arterial</div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                        <input type="number" id="pamPas" required min="40" max="300" class="form-input" placeholder="ej: 120" oninput="updatePAMLive()">
+                        <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">Sistólica</p>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAD (mmHg)</label>
+                        <input type="number" id="pamPad" required min="20" max="200" class="form-input" placeholder="ej: 80" oninput="updatePAMLive()">
+                        <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">Diastólica</p>
+                    </div>
+                </div>
+
+                <div id="pamLive"></div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:14px; border-radius:10px; margin-bottom:14px; font-size:12px; color:var(--text-secondary); line-height:1.7;">
+                <strong>Objetivos clínicos orientativos:</strong><br>
+                ≥ 65 mmHg — Shock séptico (SSC 2021) · UCI general<br>
+                ≥ 70 mmHg — Shock cardiogénico<br>
+                ≥ 80 mmHg — TCE grave · HTA crónica previa
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🩸 Calcular PAM
+            </button>
+        </form>
+        <div id="pamResult" style="display:none; margin-top:20px;"></div>
+    `;
+}
+
+function updatePAMLive() {
+    const el = document.getElementById('pamLive');
+    if (!el) return;
+    const pas = parseFloat(document.getElementById('pamPas').value);
+    const pad = parseFloat(document.getElementById('pamPad').value);
+    if (isNaN(pas) || isNaN(pad)) { el.innerHTML = ''; return; }
+    const pam = Math.round((pad + (pas - pad) / 3) * 10) / 10;
+    const color = pam < 60 ? '#ef4444' : pam < 65 ? '#f59e0b' : pam <= 100 ? '#22c55e' : '#f59e0b';
+    el.innerHTML = `
+        <div style="background:${color}20; border:1px solid ${color}55; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; font-weight:600; color:${color};">PAM estimada</span>
+            <span style="font-size:20px; font-weight:800; color:${color};">${pam} <span style="font-size:13px; font-weight:500;">mmHg</span></span>
+        </div>`;
+}
+
+function calculatePAM(event) {
+    event.preventDefault();
+    const inputs = {
+        pas: parseFloat(document.getElementById('pamPas').value),
+        pad: parseFloat(document.getElementById('pamPad').value)
+    };
+    const r = Calculators.calculatePAM(inputs);
+    const colors = { danger: '#ef4444', warning: '#f59e0b', success: '#22c55e' };
+    const c = colors[r.interpretation.color] || '#64748b';
+    document.getElementById('pamResult').innerHTML = `
+        <div style="background:${c}; border-radius:12px; padding:20px; margin-bottom:14px; color:white;">
+            <div style="font-size:12px; font-weight:600; opacity:0.85; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Presión Arterial Media</div>
+            <div style="font-size:48px; font-weight:900; line-height:1; margin-bottom:6px;">${r.value} <span style="font-size:18px; font-weight:500;">mmHg</span></div>
+            <div style="font-size:15px; font-weight:700;">${r.interpretation.stage} — ${r.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); border-left:4px solid ${c}; padding:16px; border-radius:10px; margin-bottom:14px;">
+            <p style="font-size:13px; color:var(--text-primary); margin:0; line-height:1.6;">${r.interpretation.description}</p>
+        </div>
+        <div style="background:var(--bg-secondary); padding:14px; border-radius:10px; margin-bottom:14px; font-size:12px; color:var(--text-secondary); line-height:1.7;">
+            <strong style="color:var(--text-primary);">Fórmula:</strong> PAM = PAD + (PAS − PAD) / 3 = ${inputs.pad} + (${inputs.pas} − ${inputs.pad}) / 3 = <strong>${r.value} mmHg</strong>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('pamForm').reset(); document.getElementById('pamResult').style.display='none'; document.getElementById('pamLive').innerHTML='';" style="width:100%;">
+            🔄 Nuevo Cálculo
+        </button>`;
+    document.getElementById('pamResult').style.display = 'block';
+    Storage.addToHistory({ calculatorId: 34, calculatorName: 'PAM', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 33. DIAGNÓSTICO LES — CRITERIOS ACR/EULAR 2019 === //
+function createLESForm() {
+    // Helper: genera una sección de dominio con checkboxes individuales
+    // items: [[id, label, pts, nota?], ...]
+    function domCheck(icon, title, max, items) {
+        return `
+        <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">${icon} ${title}</div>
+                <span style="font-size:11px; color:var(--text-tertiary); background:var(--bg-card); padding:2px 8px; border-radius:12px;">máx ${max} pts</span>
+            </div>
+            <p style="font-size:11px; color:var(--text-tertiary); margin-top:3px; margin-bottom:12px;">Marque todos los presentes — suma solo el de mayor puntuación</p>
+            ${items.map(([id, label, pts, note]) => `
+            <label style="display:flex; align-items:flex-start; gap:10px; padding:10px; border-radius:8px; cursor:pointer; margin-bottom:5px; background:var(--bg-card);">
+                <input type="checkbox" id="${id}" onchange="updateLESLiveCalcs()" style="margin-top:2px; flex-shrink:0; width:16px; height:16px; accent-color:#7c3aed; cursor:pointer;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:13px; font-weight:500; color:var(--text-primary);">${label}</div>
+                    ${note ? `<div style="font-size:11px; color:var(--text-tertiary); margin-top:2px;">${note}</div>` : ''}
+                </div>
+                <div style="font-size:12px; font-weight:700; color:#7c3aed; flex-shrink:0; padding-left:8px;">${pts} pts</div>
+            </label>`).join('')}
+        </div>`;
+    }
+
+    return `
+        <form id="lesForm" onsubmit="calculateLESForm(event)">
+
+            <!-- ANA: criterio de entrada obligatorio -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; border:2px solid #3b82f655;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="font-size:13px; font-weight:700; color:#3b82f6; text-transform:uppercase; letter-spacing:0.05em;">🔬 Criterio de Entrada</div>
+                    <span style="font-size:11px; background:#3b82f622; color:#3b82f6; padding:2px 8px; border-radius:12px; font-weight:600;">obligatorio</span>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Anticuerpos Antinucleares (ANA)</label>
+                    <select id="lesAna" required class="form-input" onchange="updateLESLiveCalcs()">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="positive">✅ Positivo ≥1:80 (HEp-2 o técnica equivalente validada)</option>
+                        <option value="negative">❌ Negativo &lt;1:80</option>
+                        <option value="not_done">⚠️ No realizado aún</option>
+                    </select>
+                    <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">ANA ≥1:80 es requisito obligatorio para clasificación formal ACR/EULAR 2019</p>
+                </div>
+            </div>
+
+            <!-- Dominios clínicos — checkboxes individuales (suma solo el mayor por dominio) -->
+            ${domCheck('🌡️', 'Constitucional', 2, [
+                ['lesFever', 'Fiebre >38.3°C inexplicada', 2, 'Descartar infección u otra causa']
+            ])}
+
+            ${domCheck('🩸', 'Hematológico', 4, [
+                ['lesLeukopenia',       'Leucopenia <4.000/µL', 3, null],
+                ['lesThrombocytopenia', 'Trombocitopenia <100.000/µL', 4, null],
+                ['lesHemolysis',        'Hemólisis autoinmune', 4, 'Coombs directo positivo + anemia hemolítica']
+            ])}
+
+            ${domCheck('🧠', 'Neuropsiquiátrico', 5, [
+                ['lesDelirium',  'Delirium', 2, 'Excluir causas metabólicas, tóxicas o infecciosas'],
+                ['lesPsychosis', 'Psicosis', 3, null],
+                ['lesSeizures',  'Convulsiones', 5, null]
+            ])}
+
+            ${domCheck('🔴', 'Mucocutáneo', 6, [
+                ['lesAlopecia',        'Alopecia no cicatricial (parcheada o difusa)', 2, null],
+                ['lesOralUlcers',      'Úlceras orales (paladar o mucosa oral)', 2, null],
+                ['lesSubacuteDiscoid', 'Lupus cutáneo subagudo o discoide', 4, null],
+                ['lesAcuteCutaneous',  'Lupus cutáneo agudo — eritema malar / rash fotosensible', 6, null]
+            ])}
+
+            ${domCheck('💧', 'Seroso', 6, [
+                ['lesEffusion',     'Derrame pleural o pericárdico (sin otra causa)', 5, null],
+                ['lesPericarditis', 'Pericarditis aguda (≥2: dolor, roce, ST difuso, derrame)', 6, null]
+            ])}
+
+            ${domCheck('🦴', 'Musculoesquelético', 6, [
+                ['lesJoints', 'Sinovitis ≥2 articulaciones o rigidez matutina ≥30 min', 6, null]
+            ])}
+
+            ${domCheck('🫘', 'Renal', 10, [
+                ['lesProteinuria', 'Proteinuria >0.5 g/24h o cociente Pr/Cr >0.5', 4, null],
+                ['lesBiopsy25',    'Biopsia renal: Nefritis lúpica clase II o V', 8, null],
+                ['lesBiopsy34',    'Biopsia renal: Nefritis lúpica clase III o IV', 10, null]
+            ])}
+
+            <!-- Dominio inmunológico: selects (mantienen "No realizado" como estado distinto de negativo) -->
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">🔬 Inmunológico</div>
+                    <span style="font-size:11px; color:var(--text-tertiary); background:var(--bg-card); padding:2px 8px; border-radius:12px;">máx 12 pts · 3 categorías aditivas</span>
+                </div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-top:3px; margin-bottom:14px;">Estas 3 categorías se suman entre sí (a diferencia de los dominios clínicos)</p>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Anticuerpos antifosfolípidos <span style="font-weight:400; color:var(--text-tertiary);">(+2 pts si positivo)</span></label>
+                    <select id="lesAntiphospholipid" class="form-input" onchange="updateLESLiveCalcs()">
+                        <option value="not_done">No realizado</option>
+                        <option value="negative">Negativos</option>
+                        <option value="positive">Positivos — anti-CL IgG >40 GPL · anti-β2GPI IgG >40 U · o anticoagulante lúpico</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Complemento <span style="font-weight:400; color:var(--text-tertiary);">(+3 o +4 pts)</span></label>
+                    <select id="lesComplement" class="form-input" onchange="updateLESLiveCalcs()">
+                        <option value="not_done">No realizado</option>
+                        <option value="normal">Normal — C3 y C4 en rango</option>
+                        <option value="one_low">C3 O C4 bajo — 3 pts</option>
+                        <option value="both_low">C3 Y C4 ambos bajos — 4 pts</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Anticuerpos específicos LES <span style="font-weight:400; color:var(--text-tertiary);">(+6 pts)</span></label>
+                    <select id="lesSpecificAb" class="form-input" onchange="updateLESLiveCalcs()">
+                        <option value="not_done">No realizado</option>
+                        <option value="negative">Negativos</option>
+                        <option value="positive">Anti-dsDNA positivo (≥90% especificidad) O Anti-Sm positivo</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Score en tiempo real -->
+            <div id="lesLiveCalcs"></div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Criterios de <em>clasificación</em>, no de diagnóstico definitivo. Marque solo criterios sin explicación alternativa más probable. Basado en: Aringer M et al., Arthritis Rheumatol 2019.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧬 Calcular Score ACR/EULAR 2019
+            </button>
+        </form>
+        <div id="lesResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function updateLESLiveCalcs() {
+    const container = document.getElementById('lesLiveCalcs');
+    if (!container) return;
+
+    const ana = document.getElementById('lesAna').value;
+    if (!ana) { container.innerHTML = ''; return; }
+
+    const ck = id => document.getElementById(id)?.checked || false;
+
+    const sc  = ck('lesFever') ? 2 : 0;
+    const sh  = Math.max(ck('lesLeukopenia') ? 3 : 0, ck('lesThrombocytopenia') ? 4 : 0, ck('lesHemolysis') ? 4 : 0);
+    const sn  = Math.max(ck('lesDelirium') ? 2 : 0, ck('lesPsychosis') ? 3 : 0, ck('lesSeizures') ? 5 : 0);
+    const sm  = Math.max(ck('lesAlopecia') ? 2 : 0, ck('lesOralUlcers') ? 2 : 0, ck('lesSubacuteDiscoid') ? 4 : 0, ck('lesAcuteCutaneous') ? 6 : 0);
+    const ss  = Math.max(ck('lesEffusion') ? 5 : 0, ck('lesPericarditis') ? 6 : 0);
+    const smu = ck('lesJoints') ? 6 : 0;
+    const sr  = Math.max(ck('lesProteinuria') ? 4 : 0, ck('lesBiopsy25') ? 8 : 0, ck('lesBiopsy34') ? 10 : 0);
+
+    const aphospho = document.getElementById('lesAntiphospholipid').value;
+    const comp     = document.getElementById('lesComplement').value;
+    const specAb   = document.getElementById('lesSpecificAb').value;
+    const sap = aphospho === 'positive' ? 2 : 0;
+    const sco = comp === 'both_low' ? 4 : comp === 'one_low' ? 3 : 0;
+    const sab = specAb === 'positive' ? 6 : 0;
+    const total   = sc + sh + sn + sm + ss + smu + sr + sap + sco + sab;
+    const pending = [aphospho, comp, specAb].filter(v => v === 'not_done').length;
+
+    let badge, label, color;
+    if (ana === 'not_done')                     { badge = '⚠️'; label = 'Score parcial — ANA pendiente';            color = '#2563eb'; }
+    else if (ana === 'negative')                { badge = '⬜'; label = 'ANA negativo — LES muy improbable';        color = '#475569'; }
+    else if (ana === 'positive' && total >= 10) { badge = '🧬'; label = 'Cumple criterios ACR/EULAR 2019 para LES'; color = '#7c3aed'; }
+    else if (ana === 'positive' && total >= 7)  { badge = '🟡'; label = 'Score elevado — completar evaluación';      color = '#ca8a04'; }
+    else                                        { badge = '🟢'; label = 'Score bajo — no cumple criterios';          color = '#16a34a'; }
+
+    container.innerHTML = `
+        <div style="background:${color}22; border:1px solid ${color}55; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="font-size:13px; font-weight:700; color:${color};">${badge} ${label}</div>
+                <div style="font-size:22px; font-weight:800; color:${color};">${total}<span style="font-size:12px; font-weight:500;"> pts</span></div>
+            </div>
+            <div style="font-size:12px; color:${color}cc;">
+                Umbral: ≥10 pts + ANA positivo${pending > 0 ? ` · ${pending} test${pending > 1 ? 's' : ''} inmunológico${pending > 1 ? 's' : ''} pendiente${pending > 1 ? 's' : ''}` : ''}
+            </div>
+        </div>`;
+}
+
+function buildLESResultHTML(r, inputs) {
+    const { totalScore, classification, classLabel, pendingTests, maxAdditional, domains } = r;
+
+    const colorMap = {
+        'met':          '#7c3aed',
+        'possible':     '#ca8a04',
+        'not_met':      '#16a34a',
+        'incomplete':   '#2563eb',
+        'ana_negative': '#475569'
+    };
+    const c = colorMap[classification] || '#64748b';
+
+    const badgeMap = {
+        'met':          '🧬 CUMPLE CRITERIOS ACR/EULAR 2019',
+        'possible':     '🟡 SCORE ELEVADO — EVALUACIÓN INCOMPLETA',
+        'not_met':      '🟢 NO CUMPLE CRITERIOS',
+        'incomplete':   '⚠️ EVALUACIÓN INCOMPLETA',
+        'ana_negative': '⬜ ANA NEGATIVO'
+    };
+
+    // Header
+    let html = `
+    <div style="background:${c}; border-radius:12px; padding:20px; margin-bottom:16px; color:white;">
+        <div style="font-size:12px; font-weight:600; opacity:0.85; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Lupus Eritematoso Sistémico — Clasificación</div>
+        <div style="font-size:16px; font-weight:800; margin-bottom:10px;">${badgeMap[classification]}</div>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:6px;">
+            <span style="font-size:44px; font-weight:900; line-height:1;">${totalScore}</span>
+            <span style="font-size:15px; opacity:0.85;">pts &nbsp;/&nbsp; umbral ≥10 + ANA positivo</span>
+        </div>
+        <div style="font-size:13px; opacity:0.9;">${classLabel}</div>
+    </div>`;
+
+    // ANA alerts
+    if (r.anaNotDone) {
+        html += `<div style="background:#1e3a5f; border:1px solid #3b82f6; border-radius:10px; padding:14px; margin-bottom:12px; color:#93c5fd;">
+            ⚠️ <strong>ANA no realizado</strong> — Es el criterio de entrada obligatorio según ACR/EULAR 2019. Sin ANA no puede emitirse clasificación definitiva. Solicitar urgente.
+        </div>`;
+    } else if (r.anaNegative) {
+        html += `<div style="background:#1e293b; border:1px solid #64748b; border-radius:10px; padding:14px; margin-bottom:12px; color:#94a3b8;">
+            ❌ <strong>ANA negativo</strong> — Descarta LES con sensibilidad del 97-99%. No se aplica la clasificación ACR/EULAR 2019.<br>
+            <span style="font-size:11px;">Excepción rara: LES ANA-negativo (&lt;1% de casos). Si la sospecha clínica es muy alta, repetir ANA en distinto laboratorio/técnica.</span>
+        </div>`;
+    }
+
+    // Domain breakdown
+    html += `
+    <div style="background:var(--bg-secondary); border-radius:10px; padding:16px; margin-bottom:12px;">
+        <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Desglose por Dominio</div>
+        ${domains.map(d => {
+            const checkedCriteria = d.isAdditive
+                ? d.criteria.filter(cr => cr.state !== 'not_done')
+                : d.criteria.filter(cr => cr.checked);
+            return `
+            <div style="padding:9px 0; border-bottom:1px solid rgba(148,163,184,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center; ${checkedCriteria.length ? 'margin-bottom:5px;' : ''}">
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${d.icon} ${d.name}</div>
+                    <div style="font-size:15px; font-weight:700; color:${d.score > 0 ? c : 'var(--text-tertiary)'};">
+                        ${d.score}<span style="font-size:11px; font-weight:400; color:var(--text-tertiary);"> / ${d.max}</span>
+                    </div>
+                </div>
+                ${d.isAdditive
+                    ? d.criteria.map(cr => {
+                        const isNotDone = cr.state === 'not_done';
+                        const isPos     = cr.score > 0;
+                        const col = isNotDone ? '#64748b' : isPos ? c : '#475569';
+                        const icon = isNotDone ? '○' : isPos ? '✓' : '✗';
+                        return `<div style="display:flex; justify-content:space-between; padding:2px 0 2px 14px; font-size:12px; color:${col};">
+                            <span>${icon} ${cr.label}${isNotDone ? ' — pendiente' : ''}</span>
+                            <span style="margin-left:8px; white-space:nowrap;">${isNotDone ? '? pts' : isPos ? `+${cr.score} pts` : '0 pts'}</span>
+                        </div>`;
+                    }).join('')
+                    : checkedCriteria.map(cr => {
+                        const col = cr.counts ? c : '#64748b';
+                        return `<div style="display:flex; justify-content:space-between; padding:2px 0 2px 14px; font-size:12px; color:${col};">
+                            <span>${cr.counts ? '✓' : '↳'} ${cr.label}</span>
+                            <span style="margin-left:8px; white-space:nowrap;">${cr.pts} pts${cr.counts ? '' : ' — no suma'}</span>
+                        </div>`;
+                    }).join('')
+                }
+            </div>`;
+        }).join('')}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 0 0; border-top:2px solid ${c}44; margin-top:4px;">
+            <div style="font-size:14px; font-weight:700; color:var(--text-primary);">TOTAL</div>
+            <div style="font-size:22px; font-weight:800; color:${c};">${totalScore} pts</div>
+        </div>
+    </div>`;
+
+    // Pending tests
+    if (pendingTests.length > 0) {
+        html += `
+        <div style="background:var(--bg-secondary); border:1px solid #f59e0b44; border-radius:10px; padding:14px; margin-bottom:12px;">
+            <div style="font-size:13px; font-weight:700; color:#fbbf24; margin-bottom:8px;">📋 Tests pendientes que podrían modificar el resultado</div>
+            ${maxAdditional > 0 ? `<div style="font-size:12px; color:#d97706; margin-bottom:10px; padding:6px 10px; background:#f59e0b22; border-radius:6px;">Hasta +${maxAdditional} pts adicionales posibles si positivos</div>` : ''}
+            ${pendingTests.map(t => `
+            <div style="padding:6px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+                <div style="font-size:13px; color:var(--text-primary);">→ ${t.test}</div>
+                <div style="font-size:11px; color:#d97706; padding-left:12px;">${t.pts}</div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    // Differential diagnosis (ANA negative)
+    if (r.anaNegative) {
+        html += `
+        <div style="background:var(--bg-secondary); border-radius:10px; padding:14px; margin-bottom:12px;">
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Diagnósticos alternativos a considerar</div>
+            <div style="font-size:13px; line-height:1.9; color:var(--text-primary);">
+                • Enfermedad mixta del tejido conectivo (EMTC) — anti-U1-RNP<br>
+                • Síndrome de Sjögren primario — anti-Ro/SSA, anti-La/SSB<br>
+                • Artritis reumatoide — FR, anti-CCP<br>
+                • Vasculitis ANCA-asociada — ANCA c/p<br>
+                • Lupus inducido por fármacos — anti-histona<br>
+                • Síndrome antifosfolípido primario
+            </div>
+        </div>`;
+    }
+
+    // Referral
+    if (classification === 'met' || classification === 'possible' || (r.anaNotDone && totalScore >= 5)) {
+        html += `
+        <div style="background:#1e3a2f; border:1px solid #22c55e33; border-radius:10px; padding:14px; margin-bottom:12px; color:#86efac;">
+            👨‍⚕️ <strong>Derivar a Reumatología</strong><br>
+            <span style="font-size:12px;">Los criterios ACR/EULAR 2019 son de <em>clasificación</em> (no diagnóstico definitivo). El diagnóstico clínico, la evaluación de actividad y el plan terapéutico requieren valoración especializada.</span>
+        </div>`;
+    }
+
+    html += `<div style="font-size:11px; color:#64748b; text-align:right; margin-top:4px; padding:0 4px;">
+        ACR/EULAR 2019 · Aringer M et al., Arthritis Rheumatol 2019;71:1400-1412</div>`;
+
+    return html;
+}
+
+function calculateLESForm(event) {
+    event.preventDefault();
+    const ck = id => document.getElementById(id)?.checked || false;
+    const inputs = {
+        ana:               document.getElementById('lesAna').value,
+        fever:             ck('lesFever'),
+        leukopenia:        ck('lesLeukopenia'),
+        thrombocytopenia:  ck('lesThrombocytopenia'),
+        hemolysis:         ck('lesHemolysis'),
+        delirium:          ck('lesDelirium'),
+        psychosis:         ck('lesPsychosis'),
+        seizures:          ck('lesSeizures'),
+        alopecia:          ck('lesAlopecia'),
+        oralUlcers:        ck('lesOralUlcers'),
+        subacuteDiscoid:   ck('lesSubacuteDiscoid'),
+        acuteCutaneous:    ck('lesAcuteCutaneous'),
+        effusion:          ck('lesEffusion'),
+        pericarditis:      ck('lesPericarditis'),
+        joints:            ck('lesJoints'),
+        proteinuria:       ck('lesProteinuria'),
+        biopsy25:          ck('lesBiopsy25'),
+        biopsy34:          ck('lesBiopsy34'),
+        antiphospholipid:  document.getElementById('lesAntiphospholipid').value,
+        complement:        document.getElementById('lesComplement').value,
+        specificAb:        document.getElementById('lesSpecificAb').value,
+    };
+    const r = Calculators.calculateLES(inputs);
+    const container = document.getElementById('lesResult');
+    container.innerHTML = buildLESResultHTML(r, inputs) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('lesForm').reset(); document.getElementById('lesResult').style.display='none'; document.getElementById('lesLiveCalcs').innerHTML='';" style="width:100%; margin-top:12px;">
+            🔄 Nueva Evaluacion
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 33, calculatorName: 'Diagnóstico LES', inputs, result: r, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);
