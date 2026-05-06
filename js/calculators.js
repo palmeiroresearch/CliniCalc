@@ -1541,6 +1541,164 @@ const Calculators = {
         };
     },
 
+    // === 39. EPOC — CLASIFICACIÓN Y TRATAMIENTO (GOLD 2025) === //
+    calculateEPOC(inputs) {
+        const { fev1fvc, fev1, cat, mmrc, exacMod, hospitalization, eos } = inputs;
+
+        // FEV1/FVC post-BD
+        const fev1fvcNum = parseFloat(fev1fvc);
+        const fev1fvcOk   = !isNaN(fev1fvcNum) && fev1fvcNum < 0.70;
+        const fev1fvcHigh = !isNaN(fev1fvcNum) && fev1fvcNum >= 0.70;
+        const fev1fvcND   = !fev1fvc || fev1fvc === '';
+
+        // GOLD spirometric grade (only if FEV1/FVC < 0.70)
+        const fev1Num = parseFloat(fev1);
+        let goldGrade = null, goldLabel = null, goldColor = null;
+        if (fev1fvcOk && !isNaN(fev1Num) && fev1Num > 0) {
+            if (fev1Num >= 80)      { goldGrade = 1; goldLabel = 'GOLD 1 — Leve';      goldColor = '#22c55e'; }
+            else if (fev1Num >= 50) { goldGrade = 2; goldLabel = 'GOLD 2 — Moderada';  goldColor = '#f59e0b'; }
+            else if (fev1Num >= 30) { goldGrade = 3; goldLabel = 'GOLD 3 — Grave';     goldColor = '#f97316'; }
+            else                   { goldGrade = 4; goldLabel = 'GOLD 4 — Muy grave';  goldColor = '#ef4444'; }
+        }
+
+        // CAT Score (8 ítems, 0–5 cada uno)
+        const catArr = Array.isArray(cat) ? cat.map(v => parseInt(v) || 0) : [];
+        const catScore = catArr.length === 8 ? catArr.reduce((a, b) => a + b, 0) : null;
+        let catLevel = null, catColor = null;
+        if (catScore !== null) {
+            if (catScore <= 10)      { catLevel = 'Leve (≤10)';      catColor = '#22c55e'; }
+            else if (catScore <= 20) { catLevel = 'Moderado (11–20)'; catColor = '#f59e0b'; }
+            else if (catScore <= 30) { catLevel = 'Grave (21–30)';    catColor = '#f97316'; }
+            else                    { catLevel = 'Muy grave (>30)';  catColor = '#ef4444'; }
+        }
+
+        // mMRC
+        const mmrcNum = mmrc !== '' && mmrc !== null && mmrc !== undefined ? parseInt(mmrc) : null;
+        const mmrcLabels = [
+            'Solo con ejercicio intenso',
+            'Al caminar rápido o en pendiente leve',
+            'Camina más despacio o para al ritmo propio',
+            'Para tras ~100 m o pocos minutos en llano',
+            'Demasiada disnea para salir de casa o vestirse'
+        ];
+
+        // Symptom burden
+        const highSymptoms = (catScore !== null && catScore >= 10) || (mmrcNum !== null && mmrcNum >= 2);
+
+        // Exacerbations
+        const exacModNum = parseInt(exacMod) || 0;
+        const hospitBool = hospitalization === true || hospitalization === 'true';
+        const frequentExac = exacModNum >= 2 || hospitBool;
+
+        // ABE group
+        let abeGroup = null, abeColor = null, abeLabel = null;
+        if (catScore === null && mmrcNum === null) {
+            abeGroup = null;
+        } else if (frequentExac) {
+            abeGroup = 'E'; abeColor = '#ef4444'; abeLabel = 'Grupo E — Exacerbador frecuente';
+        } else if (highSymptoms) {
+            abeGroup = 'B'; abeColor = '#f59e0b'; abeLabel = 'Grupo B — Más síntomas';
+        } else {
+            abeGroup = 'A'; abeColor = '#22c55e'; abeLabel = 'Grupo A — Pocos síntomas';
+        }
+
+        // Eosinophils
+        const eosNum = eos !== '' && eos !== undefined && eos !== null ? parseFloat(eos) : null;
+
+        // ICS guidance
+        let icsNote = null;
+        if (eosNum !== null) {
+            if (eosNum >= 300)      icsNote = { level: 'keep',   text: 'eos ≥ 300: NO retirar ICS — alto riesgo de exacerbación (WISDOM trial)' };
+            else if (eosNum >= 100) icsNote = { level: 'gray',   text: 'eos 100–299: zona gris — individualizar según exacerbaciones y efectos adversos' };
+            else                   icsNote = { level: 'remove', text: 'eos < 100: se puede retirar el ICS con seguridad — beneficio mínimo, riesgo de neumonía' };
+        }
+
+        // Treatment
+        let treatmentTitle = '', treatmentLines = [], treatmentColor = '#64748b';
+        if (abeGroup === 'A') {
+            treatmentTitle = 'Broncodilatador de acción larga en monoterapia';
+            treatmentLines = [
+                '🥇 LAMA o LABA (monoterapia)',
+                '· LAMA: Tiotropio (Spiriva®), Glicopirronio (Seebri®), Umeclidinio (Incruse®)',
+                '· LABA: Indacaterol (Onbrez®), Salmeterol, Formoterol, Olodaterol',
+                'Si síntomas muy ocasionales → SABA/SAMA a demanda (salbutamol, ipratropio)'
+            ];
+            treatmentColor = '#22c55e';
+        } else if (abeGroup === 'B') {
+            treatmentTitle = 'LAMA preferido → escalar a LABA+LAMA si síntomas persisten';
+            treatmentLines = [
+                '🥇 LAMA (preferido sobre LABA en Grupo B)',
+                '· Tiotropio (Spiriva®), Glicopirronio (Seebri®), Umeclidinio (Incruse®)',
+                '🔼 Si síntomas persisten → LABA + LAMA:',
+                '· Indacaterol/Glicopirronio (Ultibro®)',
+                '· Vilanterol/Umeclidinio (Anoro® Ellipta)',
+                '· Olodaterol/Tiotropio (Spiolto® Respimat)'
+            ];
+            treatmentColor = '#f59e0b';
+        } else if (abeGroup === 'E') {
+            if (eosNum === null) {
+                treatmentTitle = 'LABA + LAMA — solicitar eosinófilos para refinar';
+                treatmentLines = [
+                    '🥇 LABA + LAMA (doble broncodilatación):',
+                    '· Indacaterol/Glicopirronio (Ultibro®)',
+                    '· Vilanterol/Umeclidinio (Anoro® Ellipta)',
+                    '· Formoterol/Aclidinio (Duaklir® Genuair)',
+                    'ℹ️ Solicitar eosinófilos para decidir si añadir ICS'
+                ];
+                treatmentColor = '#f97316';
+            } else if (eosNum >= 300) {
+                treatmentTitle = 'Triple terapia (LABA+LAMA+ICS) — eos ≥ 300 cél/µL';
+                treatmentLines = [
+                    '🥇 Triple terapia indicada:',
+                    '· Fluticasona/Umeclidinio/Vilanterol (Trelegy® Ellipta)',
+                    '· Budesonida/Glicopirronio/Formoterol (Breztri® Aerosphere)',
+                    '· Beclometasona/Formoterol/Glicopirronio (Trimbow®)',
+                    '📊 IMPACT trial (NEJM 2018): −25% exacerbaciones vs LABA+LAMA'
+                ];
+                treatmentColor = '#ef4444';
+            } else if (eosNum >= 100) {
+                treatmentTitle = 'LABA + LAMA → escalar a triple si exacerbaciones persisten';
+                treatmentLines = [
+                    '🥇 Base: LABA + LAMA',
+                    '· Indacaterol/Glicopirronio (Ultibro®), Vilanterol/Umeclidinio (Anoro®)',
+                    '🔼 Si exacerbaciones persisten pese a LABA+LAMA → triple terapia:',
+                    '· Trelegy® Ellipta, Breztri® Aerosphere, Trimbow®',
+                    '⚠️ eos 100–299: zona gris — individualizar decisión de ICS'
+                ];
+                treatmentColor = '#f97316';
+            } else {
+                treatmentTitle = 'LABA + LAMA — ICS NO recomendado (eos < 100)';
+                treatmentLines = [
+                    '🥇 LABA + LAMA (doble broncodilatación):',
+                    '· Indacaterol/Glicopirronio (Ultibro®)',
+                    '· Vilanterol/Umeclidinio (Anoro® Ellipta)',
+                    '· Formoterol/Aclidinio (Duaklir® Genuair)',
+                    '⛔ ICS NO indicado — eos < 100: beneficio mínimo, riesgo elevado de neumonía'
+                ];
+                treatmentColor = '#f97316';
+            }
+        }
+
+        const descLabel = abeGroup ? `${abeLabel}${goldGrade ? ' · GOLD ' + goldGrade : ''}` : 'Completar datos';
+        return {
+            fev1fvcOk, fev1fvcHigh, fev1fvcND, fev1fvcNum,
+            goldGrade, goldLabel, goldColor,
+            catScore, catLevel, catColor, catArr,
+            mmrcNum, mmrcLabel: mmrcNum !== null ? mmrcLabels[mmrcNum] : null,
+            highSymptoms, exacModNum, hospitBool, frequentExac,
+            abeGroup, abeColor, abeLabel,
+            eosNum, icsNote,
+            treatmentTitle, treatmentLines, treatmentColor,
+            value: abeGroup || '—', unit: '(ABE)',
+            description: descLabel,
+            interpretation: {
+                label: abeLabel || 'Datos incompletos',
+                color: abeGroup === 'E' ? 'danger' : abeGroup === 'B' ? 'warning' : 'success',
+                description: `Grupo ABE: ${abeGroup || '—'}. GOLD: ${goldGrade || '—'}. CAT: ${catScore ?? '—'}. mMRC: ${mmrcNum ?? '—'}. ${abeLabel || ''}.`
+            }
+        };
+    },
+
     // === 38. FIB-4 / APRI — FIBROSIS HEPÁTICA === //
     calculateFibrosis(inputs) {
         const { age, ast, alt, platelets, plateletsUnit, lsnAst,

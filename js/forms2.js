@@ -3444,6 +3444,276 @@ function calculateLESForm(event) {
     Storage.addToHistory({ calculatorId: 33, calculatorName: 'Diagnóstico LES', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 39. EPOC — CLASIFICACIÓN Y TRATAMIENTO (GOLD 2025) === //
+function createEPOCForm() {
+    const catDefs = [
+        ['Tos',                     'Nunca toso',                    'Siempre estoy tosiendo'],
+        ['Flema / Expectoración',    'No tengo flema en el pecho',    'El pecho completamente lleno de flema'],
+        ['Opresión torácica',        'No siento ninguna opresión',    'Siento una gran opresión en el pecho'],
+        ['Disnea al subir escaleras','Sin disnea al subir escaleras', 'Mucha disnea al subir escaleras'],
+        ['Actividades domésticas',   'Sin limitaciones en casa',      'Muy limitado en actividades del hogar'],
+        ['Seguridad para salir',     'Salgo de casa con confianza',   'No me siento seguro para salir'],
+        ['Calidad del sueño',        'Duermo profundamente',          'Me despierto mucho por mi enfermedad'],
+        ['Energía',                  'Tengo mucha energía',           'No tengo ninguna energía'],
+    ];
+    const catHTML = catDefs.map((d, i) => `
+        <div style="background:var(--bg-card);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text-primary);">${i+1}. ${d[0]}</span>
+                <select id="cat${i}" onchange="updateEPOCLive()"
+                    style="padding:6px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);font-size:15px;font-weight:700;width:60px;text-align:center;">
+                    ${[0,1,2,3,4,5].map(v=>`<option value="${v}">${v}</option>`).join('')}
+                </select>
+            </div>
+            <div style="font-size:11px;color:var(--text-secondary);">0: ${d[1]} &nbsp;·&nbsp; 5: ${d[2]}</div>
+        </div>`).join('');
+
+    return `
+        <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;border-left:4px solid #22c55e;">
+            <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">
+                Clasifica la EPOC según GOLD 2025: grado espirométrico (1–4), carga sintomática (CAT + mMRC), historia de exacerbaciones y Esquema ABE con recomendación de tratamiento.
+            </p>
+        </div>
+        <form id="epocForm" onsubmit="calculateEPOCForm(event)">
+
+            <!-- Espirometría -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Espirometría post-broncodilatador</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">FEV₁/FVC (ej: 0.65)</label>
+                        <input type="number" id="epocFev1fvc" min="0.1" max="1.2" step="0.01" placeholder="ej: 0.65" oninput="updateEPOCLive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:3px;">Diagnóstico EPOC: &lt;0.70 post-BD</div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">FEV₁ (% predicho)</label>
+                        <input type="number" id="epocFev1" min="1" max="150" step="1" placeholder="ej: 55" oninput="updateEPOCLive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:3px;">GOLD 1≥80 · 2:50-79 · 3:30-49 · 4&lt;30</div>
+                    </div>
+                </div>
+                <div id="epocFev1Banner" style="margin-top:8px;"></div>
+            </div>
+
+            <!-- CAT Score -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">CAT Score (0–40)</div>
+                    <span id="epocCatTotal" style="font-size:18px;font-weight:800;color:var(--text-secondary);">0 pts</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">Puntúa cada ítem de 0 (mejor) a 5 (peor). Umbral clínico: ≥10 pts = síntomas significativos.</div>
+                ${catHTML}
+            </div>
+
+            <!-- mMRC -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Escala mMRC (disnea)</div>
+                <select id="epocMmrc" onchange="updateEPOCLive()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:13px;">
+                    <option value="">-- Seleccionar grado mMRC --</option>
+                    <option value="0">0 — Disnea solo con ejercicio intenso (correr, subir colina empinada)</option>
+                    <option value="1">1 — Disnea al caminar rápido en llano o al subir pendiente leve</option>
+                    <option value="2">2 — Camina más despacio que pares o para al caminar a su propio ritmo</option>
+                    <option value="3">3 — Para a descansar tras ~100 m o pocos minutos en llano</option>
+                    <option value="4">4 — Demasiada disnea para salir de casa o al vestirse/desvestirse</option>
+                </select>
+                <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">mMRC ≥ 2 = síntomas significativos (equivale a CAT ≥ 10)</div>
+            </div>
+
+            <!-- Exacerbaciones -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Exacerbaciones — último año</div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">Exacerbaciones moderadas (sin hospitalización)</label>
+                    <select id="epocExacMod" onchange="updateEPOCLive()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;">
+                        <option value="0">0 — Ninguna</option>
+                        <option value="1">1 exacerbación moderada</option>
+                        <option value="2">≥ 2 exacerbaciones moderadas</option>
+                    </select>
+                </div>
+                <label style="display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:8px;cursor:pointer;margin-top:8px;background:var(--bg-card);">
+                    <input type="checkbox" id="epocHospitalization" onchange="updateEPOCLive()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer;">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;color:var(--text-primary);">≥ 1 hospitalización por EPOC en el último año</div>
+                        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Clasifica directamente en Grupo E independiente del CAT/mMRC</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Eosinófilos -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Eosinófilos en sangre (opcional)</div>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px 0;">Solo relevante en Grupo E para decidir si añadir ICS. Si no disponible, dejar vacío.</p>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="number" id="epocEos" min="0" max="3000" placeholder="ej: 250" oninput="updateEPOCLive()"
+                        style="flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;">
+                    <span style="font-size:13px;color:var(--text-secondary);flex-shrink:0;">cél/µL</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">&lt;100: retirar ICS seguro · 100–299: zona gris · ≥300: triple terapia indicada</div>
+            </div>
+
+            <!-- Live preview -->
+            <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <span style="font-size:13px;color:var(--text-secondary);">Clasificación estimada:</span>
+                <span id="epocLive" style="font-size:14px;font-weight:700;color:var(--text-secondary);">— · —</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                🫁 Clasificar y Ver Tratamiento
+            </button>
+        </form>
+        <div id="epocResult"></div>`;
+}
+
+function _epocInputs() {
+    return {
+        fev1fvc: document.getElementById('epocFev1fvc')?.value || '',
+        fev1:    document.getElementById('epocFev1')?.value || '',
+        cat:     [0,1,2,3,4,5,6,7].map(i => document.getElementById('cat' + i)?.value || '0'),
+        mmrc:    document.getElementById('epocMmrc')?.value ?? '',
+        exacMod: document.getElementById('epocExacMod')?.value || '0',
+        hospitalization: document.getElementById('epocHospitalization')?.checked || false,
+        eos:     document.getElementById('epocEos')?.value || '',
+    };
+}
+
+function updateEPOCLive() {
+    const r = Calculators.calculateEPOC(_epocInputs());
+    // CAT total
+    const catEl = document.getElementById('epocCatTotal');
+    if (catEl) {
+        catEl.textContent = (r.catScore ?? 0) + ' pts';
+        catEl.style.color = r.catColor || 'var(--text-secondary)';
+    }
+    // FEV1 banner
+    const bannerEl = document.getElementById('epocFev1Banner');
+    if (bannerEl) {
+        if (r.fev1fvcHigh) {
+            bannerEl.innerHTML = `<div style="background:#f59e0b22;border:1px solid #f59e0b;border-radius:8px;padding:8px 12px;">
+                <p style="font-size:12px;color:#f59e0b;margin:0;">⚠️ FEV₁/FVC ≥ 0.70 — no cumple el criterio espirométrico de EPOC</p></div>`;
+        } else { bannerEl.innerHTML = ''; }
+    }
+    // Live badge
+    const liveEl = document.getElementById('epocLive');
+    if (!liveEl) return;
+    if (!r.abeGroup) { liveEl.style.color = 'var(--text-secondary)'; liveEl.textContent = '— · —'; return; }
+    liveEl.style.color = r.abeColor;
+    liveEl.textContent = `${r.abeLabel}${r.goldGrade ? ' · GOLD ' + r.goldGrade : ''}`;
+}
+
+function buildEPOCResultHTML(r) {
+    // GOLD badge
+    const goldBadge = r.goldGrade ? `
+        <div style="background:${r.goldColor}22;border:2px solid ${r.goldColor};border-radius:14px;padding:14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Grado GOLD</div>
+            <div style="font-size:26px;font-weight:800;color:${r.goldColor};">GOLD ${r.goldGrade}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${r.goldLabel.split('—')[1].trim()}</div>
+        </div>` : `
+        <div style="background:var(--bg-secondary);border:2px solid var(--border-color);border-radius:14px;padding:14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Grado GOLD</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-secondary);">${r.fev1fvcHigh ? 'No EPOC' : 'Sin datos'}</div>
+        </div>`;
+
+    // ABE badge
+    const abeBadge = r.abeGroup ? `
+        <div style="background:${r.abeColor}22;border:2px solid ${r.abeColor};border-radius:14px;padding:14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Esquema ABE</div>
+            <div style="font-size:36px;font-weight:800;color:${r.abeColor};">Grupo ${r.abeGroup}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${r.abeLabel.split('—')[1].trim()}</div>
+        </div>` : `
+        <div style="background:var(--bg-secondary);border:2px solid var(--border-color);border-radius:14px;padding:14px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Esquema ABE</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-secondary);">Sin datos</div>
+        </div>`;
+
+    // Warning if FEV1/FVC >= 0.70
+    const fev1Banner = r.fev1fvcHigh ? `<div style="background:#f59e0b22;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <p style="font-size:13px;color:#f59e0b;margin:0;font-weight:600;">⚠️ FEV₁/FVC ${r.fev1fvcNum?.toFixed(2)} ≥ 0.70 — no se cumple el criterio espirométrico de EPOC (requiere &lt;0.70 post-BD). El Esquema ABE clasifica síntomas y exacerbaciones, pero el diagnóstico de EPOC requiere confirmación espirométrica.</p></div>` : '';
+
+    // CAT + mMRC summary
+    const catMmrcHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;">
+                <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">CAT Score</div>
+                <div style="font-size:24px;font-weight:800;color:${r.catColor || 'var(--text-secondary)'};">${r.catScore ?? '—'}<span style="font-size:13px;font-weight:600;"> /40</span></div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${r.catLevel || '—'}</div>
+                ${r.catScore !== null ? `<div style="font-size:11px;color:${r.catScore >= 10 ? '#f59e0b' : '#22c55e'};margin-top:3px;font-weight:600;">${r.catScore >= 10 ? '⚠️ ≥10 — síntomas significativos' : '✓ <10 — síntomas leves'}</div>` : ''}
+            </div>
+            <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;">
+                <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">mMRC</div>
+                <div style="font-size:24px;font-weight:800;color:${r.mmrcNum !== null && r.mmrcNum >= 2 ? '#f59e0b' : 'var(--text-secondary)'};">${r.mmrcNum ?? '—'}<span style="font-size:13px;font-weight:600;"> /4</span></div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${r.mmrcLabel || '—'}</div>
+                ${r.mmrcNum !== null ? `<div style="font-size:11px;color:${r.mmrcNum >= 2 ? '#f59e0b' : '#22c55e'};margin-top:3px;font-weight:600;">${r.mmrcNum >= 2 ? '⚠️ ≥2 — síntomas significativos' : '✓ <2 — síntomas leves'}</div>` : ''}
+            </div>
+        </div>`;
+
+    // ABE table
+    const abeRows = [
+        { g: 'A', color: '#22c55e', symp: 'CAT <10 / mMRC 0–1', exac: '0–1 moderadas, sin hospitalización', tx: 'LAMA o LABA' },
+        { g: 'B', color: '#f59e0b', symp: 'CAT ≥10 / mMRC ≥2', exac: '0–1 moderadas, sin hospitalización', tx: 'LAMA → LABA+LAMA si persiste' },
+        { g: 'E', color: '#ef4444', symp: 'Cualquiera', exac: '≥2 moderadas O ≥1 hospitalización', tx: 'LABA+LAMA (± ICS según eos)' },
+    ].map(row => {
+        const active = row.g === r.abeGroup;
+        const bg = active ? row.color + '22' : 'transparent';
+        const fw = active ? '700' : '400';
+        return `<tr style="background:${bg};border-left:3px solid ${active ? row.color : 'transparent'};">
+            <td style="padding:8px 10px;font-size:14px;font-weight:800;color:${active ? row.color : 'var(--text-secondary)'};">Grupo ${row.g}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);font-weight:${fw};">${row.symp}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);font-weight:${fw};">${row.exac}</td>
+            <td style="padding:8px 10px;font-size:12px;color:${active ? row.color : 'var(--text-secondary)'};font-weight:${fw};">${row.tx}</td>
+        </tr>`;
+    }).join('');
+
+    // Treatment block
+    const treatmentHTML = r.abeGroup ? `
+        <div style="background:${r.treatmentColor}15;border-left:4px solid ${r.treatmentColor};border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:${r.treatmentColor};margin-bottom:8px;text-transform:uppercase;letter-spacing:0.03em;">Tratamiento recomendado</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">${r.treatmentTitle}</div>
+            ${r.treatmentLines.map(l => `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;line-height:1.4;">${l}</div>`).join('')}
+        </div>` : '';
+
+    // ICS note
+    const icsColors = { keep: '#ef4444', gray: '#f59e0b', remove: '#22c55e' };
+    const icsHTML = r.icsNote ? `
+        <div style="background:${icsColors[r.icsNote.level]}15;border:1px solid ${icsColors[r.icsNote.level]}44;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+            <p style="font-size:12px;color:${icsColors[r.icsNote.level]};margin:0;font-weight:600;">💊 Guía ICS: ${r.icsNote.text}</p>
+        </div>` : '';
+
+    return `<div style="margin-top:16px;">
+        ${fev1Banner}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            ${goldBadge}${abeBadge}
+        </div>
+        ${catMmrcHTML}
+        <div style="background:var(--bg-secondary);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+            <div style="padding:12px 14px;font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-color);">Esquema ABE (GOLD 2023-2025)</div>
+            <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:360px;">
+                <thead><tr style="border-bottom:1px solid var(--border-color);">
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Grupo</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Síntomas</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Exacerbaciones</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Tratamiento inicial</th>
+                </tr></thead>
+                <tbody>${abeRows}</tbody>
+            </table></div>
+        </div>
+        ${treatmentHTML}
+        ${icsHTML}
+        <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+            <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5;">ℹ️ El grado GOLD espirométrico (1–4) define la <strong>severidad</strong> de la obstrucción, no el tratamiento. El tratamiento farmacológico lo define el <strong>Esquema ABE</strong>.</p>
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:0;">GOLD 2025 Report · goldcopd.org · Basado en GOLD 2023–2025</p>
+    </div>`;
+}
+
+function calculateEPOCForm(event) {
+    event.preventDefault();
+    const inputs = _epocInputs();
+    const r = Calculators.calculateEPOC(inputs);
+    document.getElementById('epocResult').innerHTML = buildEPOCResultHTML(r);
+    Storage.addToHistory({ calculatorId: 39, calculatorName: 'EPOC', inputs, result: { value: r.value, unit: r.unit, description: r.description }, interpretation: r.interpretation });
+}
+
 // === 38. FIB-4 / APRI — FIBROSIS HEPÁTICA === //
 function _fibCk(id) { return document.getElementById(id)?.checked || false; }
 

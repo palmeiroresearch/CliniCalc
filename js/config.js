@@ -385,6 +385,16 @@ const CALCULATORS_CONFIG = [
         formulas: ['+', '−', '×', '÷', '%', '±']
     },
     {
+        id: 39,
+        name: 'EPOC',
+        fullName: 'EPOC — Clasificación y Tratamiento (GOLD 2025)',
+        icon: '🫁',
+        category: 'pulmonar',
+        categoryLabel: 'Pulmonar',
+        description: 'Clasificación espirométrica GOLD 1–4, CAT Score, mMRC y Esquema ABE con recomendación de tratamiento farmacológico (GOLD 2025).',
+        formulas: ['GOLD Espirométrico', 'CAT Score', 'Escala mMRC', 'Esquema ABE (GOLD 2025)']
+    },
+    {
         id: 38,
         name: 'FIB-4 / APRI',
         fullName: 'FIB-4 / APRI — Fibrosis Hepática',

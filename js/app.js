@@ -223,6 +223,7 @@ function loadCalculatorForm(calc) {
         case 36: container.innerHTML = createKillipForm(); break;
         case 37: container.innerHTML = createPSIForm(); break;
         case 38: container.innerHTML = createFibrosisForm(); break;
+        case 39: container.innerHTML = createEPOCForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
@@ -748,6 +749,9 @@ function showFullResult(itemId) {
     } else if (item.calculatorId === 38) {
         const r = Calculators.calculateFibrosis(item.inputs);
         bodyHTML = buildFibrosisResultHTML(r);
+    } else if (item.calculatorId === 39) {
+        const r = Calculators.calculateEPOC(item.inputs);
+        bodyHTML = buildEPOCResultHTML(r);
     } else {
         const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
         const c = colorMap[item.interpretation?.color] || 'var(--brand-accent)';
