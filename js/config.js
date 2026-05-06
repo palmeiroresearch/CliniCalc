@@ -3,7 +3,7 @@
 // Metadata de las 22 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.2.8';
+const APP_VERSION = '1.2.9';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -383,6 +383,36 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Otros',
         description: 'Calculadora de uso general. Operaciones básicas, porcentaje y cambio de signo.',
         formulas: ['+', '−', '×', '÷', '%', '±']
+    },
+    {
+        id: 38,
+        name: 'FIB-4 / APRI',
+        fullName: 'FIB-4 / APRI — Fibrosis Hepática',
+        icon: '🫀',
+        category: 'hepato',
+        categoryLabel: 'Hepatología',
+        description: 'Evaluación no invasiva de fibrosis hepática. FIB-4 (AASLD 2023, EASL, OMS) + APRI con estigmas clínicos. Orienta hacia elastografía o hepatólogo según el resultado combinado.',
+        formulas: ['FIB-4 (Vallet-Pichard 2007)', 'APRI (Wai 2003)', 'Estigmas clínicos']
+    },
+    {
+        id: 37,
+        name: 'PSI/PORT',
+        fullName: 'PSI/PORT — Índice de Severidad de Neumonía',
+        icon: '🫁',
+        category: 'infecciones',
+        categoryLabel: 'Infecciones',
+        description: 'Estratifica la severidad de la NAC en 5 clases (I–V). Los labs son opcionales — si no están disponibles, no suman puntos. Guía la decisión ambulatorio vs. hospitalización (Fine et al. 1997).',
+        formulas: ['Fine et al. 1997 (PORT)', 'Clase I–V', 'Mortalidad 30 días']
+    },
+    {
+        id: 36,
+        name: 'Killip-Kimball',
+        fullName: 'Clasificación Killip-Kimball',
+        icon: '🫀',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Estratificación de insuficiencia cardíaca en IAM. Marca los hallazgos clínicos → clase I–IV automática con mortalidad y manejo (Killip & Kimball 1967).',
+        formulas: ['Killip & Kimball 1967']
     }
 ];
 

@@ -296,6 +296,7 @@ function updateIVCalc() {
                     ${r.concDisplay} ${r.concUnit}</span>
             </div>`;
     } else {
+        const dropLabels2 = { 10:'macrogotero', 15:'estándar', 20:'normogotero', 60:'microgotero' };
         mainRateHtml = `
             <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent));
                         padding:20px;border-radius:var(--radius-lg);color:var(--brand-primary-dark);margin-bottom:12px;">
@@ -306,11 +307,26 @@ function updateIVCalc() {
                 </div>
                 <div style="font-size:13px;opacity:0.85;">${r.rateMlMinR} ml/min</div>
             </div>
-            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);
-                        border-radius:var(--radius-md);padding:12px 14px;margin-bottom:12px;">
-                <span style="font-size:12px;color:var(--text-tertiary);">Concentración: </span>
-                <span style="font-size:13px;font-weight:700;color:var(--text-primary);">
-                    ${r.concDisplay} ${r.concUnit}</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div style="background:var(--bg-secondary);border:1px solid var(--border-color);
+                            border-radius:var(--radius-md);padding:12px 14px;text-align:center;">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;
+                                letter-spacing:0.05em;margin-bottom:6px;">Goteo</div>
+                    <div style="display:flex;align-items:baseline;gap:4px;justify-content:center;">
+                        <span style="font-size:28px;font-weight:800;color:var(--text-primary);">${r.rateGttMin}</span>
+                        <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">gtt/min</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">
+                        ${dropLabels2[_ivDropFactor]} · ${_ivDropFactor} gtt/ml
+                    </div>
+                </div>
+                <div style="background:var(--bg-secondary);border:1px solid var(--border-color);
+                            border-radius:var(--radius-md);padding:12px 14px;text-align:center;">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;
+                                letter-spacing:0.05em;margin-bottom:6px;">Concentración</div>
+                    <div style="font-size:20px;font-weight:800;color:var(--text-primary);">${r.concDisplay}</div>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${r.concUnit}</div>
+                </div>
             </div>`;
     }
 

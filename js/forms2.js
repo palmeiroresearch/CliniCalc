@@ -3444,6 +3444,632 @@ function calculateLESForm(event) {
     Storage.addToHistory({ calculatorId: 33, calculatorName: 'Diagnóstico LES', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 38. FIB-4 / APRI — FIBROSIS HEPÁTICA === //
+function _fibCk(id) { return document.getElementById(id)?.checked || false; }
+
+function createFibrosisForm() {
+    function ck(id, label, sub) {
+        return `<label style="display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:6px;background:var(--bg-card);">
+            <input type="checkbox" id="${id}" onchange="updateFibrosisLive()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer;">
+            <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);">${label}</div>
+                ${sub ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${sub}</div>` : ''}
+            </div>
+        </label>`;
+    }
+    return `
+        <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;border-left:4px solid #f97316;">
+            <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">
+                Evaluación no invasiva de fibrosis hepática. FIB-4 es la herramienta más validada (AASLD 2023, EASL, OMS) para estadificar sin biopsia. Los estigmas clínicos contextualizan el resultado.
+            </p>
+        </div>
+        <form id="fibrosisForm" onsubmit="calculateFibrosisForm(event)">
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Contexto clínico (opcional)</div>
+                <select id="fibEtiologia" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;">
+                    <option value="">Etiología no especificada / Desconocida</option>
+                    <option value="hcv">Hepatitis C (VHC)</option>
+                    <option value="hbv">Hepatitis B (VHB)</option>
+                    <option value="alcohol">Enfermedad hepática alcohólica</option>
+                    <option value="masld">MASLD / NAFLD (hígado graso no alcohólico)</option>
+                    <option value="otra">Otra</option>
+                </select>
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Laboratorio</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">EDAD (años)</label>
+                        <input type="number" id="fibAge" min="18" max="120" placeholder="ej: 55" oninput="updateFibrosisLive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">AST / TGO (U/L)</label>
+                        <input type="number" id="fibAst" min="0" placeholder="ej: 65" oninput="updateFibrosisLive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">ALT / TGP (U/L)</label>
+                        <input type="number" id="fibAlt" min="0" placeholder="ej: 45" oninput="updateFibrosisLive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">LSN AST/TGO (U/L)</label>
+                        <select id="fibLsn" onchange="updateFibrosisLive()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;">
+                            <option value="35">35 U/L</option>
+                            <option value="40" selected>40 U/L (default)</option>
+                            <option value="45">45 U/L</option>
+                            <option value="50">50 U/L</option>
+                        </select>
+                    </div>
+                </div>
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">PLAQUETAS</label>
+                <div style="display:flex;gap:8px;align-items:center;overflow:hidden;">
+                    <input type="number" id="fibPlatelets" min="0" placeholder="ej: 170" oninput="updateFibrosisLive()"
+                        style="flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                    <select id="fibPlateletsUnit" onchange="_fibUpdatePlateletPlaceholder(); updateFibrosisLive()"
+                        style="flex-shrink:0;padding:10px 8px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:13px;">
+                        <option value="k">&times;10³/µL</option>
+                        <option value="mm3">/mm³</option>
+                    </select>
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Si tu laboratorio reporta 170 000 selecciona /mm³; si reporta 170 selecciona ×10³/µL.</div>
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Estigmas — Dermatológico</div>
+                ${ck('fibSpider','Spider nevi / Arañas vasculares','>5 lesiones en tronco o cara')}
+                ${ck('fibEritemaPalmar','Eritema palmar','Eritema en eminencias tenar/hipotenar, bilateral')}
+                ${ck('fibIctericia','Ictericia / Icterus escleral','Coloración amarillenta de piel o escleróticas')}
+                ${ck('fibLeucon','Leuconiquia / Uñas de Terry','Blanqueamiento ungueal; zona blanca proximal con banda distal rosada')}
+                ${ck('fibDupuytren','Contractura de Dupuytren','Fibrosis de fascia palmar — asociada a hepatopatía alcohólica')}
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Estigmas — Endocrino / Nutricional</div>
+                ${ck('fibGineco','Ginecomastia','En hombres — hiperestrogenismo por metabolismo hepático alterado')}
+                ${ck('fibVello','Pérdida de vello corporal','Rarefacción axilar y/o púbica')}
+                ${ck('fibSarcopenia','Pérdida de masa muscular / Sarcopenia','Atrofia visible en extremidades, región temporal o interóseos')}
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Estigmas — Abdominal / Vascular</div>
+                ${ck('fibHepato','Hepatomegalia','Hígado palpable por debajo del reborde costal')}
+                ${ck('fibEsplen','Esplenomegalia','Bazo palpable — signo de hipertensión portal')}
+                ${ck('fibAscitis','Ascitis','Matidez cambiante, oleada ascítica o distensión abdominal')}
+                ${ck('fibCaput','Circulación colateral abdominal (caput medusae)','Venas visibles en pared abdominal irradiando desde ombligo')}
+                ${ck('fibEdema','Edema periférico bilateral','Edema maleolar o pretibial bilateral')}
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Estigmas — Neurológico</div>
+                ${ck('fibAsterixis','Asterixis / Flapping tremor','Movimiento aleteante al extender muñecas — encefalopatía hepática')}
+                ${ck('fibEncefalop','Encefalopatía / Confusión fluctuante','Desorientación o comportamiento anómalo fluctuante')}
+            </div>
+
+            <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <span style="font-size:13px;color:var(--text-secondary);">FIB-4 / APRI estimado:</span>
+                <span id="fibLiveScore" style="font-size:14px;font-weight:700;color:var(--text-secondary);">— / —</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                🩺 Calcular FIB-4 / APRI
+            </button>
+        </form>
+        <div id="fibrosisResult"></div>`;
+}
+
+function _fibUpdatePlateletPlaceholder() {
+    const unit = document.getElementById('fibPlateletsUnit')?.value;
+    const inp = document.getElementById('fibPlatelets');
+    if (!inp) return;
+    inp.placeholder = unit === 'mm3' ? 'ej: 170 000' : 'ej: 170';
+}
+
+function _fibrosisInputs() {
+    return {
+        age: document.getElementById('fibAge')?.value || '',
+        ast: document.getElementById('fibAst')?.value || '',
+        alt: document.getElementById('fibAlt')?.value || '',
+        platelets: document.getElementById('fibPlatelets')?.value || '',
+        plateletsUnit: document.getElementById('fibPlateletsUnit')?.value || 'k',
+        lsnAst: document.getElementById('fibLsn')?.value || '40',
+        etiologia: document.getElementById('fibEtiologia')?.value || '',
+        spiderNevi:    _fibCk('fibSpider'),    eritemaPalmar: _fibCk('fibEritemaPalmar'),
+        ictericia:     _fibCk('fibIctericia'), leuconiquia:   _fibCk('fibLeucon'),
+        dupuytren:     _fibCk('fibDupuytren'), ginecomastia:  _fibCk('fibGineco'),
+        perdidaVello:  _fibCk('fibVello'),     sarcopenia:    _fibCk('fibSarcopenia'),
+        hepatomegalia: _fibCk('fibHepato'),    esplenomegalia:_fibCk('fibEsplen'),
+        ascitis:       _fibCk('fibAscitis'),   caputMedusae:  _fibCk('fibCaput'),
+        edema:         _fibCk('fibEdema'),     asterixis:     _fibCk('fibAsterixis'),
+        encefalopatia: _fibCk('fibEncefalop'),
+    };
+}
+
+function updateFibrosisLive() {
+    const r = Calculators.calculateFibrosis(_fibrosisInputs());
+    const el = document.getElementById('fibLiveScore');
+    if (!el) return;
+    if (r.fib4 === null) { el.style.color = 'var(--text-secondary)'; el.textContent = '— / —'; return; }
+    el.style.color = r.fib4Color;
+    el.textContent = `FIB-4: ${r.fib4} · APRI: ${r.apri ?? '—'}`;
+}
+
+function buildFibrosisResultHTML(r) {
+    const stigmataNames = {
+        spiderNevi:'Spider nevi', eritemaPalmar:'Eritema palmar', ictericia:'Ictericia / Icterus',
+        leuconiquia:'Leuconiquia / Uñas de Terry', dupuytren:'Contractura de Dupuytren',
+        ginecomastia:'Ginecomastia', perdidaVello:'Pérdida de vello corporal',
+        sarcopenia:'Pérdida de masa muscular', hepatomegalia:'Hepatomegalia',
+        esplenomegalia:'Esplenomegalia', ascitis:'Ascitis', caputMedusae:'Circulación colateral abdominal',
+        edema:'Edema periférico bilateral', asterixis:'Asterixis / Flapping tremor',
+        encefalopatia:'Encefalopatía hepática',
+    };
+    const fib4Rows = r.isOld ? [
+        { range:'<2.0',     zone:'low',  label:'Bajo riesgo',   color:'#22c55e' },
+        { range:'2.0–3.25', zone:'gray', label:'Indeterminado', color:'#f59e0b' },
+        { range:'>3.25',    zone:'high', label:'Alto riesgo',   color:'#ef4444' },
+    ] : [
+        { range:'<1.30',    zone:'low',  label:'F0–F2 probable',  color:'#22c55e' },
+        { range:'1.30–2.67',zone:'gray', label:'Indeterminado',   color:'#f59e0b' },
+        { range:'>2.67',    zone:'high', label:'F3–F4 probable',  color:'#ef4444' },
+    ];
+    const fib4TableRows = fib4Rows.map(row => {
+        const isActive = row.zone === r.fib4Zone;
+        const bg = isActive ? row.color+'22' : 'transparent';
+        const fw = isActive ? '700' : '400';
+        return `<tr style="background:${bg};border-left:3px solid ${isActive?row.color:'transparent'};">
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?row.color:'var(--text-secondary)'};white-space:nowrap;">${row.range}</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?row.color:'var(--text-secondary)'};">${row.label}</td>
+        </tr>`;
+    }).join('');
+
+    const ageNote = r.isOld ? `<div style="background:#3b82f622;border:1px solid #3b82f6;border-radius:8px;padding:10px 12px;margin-top:8px;">
+        <p style="font-size:12px;color:#3b82f6;margin:0;">ℹ️ Paciente >65 años — cutoffs ajustados (AASLD 2023)</p></div>` : '';
+
+    const apriColor = r.apriColor || '#64748b';
+    const detectedStigmata = r.stigmataMap ? Object.entries(r.stigmataMap).filter(([,v])=>v).map(([k])=>stigmataNames[k]||k) : [];
+    const stigmataHTML = detectedStigmata.length === 0
+        ? '<p style="font-size:13px;color:var(--text-secondary);margin:0;">Ningún estigma marcado</p>'
+        : `<div style="display:flex;flex-wrap:wrap;gap:6px;">${detectedStigmata.map(s=>`<span style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text-primary);">${s}</span>`).join('')}</div>`;
+    const stigmataLevelLabel = r.stigmataCount === 0 ? 'Sin estigmas' : r.stigmataCount <= 2 ? 'Sospecha moderada' : 'Alta sospecha clínica';
+    const stigmataLevelColor = r.stigmataCount === 0 ? '#22c55e' : r.stigmataCount <= 2 ? '#f59e0b' : '#ef4444';
+
+    return `<div style="margin-top:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div style="background:${(r.fib4Color||'#64748b')}22;border:2px solid ${r.fib4Color||'#64748b'};border-radius:14px;padding:16px;text-align:center;">
+                <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;">FIB-4</div>
+                <div style="font-size:28px;font-weight:800;color:${r.fib4Color||'#64748b'};">${r.fib4 ?? '—'}</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${r.fib4Label || '—'}</div>
+            </div>
+            <div style="background:${apriColor}22;border:2px solid ${apriColor};border-radius:14px;padding:16px;text-align:center;">
+                <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;">APRI</div>
+                <div style="font-size:28px;font-weight:800;color:${apriColor};">${r.apri ?? '—'}</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${r.apriLabel || '—'}</div>
+            </div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+            <div style="padding:12px 14px;font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-color);">Umbrales FIB-4${r.isOld?' (ajustados >65 años)':''}</div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="border-bottom:1px solid var(--border-color);">
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">FIB-4</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Interpretación</th>
+                </tr></thead>
+                <tbody>${fib4TableRows}</tbody>
+            </table>
+            ${ageNote}
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Estigmas clínicos (${r.stigmataCount})</div>
+                <span style="font-size:12px;font-weight:700;color:${stigmataLevelColor};">${stigmataLevelLabel}</span>
+            </div>
+            ${stigmataHTML}
+        </div>
+        <div style="background:${r.combinedColor}15;border-left:4px solid ${r.combinedColor};border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:700;color:${r.combinedColor};margin-bottom:6px;">${r.combinedLabel}</div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">${r.combinedRec}</p>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+            <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5;">⚠️ FIB-4 y APRI son herramientas de <strong>cribado</strong>, no de diagnóstico definitivo. La elastografía hepática y la biopsia son el estándar de referencia cuando los resultados son indeterminados o discordantes.</p>
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:0;">Vallet-Pichard A et al. <em>Hepatology.</em> 2007 &nbsp;·&nbsp; Wai CT et al. <em>Hepatology.</em> 2003</p>
+    </div>`;
+}
+
+function calculateFibrosisForm(event) {
+    event.preventDefault();
+    const inputs = _fibrosisInputs();
+    if (!inputs.age || !inputs.ast || !inputs.alt || !inputs.platelets) {
+        document.getElementById('fibrosisResult').innerHTML = '<p style="color:var(--danger);font-size:13px;padding:10px;">Completa edad, AST/TGO, ALT/TGP y plaquetas para calcular.</p>';
+        return;
+    }
+    const r = Calculators.calculateFibrosis(inputs);
+    document.getElementById('fibrosisResult').innerHTML = buildFibrosisResultHTML(r);
+    Storage.addToHistory({ calculatorId: 38, calculatorName: 'FIB-4 / APRI', inputs, result: { value: r.value, unit: r.unit, description: r.description }, interpretation: r.interpretation });
+}
+
+// === 37. PSI/PORT — ÍNDICE DE SEVERIDAD DE NEUMONÍA === //
+function _psiCk(id) { return document.getElementById(id)?.checked || false; }
+
+function createPSIForm() {
+    function ck(id, label, sub) {
+        return `<label style="display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:6px;background:var(--bg-card);">
+            <input type="checkbox" id="${id}" onchange="updatePSILive()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer;">
+            <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);">${label}</div>
+                ${sub ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${sub}</div>` : ''}
+            </div>
+        </label>`;
+    }
+    return `
+        <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;border-left:4px solid #22c55e;">
+            <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">
+                Estratifica la severidad de la NAC en clases I–V. Los laboratorios son <strong>opcionales</strong> — si no están disponibles, déjalos sin marcar (no suman puntos, pero el score puede subestimar la severidad).
+            </p>
+        </div>
+        <form id="psiForm" onsubmit="calculatePSIForm(event)">
+
+            <!-- Datos demográficos -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Datos del paciente</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">EDAD (años)</label>
+                        <input type="number" id="psiAge" min="18" max="120" placeholder="ej: 65" oninput="updatePSILive()"
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">SEXO</label>
+                        <select id="psiSex" onchange="updatePSILive()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;">
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino (−10 pts)</option>
+                        </select>
+                    </div>
+                </div>
+                ${ck('psiNursing','Residente de hogar de ancianos / institución','Independiente de la edad — suma +10 pts')}
+            </div>
+
+            <!-- Comorbilidades -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Comorbilidades</div>
+                ${ck('psiNeoplasia','Neoplasia activa','+30 pts — tumor sólido, hematológico, o neoplasia diagnosticada en el último año (excl. cáncer de piel basocelular/espinocelular)')}
+                ${ck('psiLiver','Enfermedad hepática','+20 pts — cirrosis u otra hepatopatía crónica documentada')}
+                ${ck('psiChf','Insuficiencia cardíaca congestiva (ICC)','+10 pts — documentada por historia, examen o imagen')}
+                ${ck('psiCerebro','Enfermedad cerebrovascular','+10 pts — ACV o isquemia cerebral transitoria documentados')}
+                ${ck('psiRenal','Enfermedad renal','+10 pts — ERC documentada o elevación de creatinina/BUN en contexto crónico')}
+            </div>
+
+            <!-- Examen físico -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Examen físico</div>
+                ${ck('psiAms','Alteración del estado mental (AMS)','+20 pts — desorientación, estupor, coma. Nuevo respecto al basal')}
+                ${ck('psiRr30','Frecuencia respiratoria ≥30/min','+20 pts')}
+                ${ck('psiSbp90','PAS <90 mmHg','+20 pts — hipotensión sostenida')}
+                ${ck('psiTemp','Temperatura <35°C o ≥40°C','+15 pts — hipotermia o fiebre alta')}
+                ${ck('psiHr125','Frecuencia cardíaca ≥125/min','+10 pts')}
+            </div>
+
+            <!-- Laboratorio y radiología (opcionales) -->
+            <div style="background:var(--bg-secondary);padding:16px;border-radius:12px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Laboratorio y radiología</div>
+                <p style="font-size:12px;color:var(--text-secondary);margin:0 0 12px 0;">Marca solo los criterios que están presentes y confirmados. Si el lab no está disponible, déjalo sin marcar.</p>
+                ${ck('psiPh','pH arterial &lt;7.35','+30 pts — acidemia en gasometría arterial')}
+                ${ck('psiBun','BUN ≥30 mg/dL (≥11 mmol/L)','+20 pts — nitrógeno ureico elevado')}
+                ${ck('psiNa','Sodio sérico &lt;130 mEq/L','+20 pts — hiponatremia significativa')}
+                ${ck('psiGlucose','Glucosa ≥250 mg/dL (≥14 mmol/L)','+10 pts')}
+                ${ck('psiHct','Hematocrito &lt;30%','+10 pts — anemia significativa')}
+                ${ck('psiHypoxia','PaO₂ &lt;60 mmHg o SaO₂ &lt;90%','+10 pts — hipoxemia en gasometría o pulsioximetría')}
+                ${ck('psiEffusion','Derrame pleural en radiografía de tórax','+10 pts')}
+            </div>
+
+            <!-- Live score -->
+            <div style="background:var(--bg-secondary);padding:14px 16px;border-radius:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <span style="font-size:13px;color:var(--text-secondary);">Score / Clase estimada:</span>
+                <span id="psiLiveClass" style="font-size:15px;font-weight:700;color:#22c55e;">— pts · Clase ?</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                🫁 Calcular PSI/PORT
+            </button>
+        </form>
+        <div id="psiResult"></div>`;
+}
+
+function _psiInputs() {
+    return {
+        age: document.getElementById('psiAge')?.value || '0',
+        sex: document.getElementById('psiSex')?.value || 'M',
+        nursingHome:   _psiCk('psiNursing'),
+        neoplasia:     _psiCk('psiNeoplasia'),
+        liver:         _psiCk('psiLiver'),
+        chf:           _psiCk('psiChf'),
+        cerebrovascular: _psiCk('psiCerebro'),
+        renal:         _psiCk('psiRenal'),
+        ams:           _psiCk('psiAms'),
+        rr30:          _psiCk('psiRr30'),
+        sbp90:         _psiCk('psiSbp90'),
+        tempAbnormal:  _psiCk('psiTemp'),
+        hr125:         _psiCk('psiHr125'),
+        phAcidosis:    _psiCk('psiPh'),
+        bunHigh:       _psiCk('psiBun'),
+        sodiumLow:     _psiCk('psiNa'),
+        glucoseHigh:   _psiCk('psiGlucose'),
+        hctLow:        _psiCk('psiHct'),
+        hypoxia:       _psiCk('psiHypoxia'),
+        effusion:      _psiCk('psiEffusion'),
+    };
+}
+
+function updatePSILive() {
+    const r = Calculators.calculatePSI(_psiInputs());
+    const el = document.getElementById('psiLiveClass');
+    if (!el) return;
+    if (!document.getElementById('psiAge')?.value) {
+        el.style.color = 'var(--text-secondary)'; el.textContent = '— pts · Clase ?'; return;
+    }
+    el.style.color = r.color;
+    el.textContent = r.isClassI ? 'Clase I — Ambulatorio' : `${r.score} pts · Clase ${r.riskClass}`;
+}
+
+function buildPSIResultHTML(r) {
+    const claseRows = [
+        { n: 'I',   label: 'Clase I',   crit: '≤50 a, sin comorbilidades, vitales normales', mort: '<0.1%', color: '#22c55e' },
+        { n: 'II',  label: 'Clase II',  crit: '≤70 pts',  mort: '0.6%',  color: '#22c55e' },
+        { n: 'III', label: 'Clase III', crit: '71–90 pts', mort: '2.8%',  color: '#f59e0b' },
+        { n: 'IV',  label: 'Clase IV',  crit: '91–130 pts',mort: '8.2%',  color: '#f97316' },
+        { n: 'V',   label: 'Clase V',   crit: '>130 pts',  mort: '29.2%', color: '#ef4444' },
+    ];
+
+    const tableRows = claseRows.map(cl => {
+        const isActive = cl.n === r.riskClass;
+        const bg = isActive ? cl.color + '22' : 'transparent';
+        const fw = isActive ? '700' : '400';
+        const border = isActive ? `border-left:3px solid ${cl.color};` : 'border-left:3px solid transparent;';
+        return `<tr style="background:${bg};${border}">
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?cl.color:'var(--text-secondary)'};white-space:nowrap;">${cl.label}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);">${cl.crit}</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?cl.color:'var(--text-secondary)'};text-align:center;">${cl.mort}</td>
+        </tr>`;
+    }).join('');
+
+    const scoreLabel = r.isClassI ? 'N/A (Clase I)' : `${r.score} pts`;
+
+    const classIBanner = r.isClassI ? `<div style="background:#22c55e22;border:1px solid #22c55e;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <p style="font-size:13px;color:#22c55e;margin:0;line-height:1.5;">
+            ✅ Paciente ≤50 años sin comorbilidades y con signos vitales normales — <strong>Clase I por algoritmo directo</strong> (score no requerido).
+            Si dispone de laboratorios, su normalidad confirmaría la clasificación.
+        </p></div>` : '';
+
+    return `<div style="margin-top:16px;">
+        ${classIBanner}
+        <!-- Badge -->
+        <div style="background:${r.color}22;border:2px solid ${r.color};border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">PSI/PORT Score</div>
+            <div style="font-size:36px;font-weight:800;color:${r.color};margin-bottom:4px;">Clase ${r.riskClass}</div>
+            <div style="font-size:16px;font-weight:600;color:var(--text-primary);">${scoreLabel}</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:6px;">
+                Mortalidad a 30 días: <strong style="color:${r.color};">${r.mortality}</strong>
+            </div>
+        </div>
+        <!-- Tabla -->
+        <div style="background:var(--bg-secondary);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+            <div style="padding:12px 14px;font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-color);">Mortalidad a 30 días por clase (Fine et al.)</div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="border-bottom:1px solid var(--border-color);">
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Clase</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Criterio</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:center;">Mortalidad</th>
+                </tr></thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        </div>
+        <!-- Disposición -->
+        <div style="background:${r.color}15;border-left:4px solid ${r.color};border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:${r.color};margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Disposición recomendada</div>
+            <div style="font-size:13px;color:var(--text-primary);">${r.disposicion}</div>
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:0;">Fine MJ et al. <em>N Engl J Med.</em> 1997;336(4):243–50 · PSI/PORT Cohort Study</p>
+    </div>`;
+}
+
+function calculatePSIForm(event) {
+    event.preventDefault();
+    const inputs = _psiInputs();
+    if (!inputs.age || parseInt(inputs.age) < 18) {
+        document.getElementById('psiResult').innerHTML = '<p style="color:var(--danger);font-size:13px;padding:10px;">Ingresa una edad válida (≥18 años).</p>';
+        return;
+    }
+    const r = Calculators.calculatePSI(inputs);
+    document.getElementById('psiResult').innerHTML = buildPSIResultHTML(r);
+    Storage.addToHistory({ calculatorId: 37, calculatorName: 'PSI/PORT', inputs, result: { value: r.value, unit: r.unit, description: r.description }, interpretation: r.interpretation });
+}
+
+// === 36. KILLIP-KIMBALL === //
+function createKillipForm() {
+    return `
+        <div style="background:var(--bg-secondary); padding:14px 16px; border-radius:12px; margin-bottom:14px; border-left:4px solid #ef4444;">
+            <p style="font-size:13px; color:var(--text-secondary); margin:0; line-height:1.5;">
+                Clasifica la severidad de insuficiencia cardíaca en IAM. Marca los hallazgos clínicos presentes — la clase se determina automáticamente.
+            </p>
+        </div>
+
+        <form id="killipForm" onsubmit="calculateKillipForm(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:10px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Hallazgos pulmonares</div>
+                <label style="font-size:14px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:8px;">Estertores crepitantes</label>
+                <select id="killipEstertores" onchange="updateKillipLive()" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-primary); font-size:14px;">
+                    <option value="ninguno">Sin estertores</option>
+                    <option value="menor_mitad">Estertores en &lt;½ de los campos pulmonares</option>
+                    <option value="mayor_mitad">Estertores en &gt;½ de los campos pulmonares (EAP)</option>
+                </select>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:10px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Hallazgos cardíacos y venosos</div>
+                <label style="display:flex; align-items:flex-start; gap:12px; padding:10px; border-radius:8px; cursor:pointer; margin-bottom:6px; background:var(--bg-card);">
+                    <input type="checkbox" id="killipS3" onchange="updateKillipLive()" style="width:18px; height:18px; margin-top:2px; flex-shrink:0; cursor:pointer;">
+                    <div>
+                        <div style="font-size:14px; font-weight:600; color:var(--text-primary);">Tercer ruido (S3) / Galope ventricular</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Galope protodiastólico audible en foco mitral</div>
+                    </div>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:12px; padding:10px; border-radius:8px; cursor:pointer; background:var(--bg-card);">
+                    <input type="checkbox" id="killipJVD" onchange="updateKillipLive()" style="width:18px; height:18px; margin-top:2px; flex-shrink:0; cursor:pointer;">
+                    <div>
+                        <div style="font-size:14px; font-weight:600; color:var(--text-primary);">Ingurgitación yugular (JVD)</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Distensión venosa yugular con paciente a 45°</div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:10px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Signos de shock cardiogénico</div>
+                <label style="display:flex; align-items:flex-start; gap:12px; padding:10px; border-radius:8px; cursor:pointer; margin-bottom:6px; background:var(--bg-card);">
+                    <input type="checkbox" id="killipPasBaja" onchange="updateKillipLive()" style="width:18px; height:18px; margin-top:2px; flex-shrink:0; cursor:pointer;">
+                    <div>
+                        <div style="font-size:14px; font-weight:600; color:var(--text-primary);">PAS &lt;90 mmHg</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Hipotensión sostenida (no transitoria)</div>
+                    </div>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:12px; padding:10px; border-radius:8px; cursor:pointer; background:var(--bg-card);">
+                    <input type="checkbox" id="killipHipoperf" onchange="updateKillipLive()" style="width:18px; height:18px; margin-top:2px; flex-shrink:0; cursor:pointer;">
+                    <div>
+                        <div style="font-size:14px; font-weight:600; color:var(--text-primary);">Signos de hipoperfusión periférica</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Extremidades frías/cianóticas, diaforesis, oliguria (&lt;30 mL/h), alteración del estado mental</div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:14px 16px; border-radius:12px; margin-bottom:14px; display:flex; align-items:center; gap:12px;">
+                <span style="font-size:13px; color:var(--text-secondary);">Clase estimada:</span>
+                <span id="killipLiveClass" style="font-size:15px; font-weight:700; color:#22c55e;">Clase I — Sin signos de IC</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🫀 Clasificar Killip-Kimball
+            </button>
+        </form>
+        <div id="killipResult"></div>`;
+}
+
+function updateKillipLive() {
+    const estertores = document.getElementById('killipEstertores')?.value || 'ninguno';
+    const s3 = document.getElementById('killipS3')?.checked || false;
+    const jvd = document.getElementById('killipJVD')?.checked || false;
+    const pasBaja = document.getElementById('killipPasBaja')?.checked || false;
+    const hipoperfusion = document.getElementById('killipHipoperf')?.checked || false;
+    const r = Calculators.calculateKillip({ estertores, s3, jvd, pasBaja, hipoperfusion });
+    const el = document.getElementById('killipLiveClass');
+    if (!el) return;
+    if (!r.clase) {
+        el.style.color = '#f59e0b';
+        el.textContent = 'Indeterminado — verificar datos';
+    } else {
+        el.style.color = r.color;
+        el.textContent = `${r.label} — ${r.desc}`;
+    }
+}
+
+function buildKillipResultHTML(r) {
+    const claseRows = [
+        { n: 1, label: 'Clase I',   desc: 'Sin signos de IC',       hist: '~6%',  act: '1–2%',   color: '#22c55e' },
+        { n: 2, label: 'Clase II',  desc: 'IC leve',                hist: '~17%', act: '4–6%',   color: '#f59e0b' },
+        { n: 3, label: 'Clase III', desc: 'Edema agudo de pulmón',  hist: '~38%', act: '8–12%',  color: '#f97316' },
+        { n: 4, label: 'Clase IV',  desc: 'Shock cardiogénico',     hist: '~81%', act: '40–60%', color: '#ef4444' },
+    ];
+    const manejo = {
+        1: ['Protocolo IAM estándar: antiagregación dual, anticoagulación, reperfusión urgente','Monitorización continua (ECG, SpO₂, PA)','IECA/ARA-II según tolerancia hemodinámica','Betabloqueador una vez estabilizado (sin contraindicación)'],
+        2: ['O₂ suplementario — objetivo SpO₂ ≥94%','Furosemida IV (20–40 mg); evaluar respuesta diurética','Nitratos IV si PAS >90 mmHg (reducir precarga)','IECA desde etapa temprana si PAS lo permite','Monitorización hemodinámica estrecha'],
+        3: ['O₂ de alto flujo; CPAP/VNI precoz (reduce necesidad de intubación)','Furosemida IV a dosis altas (40–80 mg); infusión continua si respuesta insuficiente','Nitratos IV (reducción agresiva de precarga y poscarga)','Revascularización precoz (beneficio en STEMI con EAP)','Preparar posible intubación si VNI falla'],
+        4: ['Vasopresores: norepinefrina 1ª línea (objetivo PAS ≥90 mmHg)','Dobutamina si bajo gasto sin hipotensión severa','Soporte ventilatorio invasivo si hipoxemia refractaria','Revascularización urgente — beneficio demostrado en STEMI (SHOCK Trial)','BCIA no recomendado de rutina (IABP-SHOCK II no demostró beneficio)','Considerar Impella / ECMO-VA en centros especializados','Traslado a centro con programa de shock cardiogénico'],
+    };
+    const disposicion = {
+        1: 'Unidad coronaria / sala con monitoreo continuo',
+        2: 'UCI coronaria',
+        3: 'UCI',
+        4: 'UCI — considerar traslado urgente a centro de shock cardiogénico',
+    };
+
+    if (!r.clase) {
+        return `<div style="background:#f59e0b22; border:1px solid #f59e0b; border-radius:12px; padding:16px; margin-top:16px;">
+            <div style="font-size:15px; font-weight:700; color:#f59e0b; margin-bottom:8px;">⚠️ Clase indeterminada</div>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin:0;">${r.warning}</p>
+        </div>`;
+    }
+
+    const tableRows = claseRows.map(cl => {
+        const isActive = cl.n === r.clase;
+        const bg = isActive ? cl.color + '22' : 'transparent';
+        const fw = isActive ? '700' : '400';
+        const border = isActive ? `border-left:3px solid ${cl.color};` : 'border-left:3px solid transparent;';
+        return `<tr style="background:${bg};${border}">
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?cl.color:'var(--text-secondary)'};white-space:nowrap;">${cl.label}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--text-secondary);">${cl.desc}</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?cl.color:'var(--text-secondary)'};text-align:center;">${cl.hist}</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:${fw};color:${isActive?cl.color:'var(--text-secondary)'};text-align:center;">${cl.act}</td>
+        </tr>`;
+    }).join('');
+
+    const manejoItems = (manejo[r.clase] || []).map(m =>
+        `<li style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;">${m}</li>`
+    ).join('');
+
+    const warningBanner = r.warning ? `<div style="background:#f59e0b22;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <p style="font-size:13px;color:#f59e0b;margin:0;line-height:1.5;">⚠️ ${r.warning}</p></div>` : '';
+
+    return `<div style="margin-top:16px;">
+        ${warningBanner}
+        <div style="background:${r.color}22;border:2px solid ${r.color};border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;">
+            <div style="font-size:32px;font-weight:800;color:${r.color};margin-bottom:4px;">${r.label}</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary);">${r.desc}</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:6px;">
+                Mortalidad histórica: <strong style="color:${r.color};">${r.mortalidadHist}</strong>
+                &nbsp;·&nbsp;
+                Contemporánea: <strong style="color:${r.color};">${r.mortalidadAct}</strong>
+            </div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+            <div style="padding:12px 14px;font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-color);">Mortalidad intrahospitalaria por clase</div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="border-bottom:1px solid var(--border-color);">
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Clase</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:left;">Descripción</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:center;">1967</th>
+                    <th style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:center;">Actual</th>
+                </tr></thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Manejo esencial</div>
+            <ul style="margin:0;padding-left:18px;">${manejoItems}</ul>
+        </div>
+        <div style="background:${r.color}15;border-left:4px solid ${r.color};border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:${r.color};margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Disposición recomendada</div>
+            <div style="font-size:13px;color:var(--text-primary);">${disposicion[r.clase]}</div>
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:0;">Killip T &amp; Kimball JT. <em>Am J Cardiol.</em> 1967;20(4):457–64</p>
+    </div>`;
+}
+
+function calculateKillipForm(event) {
+    event.preventDefault();
+    const inputs = {
+        estertores: document.getElementById('killipEstertores').value,
+        s3: document.getElementById('killipS3').checked,
+        jvd: document.getElementById('killipJVD').checked,
+        pasBaja: document.getElementById('killipPasBaja').checked,
+        hipoperfusion: document.getElementById('killipHipoperf').checked,
+    };
+    const r = Calculators.calculateKillip(inputs);
+    document.getElementById('killipResult').innerHTML = buildKillipResultHTML(r);
+    Storage.addToHistory({ calculatorId: 36, calculatorName: 'Killip-Kimball', inputs, result: { value: r.value, unit: r.unit, description: r.description }, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);

@@ -1539,5 +1539,215 @@ const Calculators = {
                 description: `Score ACR/EULAR 2019: ${totalScore} pts. ${classMap[classification]}.`
             }
         };
+    },
+
+    // === 38. FIB-4 / APRI — FIBROSIS HEPÁTICA === //
+    calculateFibrosis(inputs) {
+        const { age, ast, alt, platelets, plateletsUnit, lsnAst,
+                spiderNevi, eritemaPalmar, ictericia, leuconiquia, dupuytren,
+                ginecomastia, perdidaVello, sarcopenia,
+                hepatomegalia, esplenomegalia, ascitis, caputMedusae, edema,
+                asterixis, encefalopatia } = inputs;
+
+        const ageNum  = parseFloat(age)  || 0;
+        const astNum  = parseFloat(ast)  || 0;
+        const altNum  = parseFloat(alt)  || 0;
+        let   platNum = parseFloat(platelets) || 0;
+        if (plateletsUnit === 'mm3') platNum = platNum / 1000;
+        const lsnNum  = parseFloat(lsnAst) || 40;
+
+        // FIB-4 = (Edad × AST) / (Plaquetas × √ALT)
+        let fib4 = null;
+        if (ageNum > 0 && astNum > 0 && altNum > 0 && platNum > 0) {
+            fib4 = Math.round((ageNum * astNum) / (platNum * Math.sqrt(altNum)) * 100) / 100;
+        }
+
+        // APRI = (AST / LSN_AST × 100) / Plaquetas
+        let apri = null;
+        if (astNum > 0 && platNum > 0) {
+            apri = Math.round(((astNum / lsnNum) * 100) / platNum * 100) / 100;
+        }
+
+        // FIB-4 cutoffs (ajustados si >65 años — AASLD 2023)
+        const isOld = ageNum > 65;
+        let fib4Zone = null, fib4Label = null, fib4Color = null;
+        if (fib4 !== null) {
+            if (isOld) {
+                if (fib4 < 2.0)       { fib4Zone = 'low';  fib4Label = 'Bajo riesgo';     fib4Color = '#22c55e'; }
+                else if (fib4 <= 3.25){ fib4Zone = 'gray'; fib4Label = 'Indeterminado';   fib4Color = '#f59e0b'; }
+                else                  { fib4Zone = 'high'; fib4Label = 'Alto riesgo';     fib4Color = '#ef4444'; }
+            } else {
+                if (fib4 < 1.30)      { fib4Zone = 'low';  fib4Label = 'Fibrosis avanzada poco probable'; fib4Color = '#22c55e'; }
+                else if (fib4 <= 2.67){ fib4Zone = 'gray'; fib4Label = 'Zona indeterminada';              fib4Color = '#f59e0b'; }
+                else                  { fib4Zone = 'high'; fib4Label = 'Fibrosis avanzada probable';      fib4Color = '#ef4444'; }
+            }
+        }
+
+        // APRI interpretation
+        let apriZone = null, apriLabel = null, apriColor = null;
+        if (apri !== null) {
+            if (apri < 0.5)      { apriZone = 'low';      apriLabel = 'Fibrosis poco probable';    apriColor = '#22c55e'; }
+            else if (apri < 1.0) { apriZone = 'gray';     apriLabel = 'Indeterminado';             apriColor = '#f59e0b'; }
+            else if (apri < 2.0) { apriZone = 'moderate'; apriLabel = 'Fibrosis significativa';   apriColor = '#f97316'; }
+            else                 { apriZone = 'high';     apriLabel = 'Cirrosis probable';         apriColor = '#ef4444'; }
+        }
+
+        // Estigmas clínicos
+        const stigmataMap = { spiderNevi, eritemaPalmar, ictericia, leuconiquia, dupuytren,
+                              ginecomastia, perdidaVello, sarcopenia,
+                              hepatomegalia, esplenomegalia, ascitis, caputMedusae, edema,
+                              asterixis, encefalopatia };
+        const stigmataCount = Object.values(stigmataMap).filter(Boolean).length;
+
+        // Interpretación combinada
+        let combinedLabel, combinedColor, combinedRec, combinedColorName;
+        if (!fib4Zone) {
+            combinedLabel = 'Completar laboratorio para interpretación';
+            combinedColor = '#64748b'; combinedColorName = 'info';
+            combinedRec = 'Ingresa AST/TGO, ALT/TGP, plaquetas y edad para calcular FIB-4 y APRI.';
+        } else if (fib4Zone === 'low' && stigmataCount < 2) {
+            combinedLabel = 'Hepatopatía crónica avanzada poco probable';
+            combinedColor = '#22c55e'; combinedColorName = 'success';
+            combinedRec = 'Seguimiento según etiología. Repetir FIB-4 en 1–2 años si persisten factores de riesgo.';
+        } else if (fib4Zone === 'low' && stigmataCount >= 2) {
+            combinedLabel = 'Discordancia clínico-laboratorial';
+            combinedColor = '#f59e0b'; combinedColorName = 'warning';
+            combinedRec = 'Hallazgos clínicos no concordantes con laboratorio. Repetir labs en 3-6 meses, considerar elastografía o diagnóstico alternativo.';
+        } else if (fib4Zone === 'gray' && stigmataCount === 0) {
+            combinedLabel = 'Zona indeterminada — solicitar elastografía';
+            combinedColor = '#f59e0b'; combinedColorName = 'warning';
+            combinedRec = 'Solicitar elastografía hepática (FibroScan o SWE). Si no disponible, repetir FIB-4 en 6–12 meses.';
+        } else if (fib4Zone === 'gray' && stigmataCount >= 1) {
+            combinedLabel = 'Zona indeterminada con hallazgos clínicos';
+            combinedColor = '#f97316'; combinedColorName = 'warning';
+            combinedRec = 'Elastografía hepática prioritaria y valoración por hepatólogo. La clínica aumenta la sospecha.';
+        } else if (fib4Zone === 'high' && stigmataCount < 2) {
+            combinedLabel = 'Fibrosis avanzada — derivar a hepatólogo';
+            combinedColor = '#f97316'; combinedColorName = 'warning';
+            combinedRec = 'Elastografía hepática + derivación a hepatólogo. Evaluar complicaciones de hipertensión portal.';
+        } else {
+            combinedLabel = 'Probable cirrosis establecida';
+            combinedColor = '#ef4444'; combinedColorName = 'danger';
+            combinedRec = 'Derivar urgente a hepatólogo. Evaluar: endoscopia (várices), ecografía (hepatocarcinoma), Child-Pugh y MELD.';
+        }
+
+        return {
+            fib4, apri, fib4Zone, fib4Label, fib4Color, apriZone, apriLabel, apriColor,
+            stigmataCount, stigmataMap, combinedLabel, combinedColor, combinedRec, isOld,
+            value: fib4 ?? '—', unit: '(FIB-4)',
+            description: combinedLabel,
+            interpretation: { label: combinedLabel, color: combinedColorName, description: `FIB-4: ${fib4 ?? '—'}. APRI: ${apri ?? '—'}. Estigmas: ${stigmataCount}. ${combinedLabel}.` }
+        };
+    },
+
+    // === 37. PSI/PORT — ÍNDICE DE SEVERIDAD DE NEUMONÍA === //
+    calculatePSI(inputs) {
+        const { age, sex, nursingHome,
+                neoplasia, liver, chf, cerebrovascular, renal,
+                ams, rr30, sbp90, tempAbnormal, hr125,
+                phAcidosis, bunHigh, sodiumLow, glucoseHigh, hctLow, hypoxia, effusion } = inputs;
+
+        const ageNum = parseInt(age) || 0;
+
+        // Paso 1 — Clase I: ≤50 años, sin comorbilidades, sin alteraciones de signos vitales
+        const hasComorbidity = neoplasia || liver || chf || cerebrovascular || renal;
+        const hasVitalAbnormality = ams || rr30 || sbp90 || tempAbnormal || hr125;
+        const isClassI = ageNum <= 50 && !nursingHome && !hasComorbidity && !hasVitalAbnormality;
+
+        // Paso 2 — Score (aplica si no es Clase I)
+        let score = 0;
+        const agePts = sex === 'F' ? Math.max(ageNum - 10, 0) : ageNum;
+        score += agePts;
+        if (nursingHome)     score += 10;
+        if (neoplasia)       score += 30;
+        if (liver)           score += 20;
+        if (chf)             score += 10;
+        if (cerebrovascular) score += 10;
+        if (renal)           score += 10;
+        if (ams)             score += 20;
+        if (rr30)            score += 20;
+        if (sbp90)           score += 20;
+        if (tempAbnormal)    score += 15;
+        if (hr125)           score += 10;
+        if (phAcidosis)      score += 30;
+        if (bunHigh)         score += 20;
+        if (sodiumLow)       score += 20;
+        if (glucoseHigh)     score += 10;
+        if (hctLow)          score += 10;
+        if (hypoxia)         score += 10;
+        if (effusion)        score += 10;
+
+        let riskClass, mortality, color, colorName, disposicion;
+        if (isClassI) {
+            riskClass = 'I';   mortality = '<0.1%'; color = '#22c55e'; colorName = 'success';
+            disposicion = 'Tratamiento ambulatorio';
+        } else if (score <= 70) {
+            riskClass = 'II';  mortality = '0.6%';  color = '#22c55e'; colorName = 'success';
+            disposicion = 'Tratamiento ambulatorio';
+        } else if (score <= 90) {
+            riskClass = 'III'; mortality = '2.8%';  color = '#f59e0b'; colorName = 'warning';
+            disposicion = 'Observación breve o ingreso hospitalario corto';
+        } else if (score <= 130) {
+            riskClass = 'IV';  mortality = '8.2%';  color = '#f97316'; colorName = 'warning';
+            disposicion = 'Hospitalización en sala';
+        } else {
+            riskClass = 'V';   mortality = '29.2%'; color = '#ef4444'; colorName = 'danger';
+            disposicion = 'Hospitalización — considerar UCI';
+        }
+
+        const scoreDisplay = isClassI ? 'N/A' : String(score);
+        return {
+            score, isClassI, riskClass, mortality, color, colorName, disposicion, agePts,
+            value: isClassI ? 'I' : score, unit: isClassI ? '(Clase I)' : 'pts',
+            description: `PSI Clase ${riskClass}`,
+            interpretation: {
+                label: `Clase ${riskClass} — ${disposicion}`,
+                color: colorName,
+                description: `PSI Clase ${riskClass}. Score: ${scoreDisplay} pts. Mortalidad a 30 días: ${mortality}. ${disposicion}.`
+            }
+        };
+    },
+
+    // === 36. KILLIP-KIMBALL === //
+    calculateKillip({ estertores, s3, jvd, pasBaja, hipoperfusion }) {
+        let clase = null, warning = null;
+        if (pasBaja && hipoperfusion) {
+            clase = 4;
+        } else if (pasBaja && !hipoperfusion) {
+            clase = null;
+            warning = 'PAS <90 mmHg sin hipoperfusión periférica completa — verificar: ¿hipovolemia?, ¿bradiarritmia?. Si se confirma hipoperfusión → Clase IV.';
+        } else if (estertores === 'mayor_mitad') {
+            clase = 3;
+        } else if (s3 || estertores === 'menor_mitad' || jvd) {
+            clase = 2;
+        } else {
+            clase = 1;
+        }
+        const data = {
+            1: { label: 'Clase I',   desc: 'Sin signos de insuficiencia cardíaca', mortalidadHist: '~6%',  mortalidadAct: '1–2%',   color: '#22c55e', colorName: 'success' },
+            2: { label: 'Clase II',  desc: 'Insuficiencia cardíaca leve',          mortalidadHist: '~17%', mortalidadAct: '4–6%',   color: '#f59e0b', colorName: 'warning' },
+            3: { label: 'Clase III', desc: 'Edema agudo de pulmón',                mortalidadHist: '~38%', mortalidadAct: '8–12%',  color: '#f97316', colorName: 'warning' },
+            4: { label: 'Clase IV',  desc: 'Shock cardiogénico',                   mortalidadHist: '~81%', mortalidadAct: '40–60%', color: '#ef4444', colorName: 'danger'  },
+        };
+        if (!clase) {
+            return {
+                clase: null, warning,
+                value: null, unit: '',
+                description: 'Indeterminado',
+                interpretation: { label: 'Indeterminado', color: 'warning', description: warning || 'No se puede determinar la clase con los datos ingresados.' }
+            };
+        }
+        const d = data[clase];
+        return {
+            clase, label: d.label, desc: d.desc,
+            mortalidadHist: d.mortalidadHist, mortalidadAct: d.mortalidadAct,
+            color: d.color, colorName: d.colorName, warning,
+            value: clase, unit: `(${d.desc})`,
+            description: d.desc,
+            interpretation: {
+                label: d.label, color: d.colorName,
+                description: `${d.label}: ${d.desc}. Mortalidad intrahospitalaria histórica: ${d.mortalidadHist}. Contemporánea: ${d.mortalidadAct}.`
+            }
+        };
     }
 };

@@ -220,6 +220,9 @@ function loadCalculatorForm(calc) {
         case 33: container.innerHTML = createLESForm(); break;
         case 34: container.innerHTML = createPAMForm(); break;
         case 35: container.innerHTML = createCalculadoraForm(); break;
+        case 36: container.innerHTML = createKillipForm(); break;
+        case 37: container.innerHTML = createPSIForm(); break;
+        case 38: container.innerHTML = createFibrosisForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
@@ -736,6 +739,15 @@ function showFullResult(itemId) {
     } else if (item.calculatorId === 33) {
         const r = Calculators.calculateLES(item.inputs);
         bodyHTML = buildLESResultHTML(r, item.inputs);
+    } else if (item.calculatorId === 36) {
+        const r = Calculators.calculateKillip(item.inputs);
+        bodyHTML = buildKillipResultHTML(r);
+    } else if (item.calculatorId === 37) {
+        const r = Calculators.calculatePSI(item.inputs);
+        bodyHTML = buildPSIResultHTML(r);
+    } else if (item.calculatorId === 38) {
+        const r = Calculators.calculateFibrosis(item.inputs);
+        bodyHTML = buildFibrosisResultHTML(r);
     } else {
         const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
         const c = colorMap[item.interpretation?.color] || 'var(--brand-accent)';
