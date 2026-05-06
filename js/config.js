@@ -388,7 +388,7 @@ const CALCULATORS_CONFIG = [
         id: 38,
         name: 'FIB-4 / APRI',
         fullName: 'FIB-4 / APRI — Fibrosis Hepática',
-        icon: '🫀',
+        icon: '🔬',
         category: 'hepato',
         categoryLabel: 'Hepatología',
         description: 'Evaluación no invasiva de fibrosis hepática. FIB-4 (AASLD 2023, EASL, OMS) + APRI con estigmas clínicos. Orienta hacia elastografía o hepatólogo según el resultado combinado.',
