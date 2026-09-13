@@ -230,6 +230,7 @@ function loadCalculatorForm(calc) {
         case 43: container.innerHTML = createSepsisBundleForm(); break;
         case 44: container.innerHTML = createEAPForm(); break;
         case 45: container.innerHTML = createArritmiaForm(); break;
+        case 46: container.innerHTML = createParoForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">

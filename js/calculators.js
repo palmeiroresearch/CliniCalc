@@ -2246,5 +2246,144 @@ const Calculators = {
                 description: `Protocolo de manejo de ${TIPO_LABELS[tipo]} generado (AHA ACLS 2020).`
             }
         };
+    },
+
+    // === 46. PARO CARDÍACO — RCP + BÚSQUEDA GUIADA DE CAUSA (6H/5T) === //
+    CAUSAS_PARO: [
+        {
+            id: 'hipovolemia', label: 'Hipovolemia', icon: '🩸', letra: 'H',
+            clues: [
+                'Antecedente de hemorragia activa o trauma reciente',
+                'POCUS con VCI colapsada, o taquicardia/hipotensión marcada previa al paro'
+            ],
+            action: 'Bolo de cristaloides 1-2 L IV/IO rápido (o hemoderivados si hemorragia activa). Controlar el sangrado en paralelo (compresión, torniquete, cirugía/angioembolización urgente si es quirúrgico).'
+        },
+        {
+            id: 'hipoxia', label: 'Hipoxia', icon: '🫁', letra: 'H',
+            clues: [
+                'Vía aérea difícil/obstruida o hipoxemia severa antes del paro',
+                'Ahogamiento, asfixia o aspiración presenciada'
+            ],
+            action: 'Optimizar la vía aérea (intubación si no está asegurada) y ventilar con O₂ al 100%. Verificar posición del tubo endotraqueal y capnografía — el desplazamiento/obstrucción del tubo es causa frecuente de hipoxia iatrogénica durante la RCP.'
+        },
+        {
+            id: 'acidosis', label: 'Hidrogeniones (Acidosis)', icon: '🧪', letra: 'H',
+            clues: [
+                'Cetoacidosis diabética o acidosis metabólica severa conocida',
+                'Enfermedad renal crónica terminal sin diálisis reciente, o sepsis/shock prolongado previo'
+            ],
+            action: 'Asegurar ventilación adecuada (elimina CO₂). Bicarbonato de sodio 1 mEq/kg IV SOLO si acidosis metabólica severa confirmada o muy sospechada (uso NO rutinario en todo paro). Diálisis emergente en paralelo si ERC terminal.'
+        },
+        {
+            id: 'kalemia', label: 'Hipo/Hiperkalemia', icon: '⚡', letra: 'H',
+            clues: [
+                'ERC en diálisis con sesión perdida, uso de IECA/ARA-II/espironolactona, o rabdomiólisis (sugiere Hiperkalemia)',
+                'Vómitos/diarrea severa o uso de diuréticos (sugiere Hipokalemia)',
+                'ECG previo con T picudas/QRS ancho (Hiperkalemia) u onda U prominente/QT largo (Hipokalemia)'
+            ],
+            isKalemia: true,
+            hyperAction: '<strong>Hiperkalemia:</strong> Gluconato de calcio 1 g IV en bolo (o Cloruro de calcio 1 g IV) — estabiliza la membrana. Luego Insulina 10 U + Dextrosa 50% 25 g IV — desplaza K⁺ al intracelular. Bicarbonato de sodio 1 mEq/kg IV. Salbutamol nebulizado/IV. Considerar diálisis emergente si refractaria.',
+            hypoAction: '<strong>Hipokalemia:</strong> Reposición de K⁺ IV en bolos monitorizados (típicamente 10-20 mEq bajo supervisión estrecha durante el paro) — corregir Mg²⁺ concomitante si está bajo.'
+        },
+        {
+            id: 'hipotermia', label: 'Hipotermia', icon: '🥶', letra: 'H',
+            clues: [
+                'Exposición al frío o inmersión en agua fría',
+                'Hallazgos de hipotermia al examen (piel fría, rigidez) sin causa térmica ambiental clara'
+            ],
+            action: 'Recalentamiento activo: interno si &lt;30°C (lavado peritoneal/torácico caliente, ECMO si disponible) o externo si 30-34°C. RCP prolongada — no declarar fallecimiento hasta recalentar ("nadie está muerto hasta que está caliente y muerto"). Limitar a 1 dosis de Epinefrina y espaciar las descargas hasta alcanzar &gt;30°C.'
+        },
+        {
+            id: 'hipoglucemia', label: 'Hipoglucemia', icon: '🍬', letra: 'H',
+            clues: ['Diabético en tratamiento con insulina o sulfonilurea'],
+            action: 'Dextrosa 50% 25-50 mL (12.5-25 g) IV en bolo directo. Repetir glucemia a los 5-10 min.'
+        },
+        {
+            id: 'neumotorax', label: 'Neumotórax a Tensión', icon: '💨', letra: 'T',
+            clues: [
+                'Trauma torácico o ventilación mecánica reciente',
+                'Ausencia unilateral de murmullo vesicular + ingurgitación yugular o dificultad progresiva para ventilar'
+            ],
+            action: 'Descompresión con aguja (2º espacio intercostal línea medioclavicular, o 4-5º espacio línea axilar anterior) o toracostomía con dedo/tubo de tórax — inmediata, NO esperar radiografía.'
+        },
+        {
+            id: 'taponamiento', label: 'Taponamiento Cardíaco', icon: '🫀', letra: 'T',
+            clues: [
+                'Trauma torácico penetrante, o neoplasia/pericarditis/insuficiencia renal conocida',
+                'POCUS con derrame pericárdico, o AESP con buena contractilidad/FC preservada'
+            ],
+            action: 'Pericardiocentesis emergente (guiada por ecografía si disponible). Considerar toracotomía de reanimación si trauma penetrante con paro presenciado reciente.'
+        },
+        {
+            id: 'toxicos', label: 'Tóxicos', icon: '💊', letra: 'T',
+            clues: [
+                'Antecedente de sobredosis/ingesta o frascos de medicamentos/drogas en la escena',
+                'Pupilas mióticas (opioides) o QRS ancho en ECG previo (tricíclicos/bloqueadores de sodio)'
+            ],
+            action: 'Antídoto según sospecha: Naloxona 0.4-2 mg IV/IM/IN si opioides. Bicarbonato de sodio 1-2 mEq/kg IV en bolo si QRS ancho por tricíclicos/bloqueadores de sodio. Gluconato de calcio + Glucagón 3-5 mg IV + Insulina-dextrosa en dosis altas si betabloqueante/calcioantagonista. Emulsión lipídica IV 20% (bolo 1.5 mL/kg, luego infusión) si toxicidad por anestésicos locales u otros lipofílicos refractaria.'
+        },
+        {
+            id: 'trombosis_pulmonar', label: 'Trombosis Pulmonar (TEP masivo)', icon: '🫁', letra: 'T',
+            clues: [
+                'Factores de riesgo de TVP/TEP (cirugía/inmovilización reciente, cáncer activo, embarazo)',
+                'Disnea súbita o colapso presenciado, o POCUS con dilatación aguda de VD'
+            ],
+            action: 'Considerar Trombolisis durante el paro (Alteplasa 50 mg IV en bolo) si alta sospecha de TEP masivo como causa. Continuar RCP al menos 60-90 min tras la trombolisis antes de suspender esfuerzos.'
+        },
+        {
+            id: 'trombosis_coronaria', label: 'Trombosis Coronaria (SCA)', icon: '❤️', letra: 'T',
+            clues: [
+                'Dolor torácico previo al paro o factores de riesgo cardiovascular mayores',
+                'Elevación del ST en ECG previo al paro, si se registró'
+            ],
+            action: 'Tras lograr RCE: ECG de 12 derivaciones inmediato y cateterismo cardíaco urgente/angioplastia primaria si hay elevación del ST o alta sospecha de SCA como causa.'
+        }
+    ],
+
+    calculateParo(inputs) {
+        const { ritmo, clues, glucemia, potasio, temperatura } = inputs;
+
+        const causas = this.CAUSAS_PARO.map(c => {
+            const checked = (clues?.[c.id] || []).filter(Boolean).length;
+            let overrideHit = false, hyperFlag = false, hypoFlag = false;
+
+            if (c.id === 'hipoglucemia' && typeof glucemia === 'number' && !isNaN(glucemia) && glucemia < 60) overrideHit = true;
+            if (c.id === 'hipotermia' && typeof temperatura === 'number' && !isNaN(temperatura) && temperatura < 32) overrideHit = true;
+            if (c.id === 'kalemia' && typeof potasio === 'number' && !isNaN(potasio)) {
+                if (potasio > 6.5) { overrideHit = true; hyperFlag = true; }
+                else if (potasio < 2.5) { overrideHit = true; hypoFlag = true; }
+            }
+
+            const matchedCount = checked + (overrideHit ? 1 : 0);
+
+            // Para la causa combinada de kalemia, determinar qué acción(es) mostrar
+            if (c.isKalemia && matchedCount > 0) {
+                const cluesArr = clues?.[c.id] || [];
+                if (cluesArr[0]) hyperFlag = true;
+                if (cluesArr[1]) hypoFlag = true;
+                if (!hyperFlag && !hypoFlag) { hyperFlag = true; hypoFlag = true; } // solo pista ECG ambigua u override sin dirección clara
+            }
+
+            return { ...c, matchedCount, hyperFlag, hypoFlag };
+        });
+
+        const causasRankeadas = causas
+            .filter(c => c.matchedCount > 0)
+            .sort((a, b) => b.matchedCount - a.matchedCount || (a.letra === b.letra ? 0 : a.letra === 'H' ? -1 : 1));
+
+        const sinHallazgos = causasRankeadas.length === 0;
+
+        const severity = ritmo === 'desfibrilable'
+            ? { label: 'Paro Cardíaco — Ritmo Desfibrilable (FV/TVSP)', colorHex: '#7f1d1d', badge: '🚨' }
+            : { label: 'Paro Cardíaco — Ritmo No Desfibrilable (Asistolia/AESP)', colorHex: '#7f1d1d', badge: '🚨' };
+
+        return {
+            ritmo, causasRankeadas, sinHallazgos, todasLasCausas: causas, severity,
+            value: 0, unit: '',
+            interpretation: {
+                label: severity.label, color: 'danger',
+                description: 'Protocolo de paro cardíaco con búsqueda guiada de causa (6H/5T) generado.'
+            }
+        };
     }
 };

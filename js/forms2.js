@@ -5476,6 +5476,156 @@ function calculateArritmiaProtocol(event) {
     Storage.addToHistory({ calculatorId: 45, calculatorName: 'Protocolo de Arritmias', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 46. PARO CARDÍACO — RCP + BÚSQUEDA GUIADA DE CAUSA (6H/5T) === //
+function createParoForm() {
+    const causaExtraField = (causaId) => {
+        if (causaId === 'hipoglucemia') {
+            return `<div style="margin-top:8px;"><label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-tertiary);">Glucemia capilar (mg/dL) — opcional</label>
+                <input type="number" id="paroGlucemia" step="any" min="0" max="800" class="form-input" placeholder="ej. 45"></div>`;
+        }
+        if (causaId === 'kalemia') {
+            return `<div style="margin-top:8px;"><label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-tertiary);">Potasio sérico (mEq/L) — opcional</label>
+                <input type="number" id="paroPotasio" step="0.1" min="0" max="12" class="form-input" placeholder="ej. 7.2"></div>`;
+        }
+        if (causaId === 'hipotermia') {
+            return `<div style="margin-top:8px;"><label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-tertiary);">Temperatura corporal (°C) — opcional</label>
+                <input type="number" id="paroTemperatura" step="0.1" min="15" max="42" class="form-input" placeholder="ej. 29.5"></div>`;
+        }
+        return '';
+    };
+
+    const causaBloques = Calculators.CAUSAS_PARO.map(c => `
+        <div style="background:var(--bg-secondary); padding:14px 16px; border-radius:10px; margin-bottom:10px;">
+            <div style="font-size:13px; font-weight:700; margin-bottom:8px;">${c.icon} ${c.label} <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">(${c.letra})</span></div>
+            ${c.clues.map((clue, idx) => `
+                <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; cursor:pointer;">
+                    <input type="checkbox" id="paroClue_${c.id}_${idx}" style="width:16px; height:16px; margin-top:2px; flex-shrink:0;">
+                    <span style="font-size:12px; line-height:1.4;">${clue}</span>
+                </label>`).join('')}
+            ${causaExtraField(c.id)}
+        </div>`).join('');
+
+    return `
+        <form id="paroForm" onsubmit="calculateParoProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Ritmo del paro</label>
+                <select id="paroRitmo" required class="form-input">
+                    <option value="desfibrilable">Desfibrilable — FV / TV sin pulso</option>
+                    <option value="no_desfibrilable">No desfibrilable — Asistolia / AESP</option>
+                </select>
+            </div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Búsqueda de la causa (6H / 5T)</div>
+            <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:12px;">Marca cualquier hallazgo compatible (antecedente, examen, POCUS, laboratorio o ECG previo). Si no marcas nada, la herramienta te muestra las 11 causas para descartarlas de forma sistemática.</p>
+
+            ${causaBloques}
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px; margin-top:6px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en AHA ACLS 2020 (Guidelines Update).
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="paroResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildParoProtocolHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.severity.badge} ${r.severity.label}</div>
+        </div>`;
+
+    const rcpContent = `
+        <div><strong>RCP de alta calidad:</strong> compresiones continuas (100-120/min, 5-6 cm), mínima interrupción, permitir expansión torácica completa</div>
+        <div style="margin-top:4px;">Vía aérea avanzada y capnografía si disponible — objetivo EtCO₂ ≥ 10 mmHg como indicador de calidad de RCP</div>`;
+
+    const shockableContent = `
+        <div style="color:#dc2626; font-weight:700;">Desfibrilación INMEDIATA, NO sincronizada (200 J bifásico o dosis máxima del equipo)</div>
+        <div style="margin-top:4px;">Reanudar RCP inmediatamente tras la descarga — NO verificar pulso/ritmo hasta completar 2 min de RCP</div>
+        <div style="margin-top:4px;"><strong>Epinefrina:</strong> 1 mg IV/IO cada 3-5 min (tras la 2ª o 3ª descarga)</div>
+        <div style="margin-top:4px;"><strong>Antiarrítmico:</strong> Amiodarona 300 mg IV/IO (bolo) → segunda dosis 150 mg si FV/TV recurrente; alternativa: Lidocaína 1-1.5 mg/kg IV/IO</div>`;
+
+    const nonShockableContent = `
+        <div style="color:var(--text-primary); font-weight:700;">NO desfibrilar</div>
+        <div style="margin-top:4px;"><strong>Epinefrina:</strong> 1 mg IV/IO cada 3-5 min, lo antes posible</div>
+        <div style="margin-top:4px;">El antiarrítmico (Amiodarona/Lidocaína) NO está indicado en Asistolia/AESP</div>
+        <div style="margin-top:4px;">Reevaluar ritmo cada 2 min — si aparece un ritmo desfibrilable, cambiar de inmediato al protocolo correspondiente</div>`;
+
+    let causasHtml;
+    if (r.sinHallazgos) {
+        const repasoContent = r.todasLasCausas.map(c => `
+            <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--border-color);">
+                <div style="font-weight:700; margin-bottom:2px;">${c.icon} ${c.label} <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">(${c.letra})</span></div>
+                <div style="font-size:12px; color:var(--text-secondary);">${c.clues.join(' · ')}</div>
+            </div>`).join('');
+        causasHtml = section('🔍', '3. Repaso Sistemático — 6H / 5T', '#8b5cf6', `
+            <div style="margin-bottom:10px; color:var(--text-secondary); font-size:12px;">Ningún hallazgo marcado todavía — repasa cada causa de forma sistemática mientras continúa la RCP:</div>
+            ${repasoContent}`);
+    } else {
+        causasHtml = r.causasRankeadas.map((c, i) => {
+            let actionContent;
+            if (c.isKalemia) {
+                actionContent = (c.hyperFlag ? `<div>${c.hyperAction}</div>` : '') +
+                    (c.hypoFlag ? `<div style="margin-top:${c.hyperFlag ? '8px' : '0'};">${c.hypoAction}</div>` : '') +
+                    (c.hyperFlag && c.hypoFlag ? '<div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Pista ambigua o ambas direcciones marcadas — diferenciar con laboratorio/ECG específico antes de tratar.</div>' : '');
+            } else {
+                actionContent = `<div>${c.action}</div>`;
+            }
+            return section(c.icon, `${3 + i}. ${c.label} — Sospechada (${c.matchedCount} hallazgo${c.matchedCount > 1 ? 's' : ''})`, '#dc2626', actionContent);
+        }).join('');
+    }
+
+    return `${headerHTML}
+        ${section('❤️‍🩹', '1. RCP', '#dc2626', rcpContent)}
+        ${section(r.ritmo === 'desfibrilable' ? '⚡' : '🚫', '2. Ritmo — ' + (r.ritmo === 'desfibrilable' ? 'Desfibrilable' : 'No Desfibrilable'), r.ritmo === 'desfibrilable' ? '#dc2626' : '#6366f1', r.ritmo === 'desfibrilable' ? shockableContent : nonShockableContent)}
+        ${causasHtml}`;
+}
+
+function calculateParoProtocol(event) {
+    event.preventDefault();
+    const ritmo = document.getElementById('paroRitmo').value;
+
+    const clues = {};
+    Calculators.CAUSAS_PARO.forEach(c => {
+        clues[c.id] = c.clues.map((_, idx) => document.getElementById(`paroClue_${c.id}_${idx}`).checked);
+    });
+
+    const glucemiaRaw = document.getElementById('paroGlucemia').value;
+    const potasioRaw = document.getElementById('paroPotasio').value;
+    const temperaturaRaw = document.getElementById('paroTemperatura').value;
+
+    const inputs = {
+        ritmo, clues,
+        glucemia: glucemiaRaw === '' ? null : parseFloat(glucemiaRaw),
+        potasio: potasioRaw === '' ? null : parseFloat(potasioRaw),
+        temperatura: temperaturaRaw === '' ? null : parseFloat(temperaturaRaw)
+    };
+
+    const r = Calculators.calculateParo(inputs);
+    const container = document.getElementById('paroResult');
+    container.innerHTML = buildParoProtocolHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('paroForm').reset(); document.getElementById('paroResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 46, calculatorName: 'Paro Cardíaco', inputs, result: r, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);

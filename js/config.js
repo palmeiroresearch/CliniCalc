@@ -1,9 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 45 Calculadoras Médicas
+// Metadata de las 46 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -453,6 +453,16 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Cardiología',
         description: 'Guía la decisión de cardioversión/desfibrilación vs manejo farmacológico según el tipo de arritmia y la estabilidad hemodinámica, con líneas de antiarrítmicos por escenario (AHA ACLS 2020).',
         formulas: ['Estable vs Inestable', 'Cardioversión/Desfibrilación', 'Líneas de Antiarrítmicos']
+    },
+    {
+        id: 46,
+        name: 'Paro Cardíaco',
+        fullName: 'Paro Cardíaco — RCP y Búsqueda Guiada de Causa (6H/5T)',
+        icon: '💔',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'RCP + desfibrilable/no desfibrilable, y ayuda a encontrar la causa reversible a partir de hallazgos clínicos, POCUS, laboratorio y ECG — no solo enumera las 6H/5T (AHA ACLS 2020).',
+        formulas: ['RCP/Desfibrilación', 'Búsqueda de Causa por Hallazgos (6H/5T)']
     },
     {
         id: 38,
