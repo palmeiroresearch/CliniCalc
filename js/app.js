@@ -224,6 +224,12 @@ function loadCalculatorForm(calc) {
         case 37: container.innerHTML = createPSIForm(); break;
         case 38: container.innerHTML = createFibrosisForm(); break;
         case 39: container.innerHTML = createEPOCForm(); break;
+        case 40: container.innerHTML = createHHSForm(); break;
+        case 41: container.innerHTML = createHypertensiveCrisisForm(); break;
+        case 42: container.innerHTML = createStatusEpilepticusForm(); break;
+        case 43: container.innerHTML = createSepsisBundleForm(); break;
+        case 44: container.innerHTML = createEAPForm(); break;
+        case 45: container.innerHTML = createArritmiaForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">

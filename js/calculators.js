@@ -1907,5 +1907,344 @@ const Calculators = {
                 description: `${d.label}: ${d.desc}. Mortalidad intrahospitalaria histórica: ${d.mortalidadHist}. Contemporánea: ${d.mortalidadAct}.`
             }
         };
+    },
+
+    // === 40. ESTADO HIPEROSMOLAR HIPERGLUCÉMICO (EHH/HHS) === //
+    calculateHHS(inputs) {
+        let { weight, hemodynamic, glucose, glucoseUnit, sodium, potassium, chloride, mentalStatus } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+        if (glucoseUnit === 'mmol/L') glucose = glucose / 0.0555;
+
+        // Na corregido (mismo factor 2.4 usado en CAD/CADE — ADA 2024)
+        const naCorregido = Math.round((sodium + 2.4 * (glucose - 100) / 100) * 10) / 10;
+
+        // Osmolaridad sérica efectiva — variable diagnóstica clave en EHH (>320 mOsm/kg)
+        const osmEffective = Math.round((2 * sodium + glucose / 18) * 10) / 10;
+
+        const agCalc = (chloride !== null && !isNaN(chloride))
+            ? Math.round((sodium - chloride) * 10) / 10
+            : null;
+
+        // Clasificación de severidad por osmolaridad + estado mental
+        let severity;
+        if (osmEffective < 320) {
+            severity = { label: 'Osm <320 — Reevaluar diagnóstico', colorHex: '#64748b', badge: '⚪' };
+        } else if (osmEffective >= 350 || mentalStatus === 'coma') {
+            severity = { label: 'EHH Severo', colorHex: '#dc2626', badge: '🔴' };
+        } else if (osmEffective >= 330 || mentalStatus === 'estupor') {
+            severity = { label: 'EHH Moderado', colorHex: '#f59e0b', badge: '🟠' };
+        } else {
+            severity = { label: 'EHH Leve', colorHex: '#eab308', badge: '🟡' };
+        }
+
+        const criticalAlert = potassium < 3.3
+            ? { hasAlert: true, message: `K⁺ ${potassium} mEq/L — RETENER INSULINA. Reponer potasio primero. Riesgo de arritmia fatal.` }
+            : { hasAlert: false };
+
+        // Fluidos — déficit típico 8-10 L, reposición MÁS LENTA y cautelosa que en CAD
+        let bolusML, bolusTime;
+        if (hemodynamic === 'severe') {
+            bolusML = Math.round(weight * 15); bolusTime = '1 hora, reevaluar respuesta hemodinámica';
+        } else if (hemodynamic === 'cardiogenic') {
+            bolusML = 250; bolusTime = '30-60 min con monitoreo hemodinámico estrecho (considerar línea arterial)';
+        } else if (hemodynamic === 'euvolemic') {
+            bolusML = Math.round(weight * 7); bolusTime = '1 hora';
+        } else {
+            bolusML = Math.round(weight * 10); bolusTime = '1 hora';
+        }
+
+        const fluidType = naCorregido > 150 ? 'NaCl 0.45%' : 'NaCl 0.9% o cristaloide balanceado';
+        const naNote = naCorregido > 150
+            ? `Na corregido ${naCorregido} mEq/L (elevado) → usar NaCl 0.45% tras la primera hora`
+            : `Na corregido ${naCorregido} mEq/L → continuar NaCl 0.9%/balanceado`;
+
+        // Potasio (mismos umbrales que CAD)
+        let kAction, kRate, holdInsulin, kNote;
+        if (potassium < 3.3) {
+            kAction = 'RETENER INSULINA — Reponer K⁺ primero';
+            kRate = '20-40 mEq/h IV'; holdInsulin = true;
+            kNote = 'Monitoreo ECG continuo. Reiniciar/iniciar insulina cuando K⁺ ≥ 3.3 mEq/L.';
+        } else if (potassium <= 4.0) {
+            kAction = 'Reponer + iniciar insulina'; kRate = '20 mEq/h IV'; holdInsulin = false;
+            kNote = 'Monitoreo ECG continuo. Reponer Mg²⁺ si está bajo.';
+        } else if (potassium <= 5.5) {
+            kAction = 'Reponer (dosis reducida) + iniciar insulina'; kRate = '10 mEq/h IV'; holdInsulin = false;
+            kNote = 'K⁺ descenderá con insulina y expansión de volumen.';
+        } else {
+            kAction = 'No reponer — iniciar insulina'; kRate = '—'; holdInsulin = false;
+            kNote = 'Hiperkalemia por redistribución/depleción de volumen — descenderá con el tratamiento.';
+        }
+
+        // Insulina — dosis MENOR que CAD y de inicio DIFERIDO (tras ≥1h de fluidos)
+        const doseIV = Math.round(weight * 0.05 * 100) / 100;
+        const glarginMin = Math.round(weight * 0.5);
+        const glarginMax = Math.round(weight * 0.8);
+
+        return {
+            severity, criticalAlert,
+            naCorregido, agCalc, osmEffective,
+            fluids: { bolusML, bolusTime, fluidType, naNote, hemodynamic },
+            potassium: { kAction, kRate, holdInsulin, kNote, value: potassium },
+            insulin: { doseIV, holdInsulin },
+            resolution: { osmEffective },
+            transition: { glarginMin, glarginMax },
+            value: weight,
+            unit: 'kg',
+            interpretation: { label: severity.label, color: 'danger', description: 'Protocolo de Estado Hiperosmolar Hiperglucémico generado.' }
+        };
+    },
+
+    // === 41. CRISIS HIPERTENSIVA === //
+    calculateHypertensiveCrisis(inputs) {
+        const { sbp, dbp, damages, thromboCandidate } = inputs;
+
+        const DAMAGE_PROTOCOLS = {
+            acv_isquemico: {
+                label: 'ACV Isquémico Agudo',
+                color: '#6366f1',
+                drug: thromboCandidate
+                    ? 'Labetalol IV o Nicardipino IV'
+                    : 'Solo tratar si PA > 220/120 mmHg — Labetalol o Nicardipino IV',
+                target: thromboCandidate
+                    ? 'Bajar a < 185/110 mmHg ANTES de trombólisis; mantener < 180/105 mmHg las primeras 24h post-trombólisis'
+                    : 'Reducir PA solo ~15% en las primeras 24h si no es candidato a trombólisis (hipertensión permisiva)',
+                notes: 'No usar Nifedipino sublingual — caídas bruscas de PA extienden el área de penumbra isquémica.'
+            },
+            acv_hemorragico: {
+                label: 'ACV Hemorrágico',
+                color: '#4f46e5',
+                drug: 'Nicardipino IV o Labetalol IV',
+                target: 'Si PAS 150-220 mmHg: bajar a PAS objetivo ~140 mmHg (evitar < 130 mmHg)',
+                notes: 'Reducción rápida pero controlada — objetivo alcanzado en la primera hora, con monitorización neurológica estrecha.'
+            },
+            disec_aortica: {
+                label: 'Disección Aórtica',
+                color: '#ef4444',
+                drug: 'Esmolol o Labetalol IV PRIMERO (control de FC) + Nitroprusiato o Nicardipino después',
+                target: 'FC < 60 lpm y PAS 100-120 mmHg en 20 minutos',
+                notes: 'NUNCA iniciar vasodilatador puro sin betabloqueo previo — la taquicardia refleja aumenta el estrés de cizallamiento aórtico (dP/dt). Cirugía/endovascular urgente si tipo A.'
+            },
+            eap: {
+                label: 'Edema Agudo de Pulmón / Falla Cardíaca Aguda',
+                color: '#0ea5e9',
+                drug: 'Nitroglicerina IV ± diurético de asa (Furosemida)',
+                target: 'Mejoría sintomática y de la precarga — reducir PA gradualmente según tolerancia',
+                notes: 'Soporte ventilatorio (VNI) según hipoxemia. Evitar betabloqueantes IV en fase aguda descompensada.'
+            },
+            sca: {
+                label: 'Síndrome Coronario Agudo',
+                color: '#dc2626',
+                drug: 'Nitroglicerina IV + Betabloqueante (si no contraindicado)',
+                target: 'Aliviar isquemia — reducir PAM ~25% evitando hipotensión (perfusión coronaria)',
+                notes: 'Evaluar coronariografía/reperfusión según protocolo de SCA — no retrasar por el manejo tensional.'
+            },
+            encefalopatia: {
+                label: 'Encefalopatía Hipertensiva',
+                color: '#8b5cf6',
+                drug: 'Nicardipino IV o Labetalol IV',
+                target: 'Reducir la PAM 20-25% en la primera hora',
+                notes: 'Diagnóstico de exclusión (descartar ACV/HSA). Mejoría del estado mental confirma el diagnóstico retrospectivamente.'
+            },
+            preeclampsia_eclampsia: {
+                label: 'Preeclampsia Severa / Eclampsia',
+                color: '#db2777',
+                drug: 'Labetalol IV o Hidralazina IV + Sulfato de Magnesio (profilaxis/tto de convulsiones)',
+                target: 'PAS < 160 y PAD < 110 mmHg',
+                notes: 'Sulfato de Magnesio es obligatorio si eclampsia o preeclampsia con criterios de severidad — no solo antihipertensivo. Finalización del embarazo según edad gestacional y estabilidad materno-fetal.'
+            },
+            ira: {
+                label: 'Daño Renal Agudo / Microangiopatía',
+                color: '#f97316',
+                drug: 'Nicardipino IV o Labetalol IV',
+                target: 'Reducir PAM 20-25% en la primera hora, evitando hipoperfusión renal',
+                notes: 'Evitar diuréticos si hay depleción de volumen concomitante. Descartar HTA maligna con esquistocitos/hemólisis.'
+            },
+            retinopatia: {
+                label: 'Retinopatía Hipertensiva Grado III-IV',
+                color: '#0d9488',
+                drug: 'Labetalol o Nicardipino IV (o manejo oral si estable)',
+                target: 'Reducir PAM 20-25% en 24-48h',
+                notes: 'Papiledema/hemorragias retinianas — fondo de ojo urgente y control ambulatorio estrecho tras el alta.'
+            }
+        };
+
+        const validDamages = (damages || []).filter(d => DAMAGE_PROTOCOLS[d]);
+        const isEmergency = validDamages.length > 0;
+        const sections = validDamages.map(d => DAMAGE_PROTOCOLS[d]);
+
+        const severity = isEmergency
+            ? { label: 'Emergencia Hipertensiva', colorHex: '#dc2626', badge: '🔴' }
+            : { label: 'Urgencia Hipertensiva', colorHex: '#f59e0b', badge: '🟡' };
+
+        return {
+            sbp, dbp, isEmergency, severity, sections,
+            value: sbp, unit: 'mmHg',
+            interpretation: {
+                label: severity.label, color: isEmergency ? 'danger' : 'warning',
+                description: isEmergency
+                    ? 'PA severamente elevada CON daño agudo de órgano diana — manejo IV hospitalario inmediato.'
+                    : 'PA severamente elevada SIN daño agudo de órgano diana — manejo oral ambulatorio, reducción gradual en 24-48h.'
+            }
+        };
+    },
+
+    // === 42. ESTATUS EPILÉPTICO === //
+    calculateStatusEpilepticus(inputs) {
+        let { weight, stage, ivAccess, hepatopatia, embarazo, hipoglucemia } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+
+        const lorazepamDose = Math.min(Math.round(weight * 0.1 * 10) / 10, 4);
+        const diazepamDose = Math.min(Math.round(weight * 0.2 * 10) / 10, 10);
+        const midazolamIM = weight >= 40 ? 10 : 5;
+        const levetiracetamDose = Math.min(Math.round(weight * 60), 4500);
+        const fosfenitoinaDose = Math.min(Math.round(weight * 20), 1500);
+        const valproatoDose = Math.min(Math.round(weight * 40), 3000);
+
+        const avoidValproate = hepatopatia || embarazo;
+
+        const stageOrder = { temprano: 0, establecido: 1, refractario: 2 };
+        const currentStage = stageOrder[stage] ?? 0;
+
+        return {
+            weight, stage, currentStage, ivAccess,
+            hipoglucemia, avoidValproate,
+            benzo: { lorazepamDose, diazepamDose, midazolamIM, ivAccess },
+            segundaLinea: { levetiracetamDose, fosfenitoinaDose, valproatoDose, avoidValproate },
+            value: weight,
+            unit: 'kg',
+            interpretation: {
+                label: stage === 'refractario' ? 'Estatus Refractario' : stage === 'establecido' ? 'Estatus Establecido' : 'Estatus Incipiente',
+                color: 'danger',
+                description: 'Protocolo escalonado de estatus epiléptico generado.'
+            }
+        };
+    },
+
+    // === 43. SEPSIS / SHOCK SÉPTICO — BUNDLE TERAPÉUTICO === //
+    calculateSepsisBundle(inputs) {
+        let { weight, lactato, pam, hipotensionPersistente, foco } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weightUnit === 'lb') weight = weight / 2.20462;
+
+        const fluidBolusML = Math.round(weight * 30);
+        const needsBolus = (pam < 65) || (lactato >= 4);
+        const pamTarget = 65;
+
+        const shockSeptico = pam < 65 && hipotensionPersistente;
+
+        const severity = shockSeptico
+            ? { label: 'Shock Séptico (hipotensión refractaria a fluidos)', colorHex: '#dc2626', badge: '🔴' }
+            : (lactato >= 2)
+                ? { label: 'Sepsis con hipoperfusión (lactato elevado)', colorHex: '#f59e0b', badge: '🟠' }
+                : { label: 'Sepsis', colorHex: '#eab308', badge: '🟡' };
+
+        return {
+            weight, lactato, pam, foco, needsBolus, shockSeptico,
+            fluidBolusML, pamTarget, severity,
+            value: lactato, unit: 'mmol/L',
+            interpretation: {
+                label: severity.label, color: 'danger',
+                description: 'Bundle de la primera hora (Surviving Sepsis Campaign) generado.'
+            }
+        };
+    },
+
+    // === 44. EDEMA AGUDO DE PULMÓN / ICA DESCOMPENSADA === //
+    calculateEAP(inputs) {
+        const { sbp, spo2, hypoperfusion, congestion, causa } = inputs;
+
+        const hypoCount = Object.values(hypoperfusion).filter(Boolean).length;
+        const congCount = Object.values(congestion).filter(Boolean).length;
+
+        const isFrio = hypoCount >= 1 || sbp < 90;
+        const isHumedo = congCount >= 1;
+        const shockCardiogenico = sbp < 90 && hypoCount >= 1;
+
+        let profile;
+        if (!isFrio && isHumedo) {
+            profile = { key: 'caliente-humedo', label: 'Caliente y Húmedo', colorHex: '#f59e0b', badge: '🟠', freq: 'El más frecuente (~70%)' };
+        } else if (isFrio && isHumedo) {
+            profile = { key: 'frio-humedo', label: 'Frío y Húmedo', colorHex: '#dc2626', badge: '🔴', freq: 'Bajo gasto + congestión' };
+        } else if (isFrio && !isHumedo) {
+            profile = { key: 'frio-seco', label: 'Frío y Seco', colorHex: '#7c3aed', badge: '🟣', freq: 'Poco frecuente — hipoperfusión sin congestión franca' };
+        } else {
+            profile = { key: 'caliente-seco', label: 'Caliente y Seco', colorHex: '#22c55e', badge: '🟢', freq: 'Compensado' };
+        }
+
+        const needsNIV = spo2 < 90;
+
+        const severity = shockCardiogenico
+            ? { label: 'Shock Cardiogénico', colorHex: '#7f1d1d', badge: '🚨' }
+            : { label: `Perfil: ${profile.label}`, colorHex: profile.colorHex, badge: profile.badge };
+
+        return {
+            sbp, spo2, causa, profile, isFrio, isHumedo, needsNIV, shockCardiogenico, severity,
+            value: sbp, unit: 'mmHg',
+            interpretation: {
+                label: severity.label, color: 'danger',
+                description: `Perfil hemodinámico ${profile.label} (Forrester/Nohria-Stevenson). Protocolo de EAP/ICA descompensada generado.`
+            }
+        };
+    },
+
+    // === 45. PROTOCOLO DE ARRITMIAS === //
+    calculateArritmia(inputs) {
+        let { tipo, ritmoParo, inestable, efReducida, preexcitacion, qtLargo, adenosinaFallida, weight } = inputs;
+
+        if (tipo === 'paro') {
+            const label = ritmoParo === 'desfibrilable' ? 'Paro Cardíaco — Ritmo Desfibrilable (FV/TVSP)' : 'Paro Cardíaco — Ritmo No Desfibrilable (Asistolia/AESP)';
+            return {
+                tipo, ritmoParo, inestable: true, isArrest: true,
+                severity: { label, colorHex: '#7f1d1d', badge: '🚨' },
+                value: 0, unit: '',
+                interpretation: { label, color: 'danger', description: 'Protocolo de paro cardíaco (ACLS) generado.' }
+            };
+        }
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weight && weightUnit === 'lb') weight = weight / 2.20462;
+        const procainamidaMaxMg = weight ? Math.round(weight * 17) : null;
+
+        const CARDIOVERSION_J = {
+            bradicardia: null,
+            taqui_estrecha_regular: '50-100 J',
+            taqui_estrecha_irregular: '120-200 J',
+            taqui_ancha_regular: '100 J',
+            taqui_ancha_polimorfica: null // tratar como FV — desfibrilación no sincronizada
+        };
+
+        const TIPO_LABELS = {
+            bradicardia: 'Bradicardia Sintomática',
+            taqui_estrecha_regular: 'Taquicardia de Complejo Estrecho Regular (SVT/PSVT)',
+            taqui_estrecha_irregular: 'Taquicardia de Complejo Estrecho/Ancho Irregular (FA/Flutter con RVR)',
+            taqui_ancha_regular: 'Taquicardia de Complejo Ancho Regular Monomórfica (TV estable)',
+            taqui_ancha_polimorfica: 'Taquicardia de Complejo Ancho Polimórfica / Torsades'
+        };
+
+        const severity = inestable
+            ? { label: `${TIPO_LABELS[tipo]} — INESTABLE`, colorHex: '#dc2626', badge: '🔴' }
+            : { label: `${TIPO_LABELS[tipo]} — Estable`, colorHex: '#eab308', badge: '🟡' };
+
+        // La TV polimórfica/Torsades es intrínsecamente irregular — no se puede sincronizar de forma fiable
+        const requiresDefibrillation = tipo === 'taqui_ancha_polimorfica' && inestable;
+
+        return {
+            tipo, inestable, isArrest: false,
+            efReducida: !!efReducida, preexcitacion: !!preexcitacion, qtLargo: !!qtLargo, adenosinaFallida: !!adenosinaFallida,
+            weight, procainamidaMaxMg,
+            cardioversionJ: CARDIOVERSION_J[tipo] || null,
+            requiresDefibrillation,
+            severity,
+            value: 0, unit: '',
+            interpretation: {
+                label: severity.label, color: 'danger',
+                description: `Protocolo de manejo de ${TIPO_LABELS[tipo]} generado (AHA ACLS 2020).`
+            }
+        };
     }
 };

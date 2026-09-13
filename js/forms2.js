@@ -4340,6 +4340,1142 @@ function calculateKillipForm(event) {
     Storage.addToHistory({ calculatorId: 36, calculatorName: 'Killip-Kimball', inputs, result: { value: r.value, unit: r.unit, description: r.description }, interpretation: r.interpretation });
 }
 
+// === 40. ESTADO HIPEROSMOLAR HIPERGLUCÉMICO (EHH/HHS) === //
+function createHHSForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="hhsForm" onsubmit="calculateHHSProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Datos del Paciente</div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="hhsWeight" required step="any" min="30" max="300" class="form-input">
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Estado mental</label>
+                    <select id="hhsMental" required class="form-input">
+                        <option value="alerta">Alerta</option>
+                        <option value="somnoliento">Somnoliento / confuso</option>
+                        <option value="estupor">Estupor</option>
+                        <option value="coma">Coma</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Estado hemodinámico</label>
+                    <select id="hhsHemo" required class="form-input">
+                        <option value="mild">Hipovolemia leve-moderada (más frecuente)</option>
+                        <option value="severe">Hipovolemia severa — signos de shock</option>
+                        <option value="euvolemic">Euvolémico</option>
+                        <option value="cardiogenic">Choque cardiogénico / Falla cardíaca</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:14px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Laboratorio</div>
+
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-bottom:14px; align-items:end;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Glucosa</label>
+                        <input type="number" id="hhsGlucose" required step="any" min="200" max="3000" class="form-input" oninput="updateHHSLiveCalcs()">
+                    </div>
+                    <select id="hhsGlucoseUnit" class="form-input" style="min-width:100px;" onchange="updateHHSLiveCalcs()">
+                        <option value="mg/dL" ${(Storage.getSetting('units.glucose')||'mg/dL')==='mg/dL' ? 'selected' : ''}>mg/dL</option>
+                        <option value="mmol/L" ${Storage.getSetting('units.glucose')==='mmol/L' ? 'selected' : ''}>mmol/L</option>
+                    </select>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Na⁺ (mEq/L)</label>
+                        <input type="number" id="hhsSodium" required step="any" min="115" max="170" class="form-input" oninput="updateHHSLiveCalcs()">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">
+                            K⁺ (mEq/L) <span style="color:#ef4444; font-size:11px;">crítico</span>
+                        </label>
+                        <input type="number" id="hhsPotassium" required step="0.1" min="1.5" max="8" class="form-input" oninput="updateHHSLiveCalcs()">
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">pH <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">opcional</span></label>
+                        <input type="number" id="hhsPh" step="0.01" min="6.5" max="7.5" class="form-input" placeholder="ej. 7.35">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">HCO₃⁻ (mEq/L) <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">opcional</span></label>
+                        <input type="number" id="hhsHco3" step="any" min="1" max="40" class="form-input" placeholder="ej. 22">
+                    </div>
+                </div>
+            </div>
+
+            <div id="hhsLiveCalcs"></div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px; margin-top:4px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en ADA Consensus Report 2024 · JBDS-IP 2022.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo EHH
+            </button>
+        </form>
+        <div id="hhsResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function updateHHSLiveCalcs() {
+    const glucoseUnit = document.getElementById('hhsGlucoseUnit')?.value || 'mg/dL';
+    const glucoseVal = parseFloat(document.getElementById('hhsGlucose')?.value);
+    const sodiumVal = parseFloat(document.getElementById('hhsSodium')?.value);
+    const kVal = parseFloat(document.getElementById('hhsPotassium')?.value);
+    const liveDiv = document.getElementById('hhsLiveCalcs');
+    if (!liveDiv) return;
+
+    let glucoseMg = glucoseVal;
+    if (glucoseUnit === 'mmol/L' && !isNaN(glucoseVal)) glucoseMg = glucoseVal / 0.0555;
+
+    const naCorr = (!isNaN(sodiumVal) && !isNaN(glucoseMg))
+        ? Math.round((sodiumVal + 2.4 * (glucoseMg - 100) / 100) * 10) / 10 : null;
+    const osm = (!isNaN(sodiumVal) && !isNaN(glucoseMg))
+        ? Math.round((2 * sodiumVal + glucoseMg / 18) * 10) / 10 : null;
+
+    const kField = document.getElementById('hhsPotassium');
+    if (kField && !isNaN(kVal)) {
+        kField.style.borderColor = kVal < 3.3 ? '#dc2626' : '';
+        kField.style.boxShadow = kVal < 3.3 ? '0 0 0 3px rgba(220,38,38,0.15)' : '';
+    }
+
+    if (naCorr === null && osm === null) { liveDiv.innerHTML = ''; return; }
+
+    let rows = '';
+    if (naCorr !== null) {
+        rows += `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Na corregido</span><strong>${naCorr} mEq/L</strong></div>`;
+    }
+    if (osm !== null) {
+        const c = osm >= 320 ? '#dc2626' : 'var(--success)';
+        rows += `<div style="display:flex;justify-content:space-between;"><span>Osmolaridad efectiva</span><strong style="color:${c}">${osm} mOsm/kg${osm >= 320 ? ' ⚠' : ''}</strong></div>`;
+    }
+
+    let kAlert = '';
+    if (!isNaN(kVal) && kVal < 3.3) {
+        kAlert = `<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:6px;padding:8px;margin-top:8px;color:#dc2626;font-weight:700;font-size:12px;">⚠️ K⁺ ${kVal} mEq/L — RETENER INSULINA al generar el protocolo</div>`;
+    }
+
+    liveDiv.innerHTML = `<div style="background:var(--bg-secondary);padding:12px;border-radius:10px;margin-bottom:12px;font-size:13px;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Cálculos automáticos</div>${rows}${kAlert}</div>`;
+}
+
+function buildHHSProtocolHTML(r, inputs) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:13px; opacity:0.9; display:flex; flex-wrap:wrap; gap:12px;">
+                <span>Glucosa ${inputs.glucose} ${inputs.glucoseUnit}</span><span>K⁺ ${inputs.potassium} mEq/L</span>
+                <span>Estado mental: ${inputs.mentalStatus}</span>
+            </div>
+            <div style="margin-top:8px; font-size:12px; opacity:0.85; display:flex; gap:12px; flex-wrap:wrap;">
+                <span>Na corregido: ${r.naCorregido} mEq/L</span>
+                <span>Osm efectiva: ${r.osmEffective} mOsm/kg</span>
+            </div>
+        </div>`;
+
+    const alertHTML = r.criticalAlert.hasAlert ? `
+        <div style="background:#7f1d1d; color:#fca5a5; border:2px solid #dc2626; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:24px;">🚨</span><span>${r.criticalAlert.message}</span>
+        </div>` : '';
+
+    const overlapHTML = (inputs.ph && !isNaN(parseFloat(inputs.ph)) && (parseFloat(inputs.ph) < 7.30 || (inputs.hco3 && parseFloat(inputs.hco3) < 18))) ? `
+        <div style="background:#4c1d95; color:#c4b5fd; border:2px solid #7c3aed; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; font-size:13px;">
+            <strong>⚠️ Posible solapamiento CAD-EHH:</strong> pH/HCO₃ sugieren un componente de cetoacidosis concomitante — evaluar cetonas/anión gap y considerar manejo combinado (protocolo de insulina tipo CAD).
+        </div>` : '';
+
+    const kColor = r.potassium.holdInsulin ? '#dc2626' : '#f59e0b';
+
+    const fluidContent = `
+        <div><strong>Bolo inicial:</strong> <span style="color:var(--brand-accent);font-weight:700;">${r.fluids.bolusML} mL</span> de ${r.fluids.fluidType} en ${r.fluids.bolusTime}</div>
+        <div><strong>Mantenimiento:</strong> 250–500 mL/h tras la primera hora, ajustando según diuresis y respuesta hemodinámica</div>
+        <div><strong>Meta:</strong> reponer ~50% del déficit estimado (habitualmente 8-10 L) en las primeras 12h, el resto en las siguientes 24h</div>
+        <div><strong>Na corregido:</strong> ${r.fluids.naNote}</div>
+        <div style="margin-top:4px;color:#dc2626;font-weight:600;">⛔ NO iniciar insulina simultáneamente con los fluidos — la expansión de volumen por sí sola reduce la glucemia y evita el colapso vascular por desplazamiento osmótico brusco</div>
+        ${r.fluids.hemodynamic === 'cardiogenic' ? '<div style="margin-top:4px;color:#f59e0b;font-weight:600;">⚠️ Choque cardiogénico — evaluar vasopresores/monitorización invasiva desde el inicio</div>' : ''}`;
+
+    const potassiumContent = `
+        <div><strong>K⁺ actual:</strong> ${r.potassium.value} mEq/L</div>
+        <div><strong>Acción:</strong> <span style="color:${kColor};font-weight:700;">${r.potassium.kAction}</span></div>
+        ${r.potassium.kRate !== '—' ? `<div><strong>Velocidad:</strong> ${r.potassium.kRate}</div>` : ''}
+        <div style="margin-top:4px;">${r.potassium.kNote}</div>`;
+
+    const insulinContent = r.insulin.holdInsulin
+        ? `<div style="color:#dc2626;font-weight:700;">⚠️ INSULINA EN ESPERA — Reiniciar cuando K⁺ ≥ 3.3 mEq/L Y tras ≥1h de fluidoterapia</div>`
+        : `<div><strong>Iniciar solo tras ≥1h de fluidoterapia y K⁺ ≥ 3.3 mEq/L</strong></div>
+           <div><strong>Insulina IV:</strong> <span style="color:var(--brand-accent);font-weight:700;">Regular 0.05 U/kg/h = ${r.insulin.doseIV} U/h</span> (dosis fija menor que en CAD — mínima cetosis)</div>
+           <div><strong>Objetivo de descenso:</strong> 50-70 mg/dL/h — si desciende más rápido, reducir la infusión</div>
+           <div><strong>Si Glu &lt; 250-300 mg/dL:</strong> añadir Dextrosa 5% y mantener glucemia en ese rango hasta normalizar la osmolaridad y el estado mental</div>`;
+
+    const vigilanciaContent = `
+        <div><strong>Buscar causa precipitante:</strong> infección (más frecuente), IAM, ACV, incumplimiento terapéutico, fármacos (corticoides, diuréticos, antipsicóticos atípicos)</div>
+        <div style="margin-top:4px;"><strong>Tromboprofilaxis:</strong> HBPM — el EHH cursa con hiperviscosidad y alto riesgo trombótico</div>
+        <div style="margin-top:4px;color:#dc2626;font-weight:600;">⛔ Evitar corrección rápida — caída de Osm efectiva &lt; 3-8 mOsm/kg/h y de Na corregido &lt; 10 mEq/L/24h (riesgo de edema cerebral, más en jóvenes)</div>
+        <div style="margin-top:4px;color:var(--text-secondary);font-size:12px;">Mortalidad del EHH (10-20%) mayor que la de la CAD — vigilancia estrecha en UCI/intermedios</div>`;
+
+    const resContent = `
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">Osmolaridad efectiva ≤ 315 mOsm/kg</div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">Glucemia &lt; 250-300 mg/dL</div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">Recuperación del estado mental/alerta basal</div>
+        <div style="padding:4px 0;">Estabilidad hemodinámica y tolerancia a vía oral</div>`;
+
+    const transContent = `
+        <div><strong>Criterio:</strong> resolución + tolerando VO</div>
+        <div><strong>Glargina:</strong> 0.5–0.8 U/kg/día = <span style="color:var(--brand-accent);font-weight:700;">${r.transition.glarginMin}–${r.transition.glarginMax} U/día</span></div>
+        <div style="color:#dc2626;font-weight:600;">⛔ Mantener infusión IV 2h tras la primera dosis de glargina</div>`;
+
+    return `${headerHTML}${alertHTML}${overlapHTML}
+        ${section('💧', '1. Fluidos IV', '#3b82f6', fluidContent)}
+        ${section('🧪', '2. Potasio', r.potassium.holdInsulin ? '#dc2626' : '#f59e0b', potassiumContent)}
+        ${section('💉', '3. Insulina', '#22c55e', insulinContent)}
+        ${section('🩹', '4. Vigilancia y Prevención', '#f97316', vigilanciaContent)}
+        ${section('📋', '5. Criterios de Resolución', '#8b5cf6', resContent)}
+        ${section('🔄', '6. Transición a Insulina SC', '#14b8a6', transContent)}`;
+}
+
+function calculateHHSProtocol(event) {
+    event.preventDefault();
+    const phRaw = document.getElementById('hhsPh').value;
+    const hco3Raw = document.getElementById('hhsHco3').value;
+    const inputs = {
+        weight: parseFloat(document.getElementById('hhsWeight').value),
+        hemodynamic: document.getElementById('hhsHemo').value,
+        mentalStatus: document.getElementById('hhsMental').value,
+        glucose: parseFloat(document.getElementById('hhsGlucose').value),
+        glucoseUnit: document.getElementById('hhsGlucoseUnit').value,
+        sodium: parseFloat(document.getElementById('hhsSodium').value),
+        potassium: parseFloat(document.getElementById('hhsPotassium').value),
+        chloride: null,
+        ph: phRaw === '' ? null : parseFloat(phRaw),
+        hco3: hco3Raw === '' ? null : parseFloat(hco3Raw)
+    };
+    const r = Calculators.calculateHHS(inputs);
+    const container = document.getElementById('hhsResult');
+    container.innerHTML = buildHHSProtocolHTML(r, inputs) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('hhsForm').reset(); document.getElementById('hhsResult').style.display='none'; document.getElementById('hhsLiveCalcs').innerHTML='';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 40, calculatorName: 'EHH', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 41. CRISIS HIPERTENSIVA === //
+function createHypertensiveCrisisForm() {
+    return `
+        <form id="htnCrisisForm" onsubmit="calculateHypertensiveCrisisProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Presión Arterial</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                        <input type="number" id="htnSbp" required step="any" min="100" max="300" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAD (mmHg)</label>
+                        <input type="number" id="htnDbp" required step="any" min="50" max="200" class="form-input">
+                    </div>
+                </div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-top:8px;">Umbral habitual de crisis hipertensiva: PAS ≥ 180 o PAD ≥ 120 mmHg.</p>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Daño Agudo de Órgano Diana</div>
+                <p style="font-size:12px; color:var(--text-tertiary); margin-bottom:12px;">Marcar todo lo presente. Si no se marca ninguno → Urgencia hipertensiva (manejo oral).</p>
+
+                ${[
+                    ['acv_isquemico', 'ACV isquémico agudo (déficit neurológico focal)'],
+                    ['acv_hemorragico', 'ACV hemorrágico (hemorragia intracerebral)'],
+                    ['disec_aortica', 'Dolor torácico desgarrante — sospecha de disección aórtica'],
+                    ['eap', 'Disnea aguda — edema agudo de pulmón / falla cardíaca'],
+                    ['sca', 'Dolor torácico isquémico — síndrome coronario agudo'],
+                    ['encefalopatia', 'Alteración de conciencia/convulsiones sin foco — encefalopatía hipertensiva'],
+                    ['preeclampsia_eclampsia', 'Embarazo + proteinuria/síntomas o convulsiones — preeclampsia/eclampsia'],
+                    ['ira', 'Daño renal agudo / hematuria-oliguria de novo'],
+                    ['retinopatia', 'Papiledema / hemorragias retinianas (fondo de ojo grado III-IV)']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+                        <input type="checkbox" class="htn-damage" value="${id}" style="width:18px; height:18px; margin-top:2px;" ${id === 'acv_isquemico' ? 'onchange="toggleHtnThrombo(this)"' : ''}>
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+
+                <div id="htnThromboWrap" style="display:none; margin-top:6px; padding-left:28px;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="htnThrombo" style="width:16px; height:16px;">
+                        <span style="font-size:12px; color:var(--text-secondary);">¿Candidato a trombólisis IV? (ventana &lt; 4.5h)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en ACC/AHA 2017 · ESC/ESH 2023.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="htnCrisisResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleHtnThrombo(checkbox) {
+    const wrap = document.getElementById('htnThromboWrap');
+    if (wrap) wrap.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function buildHypertensiveCrisisHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">🩺</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:14px; opacity:0.9;">PA: ${r.sbp}/${r.dbp} mmHg</div>
+        </div>`;
+
+    if (!r.isEmergency) {
+        return `${headerHTML}
+            ${section('💊', 'Manejo Ambulatorio (Urgencia Hipertensiva)', '#f59e0b', `
+                <div><strong>Fármacos orales:</strong> Captopril 25 mg VO, Labetalol 200-400 mg VO o Clonidina 0.1-0.2 mg VO</div>
+                <div style="margin-top:4px;"><strong>Meta:</strong> reducir la PA de forma gradual en 24-48h (no en la sala de urgencias)</div>
+                <div style="margin-top:4px;color:#dc2626;font-weight:600;">⛔ NO usar Nifedipino sublingual — riesgo de hipotensión brusca e isquemia (miocárdica/cerebral)</div>
+                <div style="margin-top:4px;">Reposo, ambiente tranquilo, reevaluar en 30-60 min. Ajustar/reiniciar tratamiento antihipertensivo crónico y asegurar seguimiento ambulatorio precoz.</div>
+            `)}`;
+    }
+
+    const sectionsHTML = r.sections.map(s => section('🚨', s.label, s.color, `
+        <div><strong>Fármaco:</strong> ${s.drug}</div>
+        <div style="margin-top:4px;"><strong>Objetivo:</strong> ${s.target}</div>
+        <div style="margin-top:4px; color:var(--text-secondary);">${s.notes}</div>
+    `)).join('');
+
+    return `${headerHTML}
+        <div style="background:#7f1d1d; color:#fca5a5; border:2px solid #dc2626; border-radius:var(--radius-lg); padding:14px; margin-bottom:12px; font-size:13px;">
+            <strong>Regla general:</strong> salvo disección aórtica o eclampsia (reducción rápida en minutos), reducir la PAM ~25% en la primera hora — la corrección demasiado rápida puede causar hipoperfusión de órganos ya autorregulados a presiones más altas.
+        </div>
+        ${sectionsHTML}`;
+}
+
+function calculateHypertensiveCrisisProtocol(event) {
+    event.preventDefault();
+    const damages = Array.from(document.querySelectorAll('.htn-damage:checked')).map(cb => cb.value);
+    const inputs = {
+        sbp: parseFloat(document.getElementById('htnSbp').value),
+        dbp: parseFloat(document.getElementById('htnDbp').value),
+        damages,
+        thromboCandidate: document.getElementById('htnThrombo') ? document.getElementById('htnThrombo').checked : false
+    };
+    const r = Calculators.calculateHypertensiveCrisis(inputs);
+    const container = document.getElementById('htnCrisisResult');
+    container.innerHTML = buildHypertensiveCrisisHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('htnCrisisForm').reset(); document.getElementById('htnCrisisResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 41, calculatorName: 'Crisis Hipertensiva', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 42. ESTATUS EPILÉPTICO === //
+function createStatusEpilepticusForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="seForm" onsubmit="calculateStatusEpilepticusProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="seWeight" required step="any" min="20" max="300" class="form-input">
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Etapa actual</label>
+                    <select id="seStage" required class="form-input">
+                        <option value="temprano">Incipiente (&lt; 5 min, primera dosis de benzodiacepina)</option>
+                        <option value="establecido">Establecido (persiste tras 2 dosis de benzodiacepina, 5-20 min)</option>
+                        <option value="refractario">Refractario (persiste tras 2ª línea IV, &gt; 20-30 min)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Acceso IV disponible</label>
+                    <select id="seIvAccess" required class="form-input">
+                        <option value="si">Sí</option>
+                        <option value="no">No (usar vía IM/bucal/rectal)</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="seHepatopatia" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Hepatopatía severa (evitar Ácido Valproico)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="seEmbarazo" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Embarazo (evitar Ácido Valproico — teratógeno)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="seHipoglucemia" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Hipoglucemia sospechada / etilismo-desnutrición</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en AES Guideline 2016 · Neurocritical Care Society 2012 (ESETT).
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="seResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildStatusEpilepticusHTML(r) {
+    const section = (icon, title, color, content, active) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:${active ? '2px solid ' + color : '1px solid ' + color + '33'};">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+                ${active ? `<span style="margin-left:auto; font-size:11px; font-weight:700; background:${color}; color:white; padding:2px 8px; border-radius:999px;">ETAPA ACTUAL</span>` : ''}
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:#dc2626; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">🚨 ${r.interpretation.label}</div>
+            <div style="font-size:13px; opacity:0.9;">Peso: ${r.weight} kg</div>
+        </div>`;
+
+    const abcContent = `
+        <div><strong>A-B-C:</strong> vía aérea, oxígeno suplementario, monitorización (SpO₂, ECG, PA)</div>
+        <div style="margin-top:4px;"><strong>Glucemia capilar:</strong> ${r.hipoglucemia ? '<span style="color:#dc2626;font-weight:700;">Sospecha de hipoglucemia — dar Tiamina 100 mg IV ANTES de Dextrosa 50% 25g IV (evitar encefalopatía de Wernicke)</span>' : 'Descartar hipoglucemia como causa'}</div>
+        <div style="margin-top:4px;">Vía IV, extracción de laboratorio (glucosa, electrolitos, niveles de antiepilépticos, tóxicos) y considerar neuroimagen/PL según sospecha etiológica.</div>`;
+
+    const benzoContent = `
+        <div><strong>Lorazepam:</strong> <span style="color:var(--brand-accent);font-weight:700;">0.1 mg/kg IV = ${r.benzo.lorazepamDose} mg</span> (máx. 4 mg), repetir en 5 min si persiste</div>
+        <div style="margin-top:4px;"><strong>Alternativa:</strong> Diazepam 0.15-0.2 mg/kg IV = ${r.benzo.diazepamDose} mg (máx. 10 mg)</div>
+        <div style="margin-top:4px;"><strong>Sin acceso IV:</strong> Midazolam IM = ${r.benzo.midazolamIM} mg (dosis única, RAMPART)</div>
+        ${r.ivAccess === 'no' ? '<div style="margin-top:4px;color:#f59e0b;font-weight:600;">Sin acceso IV marcado — usar Midazolam IM como primera opción</div>' : ''}`;
+
+    const segundaContent = `
+        <div><strong>Levetiracetam:</strong> <span style="color:var(--brand-accent);font-weight:700;">60 mg/kg IV = ${r.segundaLinea.levetiracetamDose} mg</span> (máx. 4500 mg) en 15 min — perfil de seguridad más favorable</div>
+        <div style="margin-top:4px;"><strong>Fosfenitoína/Fenitoína:</strong> 20 mg PE/kg IV = ${r.segundaLinea.fosfenitoinaDose} mg (máx. 1500 mg), a &lt; 150 mg/min</div>
+        <div style="margin-top:4px;"><strong>Ácido Valproico:</strong> 40 mg/kg IV = ${r.segundaLinea.valproatoDose} mg (máx. 3000 mg)
+            ${r.segundaLinea.avoidValproate ? ' <span style="color:#dc2626;font-weight:700;">— EVITAR (hepatopatía/embarazo marcados)</span>' : ''}
+        </div>
+        <div style="margin-top:4px;color:var(--text-secondary);font-size:12px;">Los tres fármacos mostraron eficacia similar en el ensayo ESETT — elegir según comorbilidad y disponibilidad.</div>`;
+
+    const refractarioContent = `
+        <div><strong>Midazolam en infusión:</strong> bolo 0.2 mg/kg IV, luego 0.05-2 mg/kg/h</div>
+        <div style="margin-top:4px;"><strong>Propofol:</strong> bolo 1-2 mg/kg IV, luego 30-200 mcg/kg/min (vigilar síndrome de infusión de propofol)</div>
+        <div style="margin-top:4px;"><strong>Alternativa:</strong> coma con Pentobarbital si refractario a lo anterior</div>
+        <div style="margin-top:4px;color:#dc2626;font-weight:600;">Requiere intubación orotraqueal, UCI y EEG continuo (objetivo: supresión de brotes o control de crisis 24-48h antes de retirar)</div>
+        <div style="margin-top:4px;color:var(--text-secondary);font-size:12px;">Superrefractario (&gt;24h): considerar Ketamina, anestésicos inhalados, dieta cetogénica o inmunoterapia si se sospecha etiología autoinmune.</div>`;
+
+    return `${headerHTML}
+        ${section('🅰️', '0. Soporte y Estabilización (ABC)', '#0ea5e9', abcContent, false)}
+        ${section('💊', '1. Benzodiacepina (0-5 min)', '#f59e0b', benzoContent, r.currentStage === 0)}
+        ${section('⚡', '2. Segunda Línea IV (5-20 min)', '#dc2626', segundaContent, r.currentStage === 1)}
+        ${section('🛌', '3. Refractario — Anestesia (>20-30 min)', '#7c3aed', refractarioContent, r.currentStage === 2)}`;
+}
+
+function calculateStatusEpilepticusProtocol(event) {
+    event.preventDefault();
+    const inputs = {
+        weight: parseFloat(document.getElementById('seWeight').value),
+        stage: document.getElementById('seStage').value,
+        ivAccess: document.getElementById('seIvAccess').value,
+        hepatopatia: document.getElementById('seHepatopatia').checked,
+        embarazo: document.getElementById('seEmbarazo').checked,
+        hipoglucemia: document.getElementById('seHipoglucemia').checked
+    };
+    const r = Calculators.calculateStatusEpilepticus(inputs);
+    const container = document.getElementById('seResult');
+    container.innerHTML = buildStatusEpilepticusHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('seForm').reset(); document.getElementById('seResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 42, calculatorName: 'Estatus Epiléptico', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 43. SEPSIS / SHOCK SÉPTICO — BUNDLE TERAPÉUTICO === //
+function createSepsisBundleForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="sepsisForm" onsubmit="calculateSepsisBundleProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="sepsisWeight" required step="any" min="30" max="300" class="form-input">
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Lactato (mmol/L)</label>
+                        <input type="number" id="sepsisLactato" required step="0.1" min="0" max="30" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAM (mmHg)</label>
+                        <input type="number" id="sepsisPam" required step="any" min="20" max="150" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Foco infeccioso sospechado</label>
+                    <select id="sepsisFoco" required class="form-input">
+                        <option value="respiratorio">Respiratorio</option>
+                        <option value="urinario">Urinario</option>
+                        <option value="abdominal">Abdominal</option>
+                        <option value="piel">Piel / Tejidos blandos</option>
+                        <option value="desconocido">Desconocido</option>
+                    </select>
+                </div>
+
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="sepsisHipotensionPersistente" style="width:18px; height:18px;">
+                    <span style="font-size:13px;">PAM &lt; 65 mmHg PERSISTENTE tras el bolo inicial de cristaloides</span>
+                </label>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en Surviving Sepsis Campaign 2021 (Hour-1 Bundle).
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Bundle
+            </button>
+        </form>
+        <div id="sepsisResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildSepsisBundleHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const focoLabels = { respiratorio: 'Respiratorio', urinario: 'Urinario', abdominal: 'Abdominal', piel: 'Piel/Tejidos blandos', desconocido: 'Desconocido' };
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:13px; opacity:0.9; display:flex; flex-wrap:wrap; gap:12px;">
+                <span>Lactato ${r.lactato} mmol/L</span><span>PAM ${r.pam} mmHg</span><span>Foco: ${focoLabels[r.foco] || r.foco}</span>
+            </div>
+        </div>`;
+
+    const diagContent = `
+        <div>Lactato sérico — <strong>repetir a las 2-4h</strong> si el valor inicial es &gt; 2 mmol/L (guía de reanimación)</div>
+        <div style="margin-top:4px;">Obtener 2 sets de hemocultivos (aerobio + anaerobio) ANTES de iniciar el antibiótico, sin retrasar su administración &gt; 45 min</div>`;
+
+    const abxContent = `
+        <div style="color:#dc2626; font-weight:700;">Administrar antibiótico empírico de amplio espectro dentro de la PRIMERA HORA</div>
+        <div style="margin-top:4px;">Elegir esquema según foco sospechado (${focoLabels[r.foco] || r.foco}) — ver <strong>Calculadora 30, Guía de Antibioterapia Empírica</strong> para el régimen específico</div>
+        <div style="margin-top:4px; color:var(--text-secondary);">Control del foco (drenaje de absceso, retiro de catéter, cirugía) tan pronto como sea posible tras la estabilización inicial.</div>`;
+
+    const fluidContent = `
+        <div><strong>Bolo inicial:</strong> <span style="color:var(--brand-accent);font-weight:700;">30 mL/kg = ${r.fluidBolusML} mL</span> de cristaloide balanceado, a pasar en las primeras 3 horas (más rápido si hipotensión franca)</div>
+        <div style="margin-top:4px;">${r.needsBolus ? 'Indicado — PAM &lt; 65 o lactato ≥ 4 mmol/L' : 'Reevaluar necesidad según respuesta clínica — no bolo fijo si no hay datos de hipoperfusión'}</div>
+        <div style="margin-top:4px; color:var(--text-secondary);">Reevaluar la respuesta a fluidos con variables dinámicas (elevación pasiva de piernas, variación de presión de pulso, ecografía de VCI) antes de continuar con más volumen.</div>`;
+
+    const vasoContent = r.shockSeptico ? `
+        <div style="color:#dc2626; font-weight:700;">Hipotensión persistente pese a fluidos — iniciar vasopresor</div>
+        <div style="margin-top:4px;"><strong>1ª línea:</strong> Norepinefrina IV 0.01-3 mcg/kg/min, titular a <strong>PAM ≥ ${r.pamTarget} mmHg</strong></div>
+        <div style="margin-top:4px;"><strong>2ª línea:</strong> Vasopresina 0.03 U/min (dosis fija) si Norepinefrina &gt; 0.25-0.5 mcg/kg/min</div>
+        <div style="margin-top:4px;"><strong>3ª línea:</strong> Adrenalina si refractario a los dos anteriores</div>
+        <div style="margin-top:4px;">Considerar Hidrocortisona 200 mg/día IV si shock refractario a vasopresores pese a fluidoterapia adecuada</div>
+        <div style="margin-top:4px; color:var(--text-secondary);">Acceso venoso central y línea arterial recomendados. Considerar ingreso a UCI.</div>`
+        : `<div style="color:var(--success); font-weight:600;">PAM ≥ ${r.pamTarget} mmHg tras fluidos — sin indicación de vasopresor por ahora</div>
+           <div style="margin-top:4px; color:var(--text-secondary);">Reevaluar continuamente — iniciar Norepinefrina si la PAM cae por debajo de ${r.pamTarget} mmHg pese a fluidoterapia adecuada.</div>`;
+
+    const checklistContent = `
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">☐ Lactato medido (y repetido si &gt; 2 mmol/L)</div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">☐ Hemocultivos x2 obtenidos antes del antibiótico</div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">☐ Antibiótico de amplio espectro administrado (&lt; 1h)</div>
+        <div style="padding:4px 0;border-bottom:1px solid var(--border-color);">☐ 30 mL/kg de cristaloide si hipotensión o lactato ≥ 4 mmol/L</div>
+        <div style="padding:4px 0;">☐ Vasopresor iniciado si hipotensión persiste durante/después de fluidos (meta PAM ≥ 65 mmHg)</div>`;
+
+    return `${headerHTML}
+        ${section('🔬', '1. Diagnóstico Rápido', '#8b5cf6', diagContent)}
+        ${section('💊', '2. Antibiótico Empírico', '#dc2626', abxContent)}
+        ${section('💧', '3. Fluidoterapia', '#3b82f6', fluidContent)}
+        ${section('💉', '4. Vasopresores', r.shockSeptico ? '#dc2626' : '#22c55e', vasoContent)}
+        ${section('✅', '5. Checklist — Bundle de la Primera Hora', '#14b8a6', checklistContent)}`;
+}
+
+function calculateSepsisBundleProtocol(event) {
+    event.preventDefault();
+    const inputs = {
+        weight: parseFloat(document.getElementById('sepsisWeight').value),
+        lactato: parseFloat(document.getElementById('sepsisLactato').value),
+        pam: parseFloat(document.getElementById('sepsisPam').value),
+        foco: document.getElementById('sepsisFoco').value,
+        hipotensionPersistente: document.getElementById('sepsisHipotensionPersistente').checked
+    };
+    const r = Calculators.calculateSepsisBundle(inputs);
+    const container = document.getElementById('sepsisResult');
+    container.innerHTML = buildSepsisBundleHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('sepsisForm').reset(); document.getElementById('sepsisResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 43, calculatorName: 'Sepsis / Shock Séptico', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 44. EDEMA AGUDO DE PULMÓN / ICA DESCOMPENSADA === //
+function createEAPForm() {
+    return `
+        <form id="eapForm" onsubmit="calculateEAPProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Signos Vitales</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                        <input type="number" id="eapSbp" required step="any" min="50" max="260" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">SpO₂ (%)</label>
+                        <input type="number" id="eapSpo2" required step="any" min="50" max="100" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Signos de Hipoperfusión ("Frío")</div>
+                <p style="font-size:12px; color:var(--text-tertiary); margin-bottom:10px;">Marcar todo lo presente.</p>
+                ${[
+                    ['eapExtremidadesFrias', 'Extremidades frías / livideces'],
+                    ['eapOliguria', 'Oliguria / empeoramiento de función renal'],
+                    ['eapAlteracionConciencia', 'Alteración del estado de conciencia'],
+                    ['eapLactatoElevado', 'Lactato elevado']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Signos de Congestión ("Húmedo")</div>
+                <p style="font-size:12px; color:var(--text-tertiary); margin-bottom:10px;">Marcar todo lo presente.</p>
+                ${[
+                    ['eapEstertores', 'Estertores / crepitantes pulmonares'],
+                    ['eapIngurgitacion', 'Ingurgitación yugular'],
+                    ['eapEdema', 'Edema periférico'],
+                    ['eapOrtopnea', 'Ortopnea / disnea paroxística nocturna']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Causa precipitante sospechada</label>
+                <select id="eapCausa" required class="form-input">
+                    <option value="volumen">Sobrecarga de volumen / incumplimiento dietético-farmacológico</option>
+                    <option value="sca">Síndrome coronario agudo</option>
+                    <option value="hipertensiva">Crisis hipertensiva</option>
+                    <option value="arritmia">Arritmia (FA rápida, bloqueo, etc.)</option>
+                    <option value="valvular">Valvulopatía aguda (rotura de cuerda, endocarditis)</option>
+                    <option value="desconocida">No clara / a investigar</option>
+                </select>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en ESC Heart Failure Guidelines 2021/2023 · perfiles Forrester/Nohria-Stevenson.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="eapResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildEAPProtocolHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const causaLabels = { volumen: 'Sobrecarga de volumen', sca: 'Síndrome coronario agudo', hipertensiva: 'Crisis hipertensiva', arritmia: 'Arritmia', valvular: 'Valvulopatía aguda', desconocida: 'No clara' };
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:800; margin-bottom:6px;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:13px; opacity:0.9; display:flex; flex-wrap:wrap; gap:12px;">
+                <span>PAS ${r.sbp} mmHg</span><span>SpO₂ ${r.spo2}%</span><span>Causa: ${causaLabels[r.causa] || r.causa}</span>
+            </div>
+            <div style="margin-top:8px; font-size:12px; opacity:0.85;">${r.profile.freq}</div>
+        </div>`;
+
+    const shockAlertHTML = r.shockCardiogenico ? `
+        <div style="background:#7f1d1d; color:#fca5a5; border:2px solid #dc2626; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:24px;">🚨</span><span>Shock cardiogénico — hipoperfusión + PAS &lt; 90 mmHg. Priorizar soporte hemodinámico sobre diuréticos. Considerar UCI/hemodinamia urgente (equivalente a Killip IV).</span>
+        </div>` : '';
+
+    const nivHTML = r.needsNIV ? `
+        <div style="background:#431407; color:#fdba74; border:2px solid #f97316; border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; font-size:13px;">
+            <strong>⚠️ SpO₂ &lt; 90%:</strong> iniciar ventilación no invasiva (CPAP/BiPAP) precozmente salvo contraindicación — reduce la necesidad de intubación en EAP.
+        </div>` : '';
+
+    let treatmentContent;
+    if (r.profile.key === 'caliente-humedo') {
+        treatmentContent = `
+            <div><strong>Vasodilatador:</strong> Nitroglicerina IV, iniciar 10-20 mcg/min, titular c/5 min según respuesta y PA (mantener PAS &gt; 90-100 mmHg)</div>
+            <div style="margin-top:4px;"><strong>Diurético:</strong> Furosemida IV — 20-40 mg si no toma diurético crónico; 1-2.5× la dosis oral diaria habitual (IV) si ya lo usa</div>
+            <div style="margin-top:4px;">Reevaluar diuresis a las 2h — si respuesta inadecuada (&lt;100-150 mL/h o sin mejoría clínica), duplicar la dosis de Furosemida</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar betabloqueante IV en fase aguda descompensada (mantener el oral crónico si el paciente ya lo tomaba y está estable)</div>`;
+    } else if (r.profile.key === 'frio-humedo') {
+        treatmentContent = r.shockCardiogenico ? `
+            <div><strong>Inotrópico:</strong> Dobutamina 2-20 mcg/kg/min o Milrinone, titulado a perfusión</div>
+            <div style="margin-top:4px;"><strong>Vasopresor:</strong> Norepinefrina IV si hipotensión franca asociada, para mantener PAM ≥ 65 mmHg</div>
+            <div style="margin-top:4px;">Diurético solo una vez mejorada la perfusión — no como primera medida en shock</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Buscar y tratar la causa (reperfusión si SCA, control de arritmia). Considerar soporte mecánico (balón de contrapulsación, ECMO) si refractario — interconsulta urgente a cardiología intervencionista/cirugía cardíaca.</div>`
+            : `
+            <div>PA aceptable pese a hipoperfusión — puede tolerar vasodilatador a dosis bajas + diurético con cautela</div>
+            <div style="margin-top:4px;">Considerar Inotrópico (Dobutamina/Milrinone) si no mejora la perfusión pese a lo anterior</div>
+            <div style="margin-top:4px;">Monitorización estrecha — puede progresar a shock cardiogénico</div>`;
+    } else if (r.profile.key === 'frio-seco') {
+        treatmentContent = `
+            <div>Perfil poco frecuente — hipoperfusión SIN congestión franca</div>
+            <div style="margin-top:4px;">Optimizar precarga con pequeños bolos de fluido si tolera (evaluar respuesta a volumen)</div>
+            <div style="margin-top:4px;">Inotrópico a dosis baja si persiste hipoperfusión tras optimizar precarga</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar diuréticos — pueden empeorar la hipoperfusión</div>`;
+    } else {
+        treatmentContent = `
+            <div style="color:var(--success); font-weight:600;">Perfil compensado — no requiere manejo IV agudo</div>
+            <div style="margin-top:4px;">Optimizar terapia crónica de insuficiencia cardíaca: IECA/ARA-II/ARNI, betabloqueante, antagonista mineralocorticoide, iSGLT2</div>
+            <div style="margin-top:4px;">Reforzar restricción de sodio/líquidos y adherencia terapéutica antes del alta</div>`;
+    }
+
+    const reevalContent = `
+        <div>Diuresis horaria, peso diario, disnea (escala subjetiva) y signos de congestión/perfusión seriados</div>
+        <div style="margin-top:4px;">Lactato seriado si hipoperfusión — su descenso confirma respuesta al tratamiento</div>
+        <div style="margin-top:4px;">Traslado a UCI/unidad de cuidados intermedios si shock cardiogénico, necesidad de VNI prolongada o soporte inotrópico/vasopresor</div>
+        <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Antes del alta: optimizar terapia crónica de IC, educar sobre signos de alarma y asegurar seguimiento precoz (7-14 días).</div>`;
+
+    return `${headerHTML}${shockAlertHTML}${nivHTML}
+        ${section('🫧', '1. Perfil Hemodinámico', r.profile.colorHex, `<div><strong>${r.profile.label}</strong> — ${r.isFrio ? 'con' : 'sin'} hipoperfusión, ${r.isHumedo ? 'con' : 'sin'} congestión</div>`)}
+        ${section('💊', '2. Tratamiento Dirigido por Perfil', r.profile.colorHex, treatmentContent)}
+        ${section('📋', '3. Reevaluación y Disposición', '#14b8a6', reevalContent)}`;
+}
+
+function calculateEAPProtocol(event) {
+    event.preventDefault();
+    const inputs = {
+        sbp: parseFloat(document.getElementById('eapSbp').value),
+        spo2: parseFloat(document.getElementById('eapSpo2').value),
+        hypoperfusion: {
+            extremidadesFrias: document.getElementById('eapExtremidadesFrias').checked,
+            oliguria: document.getElementById('eapOliguria').checked,
+            alteracionConciencia: document.getElementById('eapAlteracionConciencia').checked,
+            lactatoElevado: document.getElementById('eapLactatoElevado').checked
+        },
+        congestion: {
+            estertores: document.getElementById('eapEstertores').checked,
+            ingurgitacion: document.getElementById('eapIngurgitacion').checked,
+            edema: document.getElementById('eapEdema').checked,
+            ortopnea: document.getElementById('eapOrtopnea').checked
+        },
+        causa: document.getElementById('eapCausa').value
+    };
+    const r = Calculators.calculateEAP(inputs);
+    const container = document.getElementById('eapResult');
+    container.innerHTML = buildEAPProtocolHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('eapForm').reset(); document.getElementById('eapResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 44, calculatorName: 'EAP / ICA Descompensada', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 45. PROTOCOLO DE ARRITMIAS === //
+function createArritmiaForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="arritmiaForm" onsubmit="calculateArritmiaProtocol(event)">
+
+            <div style="background:#7f1d1d; border:2px solid #dc2626; border-radius:12px; padding:14px; margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="arrSinPulso" style="width:20px; height:20px;" onchange="toggleArritmiaArrest(this)">
+                    <span style="font-size:14px; font-weight:700; color:#fca5a5;">🚨 Paciente SIN PULSO / en paro cardíaco</span>
+                </label>
+                <div id="arrParoRitmoWrap" style="display:none; margin-top:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#fca5a5;">Ritmo del paro</label>
+                    <select id="arrRitmoParo" class="form-input">
+                        <option value="desfibrilable">Desfibrilable — FV / TV sin pulso</option>
+                        <option value="no_desfibrilable">No desfibrilable — Asistolia / AESP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="arrNormalWrap">
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Tipo de Arritmia</div>
+                    <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Requiere interpretación previa del ECG — esta herramienta no interpreta el trazado.</p>
+                    <select id="arrTipo" required class="form-input" onchange="toggleArritmiaFields()">
+                        <option value="bradicardia">Bradicardia sintomática (incluye BAV)</option>
+                        <option value="taqui_estrecha_regular">Taquicardia de QRS estrecho, REGULAR (SVT/PSVT)</option>
+                        <option value="taqui_estrecha_irregular">Taquicardia de QRS estrecho/ancho, IRREGULAR (FA/Flutter con RVR)</option>
+                        <option value="taqui_ancha_regular">Taquicardia de QRS ancho, REGULAR MONOMÓRFICA (TV estable)</option>
+                        <option value="taqui_ancha_polimorfica">Taquicardia de QRS ancho, POLIMÓRFICA / Torsades</option>
+                    </select>
+                </div>
+
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Estado Hemodinámico</div>
+                    <p style="font-size:12px; color:var(--text-tertiary); margin-bottom:10px;">Marcar si hay CUALQUIERA de los siguientes — determina inestabilidad.</p>
+                    ${[
+                        ['arrHipotension', 'Hipotensión sintomática (PAS < 90 mmHg)'],
+                        ['arrConciencia', 'Alteración aguda del estado de conciencia'],
+                        ['arrShock', 'Signos de shock / hipoperfusión (frialdad, oliguria, lactato elevado)'],
+                        ['arrDolorToracico', 'Dolor torácico isquémico agudo'],
+                        ['arrEap', 'Edema agudo de pulmón / disnea severa aguda']
+                    ].map(([id, label]) => `
+                        <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                            <input type="checkbox" id="${id}" style="width:18px; height:18px;">
+                            <span style="font-size:13px;">${label}</span>
+                        </label>`).join('')}
+                </div>
+
+                <div id="arrEstrechaRegularFields" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="arrAdenosinaFallida" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Ya se administró Adenosina sin respuesta / recurrió</span>
+                    </label>
+                </div>
+
+                <div id="arrIrregularFields" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                        <input type="checkbox" id="arrEfReducida" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Fracción de eyección reducida conocida (HFrEF)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="arrPreexcitacion" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">Sospecha de preexcitación / WPW (QRS ancho e irregular, muy rápido &gt;200 lpm)</span>
+                    </label>
+                </div>
+
+                <div id="arrAnchaRegularFields" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit}) <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">para tope de Procainamida 17 mg/kg</span></label>
+                    <input type="number" id="arrWeight" step="any" min="20" max="300" class="form-input">
+                </div>
+
+                <div id="arrPolimorficaFields" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="arrQtLargo" style="width:18px; height:18px;">
+                        <span style="font-size:13px;">QT prolongado conocido/basal (Torsades típica) — si no se marca, se asume mecanismo isquémico/Brugada/catecolaminérgico</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en AHA ACLS 2020 (Guidelines Update).
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="arritmiaResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleArritmiaArrest(checkbox) {
+    document.getElementById('arrParoRitmoWrap').style.display = checkbox.checked ? 'block' : 'none';
+    document.getElementById('arrNormalWrap').style.display = checkbox.checked ? 'none' : 'block';
+}
+
+function toggleArritmiaFields() {
+    const tipo = document.getElementById('arrTipo').value;
+    document.getElementById('arrEstrechaRegularFields').style.display = tipo === 'taqui_estrecha_regular' ? 'block' : 'none';
+    document.getElementById('arrIrregularFields').style.display = tipo === 'taqui_estrecha_irregular' ? 'block' : 'none';
+    document.getElementById('arrAnchaRegularFields').style.display = tipo === 'taqui_ancha_regular' ? 'block' : 'none';
+    document.getElementById('arrPolimorficaFields').style.display = tipo === 'taqui_ancha_polimorfica' ? 'block' : 'none';
+}
+
+function buildArritmiaProtocolHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.severity.badge} ${r.severity.label}</div>
+        </div>`;
+
+    // ── PARO CARDÍACO ──────────────────────────────────────────────
+    if (r.isArrest) {
+        const rcpContent = `
+            <div><strong>RCP de alta calidad:</strong> compresiones continuas (100-120/min, 5-6 cm), mínima interrupción, permitir expansión torácica completa</div>
+            <div style="margin-top:4px;">Vía aérea avanzada y capnografía si disponible — objetivo EtCO₂ ≥ 10 mmHg como indicador de calidad de RCP</div>`;
+
+        const shockableContent = `
+            <div style="color:#dc2626; font-weight:700;">Desfibrilación INMEDIATA, NO sincronizada (200 J bifásico o dosis máxima del equipo)</div>
+            <div style="margin-top:4px;">Reanudar RCP inmediatamente tras la descarga — NO verificar pulso/ritmo hasta completar 2 min de RCP</div>
+            <div style="margin-top:4px;"><strong>Epinefrina:</strong> 1 mg IV/IO cada 3-5 min (tras la 2ª o 3ª descarga)</div>
+            <div style="margin-top:4px;"><strong>Antiarrítmico:</strong> Amiodarona 300 mg IV/IO (bolo) → segunda dosis 150 mg si FV/TV recurrente; alternativa: Lidocaína 1-1.5 mg/kg IV/IO</div>`;
+
+        const nonShockableContent = `
+            <div style="color:var(--text-primary); font-weight:700;">NO desfibrilar</div>
+            <div style="margin-top:4px;"><strong>Epinefrina:</strong> 1 mg IV/IO cada 3-5 min, lo antes posible</div>
+            <div style="margin-top:4px;">El antiarrítmico (Amiodarona/Lidocaína) NO está indicado en Asistolia/AESP</div>
+            <div style="margin-top:4px;">Reevaluar ritmo cada 2 min — si aparece un ritmo desfibrilable, cambiar de inmediato al protocolo correspondiente</div>`;
+
+        const causasContent = `
+            <div style="font-weight:700; margin-bottom:4px;">6 H:</div>
+            <div>Hipovolemia · Hipoxia · Hidrogeniones (acidosis) · Hipo/Hiperkalemia · Hipotermia · Hipoglucemia</div>
+            <div style="font-weight:700; margin:8px 0 4px;">5 T:</div>
+            <div>Neumotórax a Tensión · Taponamiento cardíaco · Tóxicos · Trombosis pulmonar · Trombosis coronaria</div>`;
+
+        return `${headerHTML}
+            ${section('❤️‍🩹', '1. RCP', '#dc2626', rcpContent)}
+            ${section(r.ritmoParo === 'desfibrilable' ? '⚡' : '🚫', '2. Ritmo — ' + (r.ritmoParo === 'desfibrilable' ? 'Desfibrilable' : 'No Desfibrilable'), r.ritmoParo === 'desfibrilable' ? '#dc2626' : '#6366f1', r.ritmoParo === 'desfibrilable' ? shockableContent : nonShockableContent)}
+            ${section('🔍', '3. Causas Reversibles (6H/5T)', '#8b5cf6', causasContent)}`;
+    }
+
+    // ── INESTABLE (excepto polimórfica, que se trata siempre como FV) ──
+    if (r.inestable && r.tipo !== 'bradicardia') {
+
+        const prepContent = `
+            <div>Oxígeno suplementario, monitor/desfibrilador con electrodos de parche, vía IV/IO permeable, capnografía si disponible</div>
+            <div style="margin-top:4px;"><strong>Sedación breve si el tiempo y la estabilidad lo permiten:</strong> Etomidato 0.1-0.3 mg/kg IV, o Midazolam 0.05-0.1 mg/kg + Fentanilo 1-2 µg/kg IV, o Propofol 0.5-1 mg/kg IV</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">NO retrasar la cardioversión por sedación si el paciente está en inestabilidad extrema (shock franco, EAP fulminante) — priorizar la descarga</div>`;
+
+        const cvContent = r.requiresDefibrillation ? `
+            <div style="color:#dc2626; font-weight:700;">Tratar como Fibrilación Ventricular — Desfibrilación INMEDIATA, NO sincronizada (200 J bifásico o dosis máxima del equipo)</div>
+            <div style="margin-top:4px;">La irregularidad de la TV polimórfica impide una sincronización fiable — no perder tiempo intentando sincronizar</div>
+            <div style="margin-top:4px;">Si no revierte o degenera a TV sin pulso → pasar de inmediato al protocolo de paro cardíaco (RCP + descargas seriadas + Epinefrina + Amiodarona)</div>`
+            : `
+            <div><strong>Cardioversión eléctrica SINCRONIZADA</strong> — energía inicial: <span style="color:var(--brand-accent);font-weight:700;">${r.cardioversionJ}</span> (bifásico)</div>
+            <div style="margin-top:4px;"><strong>Si el primer choque no revierte la arritmia:</strong> aumentar la energía de forma escalonada en el siguiente intento (habitualmente duplicando, p.ej. 100→200→300→360 J, o según las recomendaciones del fabricante, hasta la energía máxima del equipo) y repetir sincronizado</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Si no hay captura, o el ritmo degenera a FV/TV sin pulso en cualquier momento → pasar de inmediato a desfibrilación NO sincronizada y al protocolo de paro cardíaco</div>
+            <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Reconfirmar el modo "sincronizado" antes de cada descarga — el desfibrilador lo desactiva automáticamente tras cada choque en muchos equipos</div>`;
+
+        let recurContent;
+        if (r.tipo === 'taqui_estrecha_regular') {
+            recurContent = `
+                <div>Si recurre tras la cardioversión o entre descargas: Adenosina 6 mg IV en bolo rápido (si no se ha probado) → 12 mg si no responde</div>
+                <div style="margin-top:4px;">Para prevenir recurrencia: Betabloqueante IV (Metoprolol) o Calcioantagonista IV (Diltiazem) — evitar si preexcitación/WPW o disfunción ventricular severa</div>
+                ${r.adenosinaFallida ? '<div style="margin-top:4px;color:#f59e0b;font-weight:600;">⚠️ Adenosina ya fallida — priorizar Betabloqueante/Calcioantagonista tras la cardioversión</div>' : ''}`;
+        } else if (r.tipo === 'taqui_estrecha_irregular') {
+            recurContent = r.preexcitacion ? `
+                <div style="color:#dc2626; font-weight:700;">⚠️ Preexcitación (WPW) sospechada — EVITAR bloqueadores del nodo AV incluso peri-cardioversión</div>
+                <div style="margin-top:4px;">NO usar Adenosina, Betabloqueante, Calcioantagonista ni Digoxina. Para prevenir recurrencia: Procainamida IV o Ibutilida IV</div>
+                <div style="margin-top:4px;">Interconsulta a Electrofisiología — candidato a ablación de la vía accesoria</div>`
+                : `
+                <div>Para prevenir recurrencia tras la cardioversión — control de frecuencia: ${r.efReducida ? 'Amiodarona IV o Digoxina IV (FE reducida — evitar Calcioantagonistas no dihidropiridínicos)' : 'Betabloqueante IV (Metoprolol) o Calcioantagonista IV (Diltiazem)'}</div>
+                <div style="margin-top:4px;">Anticoagulación: iniciar según CHA₂DS₂-VASc (Calculadora 9) independientemente de si se cardiovirtió — si &gt; 48h de inicio o incierto, considerar ecocardiograma transesofágico antes de cualquier cardioversión adicional para descartar trombo auricular</div>`;
+        } else if (r.tipo === 'taqui_ancha_regular') {
+            recurContent = `
+                <div>Para prevenir recurrencia tras la cardioversión: Amiodarona IV 150 mg en 10 min (puede repetirse), luego infusión 1 mg/min × 6h y 0.5 mg/min × 18h</div>
+                <div style="margin-top:4px;">Alternativa si función ventricular conservada y sin QT prolongado: Procainamida IV 20-50 mg/min${r.procainamidaMaxMg ? ` hasta un máximo de <span style="color:var(--brand-accent);font-weight:700;">${r.procainamidaMaxMg} mg</span> (17 mg/kg)` : ' (máx. 17 mg/kg)'}</div>
+                <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Buscar y corregir causa (isquemia, alteración electrolítica, proarritmia por fármacos) para evitar recurrencia inmediata</div>`;
+        }
+
+        const causaContent = `
+            <div>Buscar y tratar la causa precipitante de forma simultánea: isquemia/IAM, alteración electrolítica (K⁺, Mg²⁺), hipoxia, embolia pulmonar, intoxicación/proarritmia farmacológica, disfunción tiroidea</div>
+            <div style="margin-top:4px;">ECG de 12 derivaciones e interconsulta a Cardiología tan pronto como el paciente esté estabilizado</div>`;
+
+        const postContent = `
+            <div>Monitorización ECG continua y control seriado de PA tras la cardioversión</div>
+            <div style="margin-top:4px;">Revisar la piel bajo los electrodos (quemaduras) y el estado neurológico post-sedación</div>
+            <div style="margin-top:4px;">Troponinas seriadas si se sospecha isquemia concomitante o si la cardioversión fue prolongada/con múltiples descargas</div>
+            <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Considerar ingreso a UCI/unidad de monitorización si requirió múltiples descargas, soporte vasoactivo o antiarrítmico en infusión.</div>`;
+
+        return `${headerHTML}
+            ${section('🅰️', '1. Preparación', '#0ea5e9', prepContent)}
+            ${section('⚡', '2. Cardioversión / Desfibrilación', '#dc2626', cvContent)}
+            ${recurContent ? section('💊', '3. Prevención de Recurrencia / Si Recurre', '#f59e0b', recurContent) : ''}
+            ${section('🔍', `${recurContent ? '4' : '3'}. Causa Precipitante`, '#8b5cf6', causaContent)}
+            ${section('📋', `${recurContent ? '5' : '4'}. Monitorización Post-Procedimiento`, '#14b8a6', postContent)}`;
+    }
+
+    // ── BRADICARDIA ──────────────────────────────────────────────
+    if (r.tipo === 'bradicardia') {
+        if (r.inestable) {
+            const content = `
+                <div><strong>1. Atropina:</strong> 1 mg IV en bolo, repetir cada 3-5 min (máximo 3 mg)</div>
+                <div style="margin-top:4px; color:#dc2626; font-weight:600;">Si BAV de alto grado (Mobitz II o 3er grado con QRS ancho) → NO esperar respuesta a la atropina, iniciar marcapasos transcutáneo de inmediato</div>
+                <div style="margin-top:8px;"><strong>2. Marcapasos transcutáneo:</strong> si atropina inefectiva/contraindicada. Sedoanalgesia si el paciente está consciente (es doloroso). Verificar captura eléctrica Y mecánica (pulso palpable)</div>
+                <div style="margin-top:8px;"><strong>3. Fármacos puente (si atropina/marcapasos no disponibles o inefectivos):</strong> Dopamina 5-20 µg/kg/min IV o Epinefrina 2-10 µg/min IV (ver Calculadora 29, Vasoactivos IV)</div>
+                <div style="margin-top:8px;"><strong>4. Causas reversibles:</strong> hiperkalemia, intoxicación por betabloqueante/calcioantagonista (Gluconato de calcio, Glucagón, insulina-dextrosa en dosis altas), intoxicación digitálica (fragmentos Fab antidigoxina), IAM inferior, hipotiroidismo</div>
+                <div style="margin-top:8px;">5. Interconsulta a Cardiología / marcapasos transvenoso si refractaria o BAV de alto grado persistente</div>`;
+            return `${headerHTML}${section('💓', 'Bradicardia Inestable', '#dc2626', content)}`;
+        }
+        const content = `
+            <div>Observación y monitorización continua — no requiere intervención inmediata salvo progresión a inestabilidad</div>
+            <div style="margin-top:4px;">Identificar y tratar la causa subyacente (fármacos bradicardizantes, isquemia, alteraciones electrolíticas, hipotiroidismo)</div>
+            <div style="margin-top:4px;">Suspender/ajustar fármacos bradicardizantes si aplica (betabloqueante, calcioantagonista no dihidropiridínico, digoxina, amiodarona)</div>`;
+        return `${headerHTML}${section('💓', 'Bradicardia Estable', '#eab308', content)}`;
+    }
+
+    // ── TAQUICARDIA ESTRECHA REGULAR (SVT/PSVT) — estable ───────────
+    if (r.tipo === 'taqui_estrecha_regular') {
+        const content = `
+            <div><strong>1. Maniobras vagales:</strong> Valsalva modificada (espirar contra resistencia + elevación pasiva de piernas) o masaje del seno carotídeo (solo si no hay soplo carotídeo/contraindicación)</div>
+            <div style="margin-top:8px;"><strong>2. Adenosina:</strong> 6 mg IV en bolo RÁPIDO + flush de 20 mL SSN, elevar el brazo de inmediato. Si no responde en 1-2 min: 12 mg IV, puede repetirse una vez más (12 mg)</div>
+            <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Advertir al paciente de sensación transitoria de muerte inminente/rubor — es esperado y de segundos de duración</div>
+            <div style="margin-top:8px;"><strong>3. Si falla Adenosina o recurre:</strong> Betabloqueante IV (Metoprolol 2.5-5 mg IV c/5 min) o Calcioantagonista IV (Diltiazem 0.25 mg/kg IV en 2 min, luego infusión 5-15 mg/h)</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar Calcioantagonistas si preexcitación/WPW conocido o disfunción ventricular severa</div>
+            <div style="margin-top:8px;">4. Interconsulta a Cardiología/Electrofisiología si recurrente — candidato a estudio electrofisiológico y ablación</div>
+            ${r.adenosinaFallida ? '<div style="margin-top:8px;color:#f59e0b;font-weight:600;">⚠️ Adenosina ya fallida/recurrió — proceder directamente al paso 3 (Betabloqueante/Calcioantagonista)</div>' : ''}`;
+        return `${headerHTML}${section('💊', 'SVT/PSVT Estable', '#eab308', content)}`;
+    }
+
+    // ── TAQUICARDIA IRREGULAR (FA/Flutter con RVR) — estable ────────
+    if (r.tipo === 'taqui_estrecha_irregular') {
+        let content;
+        if (r.preexcitacion) {
+            content = `
+                <div style="color:#dc2626; font-weight:700;">⚠️ Sospecha de preexcitación (WPW) — EVITAR bloqueadores del nodo AV</div>
+                <div style="margin-top:4px;">NO usar: Adenosina, Betabloqueante, Calcioantagonista ni Digoxina — riesgo de conducción preferencial por la vía accesoria y degeneración a FV</div>
+                <div style="margin-top:8px;"><strong>Usar:</strong> Procainamida IV o Ibutilida IV, o cardioversión eléctrica sincronizada (electiva o urgente según tolerancia)</div>
+                <div style="margin-top:8px;">Interconsulta a Electrofisiología — candidato a ablación de la vía accesoria</div>`;
+        } else {
+            content = `
+                <div style="font-weight:700; margin-bottom:4px;">Control de frecuencia:</div>
+                <div>${r.efReducida
+                    ? '<strong>FE reducida (HFrEF):</strong> Amiodarona IV (150 mg en 10 min, luego infusión) o Digoxina IV — evitar Calcioantagonistas no dihidropiridínicos; usar Betabloqueantes con cautela solo si compensado'
+                    : '<strong>FE preservada:</strong> Betabloqueante IV (Metoprolol) o Calcioantagonista IV (Diltiazem)'}</div>
+                <div style="margin-top:10px; font-weight:700; margin-bottom:4px;">Anticoagulación y control del ritmo:</div>
+                <div>Si &lt; 48h de inicio → puede considerarse cardioversión electiva. Si &gt; 48h o incierto → anticoagular ≥ 3 semanas antes de cardioversión electiva, o ecocardiograma transesofágico para descartar trombo auricular</div>
+                <div style="margin-top:4px;">Iniciar anticoagulación según CHA₂DS₂-VASc (Calculadora 9 de esta app) independientemente de la estrategia elegida</div>`;
+        }
+        return `${headerHTML}${section('💊', 'FA/Flutter con RVR — Estable', '#eab308', content)}`;
+    }
+
+    // ── TAQUICARDIA ANCHA REGULAR MONOMÓRFICA (TV estable) ──────────
+    if (r.tipo === 'taqui_ancha_regular') {
+        const content = `
+            <div><strong>1. Procainamida IV:</strong> 20-50 mg/min (o 100 mg c/5 min) hasta control de la arritmia, hipotensión, ensanchamiento del QRS &gt; 50%, o dosis máxima de 17 mg/kg${r.procainamidaMaxMg ? ` = <span style="color:var(--brand-accent);font-weight:700;">${r.procainamidaMaxMg} mg</span> para este paciente` : ''} — mantenimiento 1-4 mg/min. Preferida si función ventricular conservada</div>
+            <div style="margin-top:8px;"><strong>2. Amiodarona IV:</strong> 150 mg en 10 min (puede repetirse), luego infusión 1 mg/min × 6h y 0.5 mg/min × 18h. Preferida si disfunción ventricular/IC conocida</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar Procainamida si QT prolongado basal o insuficiencia cardíaca severa</div>
+            <div style="margin-top:8px;">3. Si refractaria a fármacos → cardioversión eléctrica sincronizada electiva</div>
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Ante incertidumbre diagnóstica entre TV y SVT con aberrancia, tratar como TV por defecto — especialmente con cardiopatía estructural conocida.</div>`;
+        return `${headerHTML}${section('💊', 'TV Monomórfica Estable', '#eab308', content)}`;
+    }
+
+    // ── TAQUICARDIA ANCHA POLIMÓRFICA / TORSADES — estable ──────────
+    if (r.tipo === 'taqui_ancha_polimorfica') {
+        const content = r.qtLargo ? `
+            <div style="font-weight:700; margin-bottom:4px;">QT prolongado — Torsades típica:</div>
+            <div><strong>1. Sulfato de Magnesio:</strong> 2 g IV en 5-10 min (incluso con Mg sérico normal), puede repetirse</div>
+            <div style="margin-top:4px;"><strong>2.</strong> Corregir K⁺ (mantener &gt; 4.5 mEq/L) y demás electrolitos</div>
+            <div style="margin-top:4px;"><strong>3.</strong> Suspender todo fármaco que prolongue el QT</div>
+            <div style="margin-top:4px;"><strong>4.</strong> Considerar marcapasos con sobreestimulación (overdrive pacing) o Isoproterenol IV (Calculadora 29, Vasoactivos IV) como puente — acorta el QT dependiente de bradicardia</div>`
+            : `
+            <div style="font-weight:700; margin-bottom:4px;">QT normal — isquemia / Brugada / TV catecolaminérgica:</div>
+            <div><strong>1.</strong> Tratar la isquemia miocárdica activa (revascularización urgente si aplica)</div>
+            <div style="margin-top:4px;"><strong>2.</strong> Betabloqueante IV — especialmente eficaz en TV catecolaminérgica</div>
+            <div style="margin-top:4px;"><strong>3.</strong> Amiodarona IV como alternativa</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar Isoproterenol si se sospecha Síndrome de Brugada o TV catecolaminérgica — puede empeorarlas</div>`;
+        return `${headerHTML}
+            <div style="background:#431407; color:#fdba74; border:2px solid #f97316; border-radius:var(--radius-lg); padding:14px; margin-bottom:12px; font-size:13px;">
+                <strong>⚠️ Si degenera a inestable o TV sin pulso/FV en cualquier momento:</strong> desfibrilación inmediata, NO sincronizada.
+            </div>
+            ${section('💊', 'TV Polimórfica / Torsades', '#eab308', content)}`;
+    }
+
+    return headerHTML;
+}
+
+function calculateArritmiaProtocol(event) {
+    event.preventDefault();
+    const sinPulso = document.getElementById('arrSinPulso').checked;
+
+    let inputs;
+    if (sinPulso) {
+        inputs = { tipo: 'paro', ritmoParo: document.getElementById('arrRitmoParo').value };
+    } else {
+        const tipo = document.getElementById('arrTipo').value;
+        const inestable = ['arrHipotension', 'arrConciencia', 'arrShock', 'arrDolorToracico', 'arrEap']
+            .some(id => document.getElementById(id).checked);
+        const weightRaw = tipo === 'taqui_ancha_regular' ? document.getElementById('arrWeight').value : '';
+        inputs = {
+            tipo, inestable,
+            efReducida: tipo === 'taqui_estrecha_irregular' ? document.getElementById('arrEfReducida').checked : false,
+            preexcitacion: tipo === 'taqui_estrecha_irregular' ? document.getElementById('arrPreexcitacion').checked : false,
+            qtLargo: tipo === 'taqui_ancha_polimorfica' ? document.getElementById('arrQtLargo').checked : false,
+            adenosinaFallida: tipo === 'taqui_estrecha_regular' ? document.getElementById('arrAdenosinaFallida').checked : false,
+            weight: weightRaw === '' ? null : parseFloat(weightRaw)
+        };
+    }
+
+    const r = Calculators.calculateArritmia(inputs);
+    const container = document.getElementById('arritmiaResult');
+    container.innerHTML = buildArritmiaProtocolHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('arritmiaForm').reset(); document.getElementById('arritmiaResult').style.display='none'; toggleArritmiaArrest({checked:false}); toggleArritmiaFields();" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 45, calculatorName: 'Protocolo de Arritmias', inputs, result: r, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);

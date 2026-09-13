@@ -67,7 +67,7 @@ const DRUGS_VASOACTIVE = [
   name: 'Fenilefrina',
   category: 'Vasopresores',
   weightBased: true,
-  defaultAmount: 100, defaultAmountUnit: 'mg', defaultVolume: 250,
+  defaultAmount: 10, defaultAmountUnit: 'mg', defaultVolume: 250,
   defaultDoseUnit: 'µg/kg/min',
   amountUnits: ['mg', 'µg'],
   doseUnits: ['µg/kg/min', 'µg/min'],
@@ -245,7 +245,7 @@ const DRUGS_VASOACTIVE = [
     },
     {
       name: 'Edema Agudo de Pulmón (EAP) Hipertensivo',
-      doseStart: 20, doseMin: 10, doseMax: 200, doseUnit: 'µg/min',
+      doseStart: 20, doseMin: 10, doseMax: 400, doseUnit: 'µg/min',
       pearl: 'En EAP hipertensivo la nitroglicerina en dosis altas (hasta 400 µg/min en algunos protocolos agresivos) reduce rápidamente la precarga y la PA. Monitorizar PA cada 5 min. La tolerancia a nitratos se desarrolla en 12-24h de infusión continua.',
       alert: null
     },
@@ -294,7 +294,7 @@ const DRUGS_VASOACTIVE = [
   id: 'isoprenalina',
   name: 'Isoprenalina (Isoproterenol)',
   category: 'Mixtos',
-  weightBased: false,
+  weightBased: true,
   defaultAmount: 1, defaultAmountUnit: 'mg', defaultVolume: 250,
   defaultDoseUnit: 'µg/min',
   amountUnits: ['mg', 'µg'],

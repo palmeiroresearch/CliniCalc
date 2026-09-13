@@ -1,6 +1,6 @@
 // ============================================
 // CLINICALC — GUÍA ANTIBIÓTICA
-// Misceláneos: GI, Cardio, Piel menor, Neurológico, Diálisis (9)
+// Misceláneos: GI, Cardio, Piel menor, Neurológico, Diálisis (8)
 // Fuentes: IDSA · ACG · ESC · ESCMID · Sanford Guide 2024
 // ============================================
 

@@ -1,9 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 22 Calculadoras Médicas
+// Metadata de las 45 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.5.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -393,6 +393,66 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Pulmonar',
         description: 'Clasificación espirométrica GOLD 1–4, CAT Score, mMRC y Esquema ABE con recomendación de tratamiento farmacológico (GOLD 2025).',
         formulas: ['GOLD Espirométrico', 'CAT Score', 'Escala mMRC', 'Esquema ABE (GOLD 2025)']
+    },
+    {
+        id: 40,
+        name: 'EHH',
+        fullName: 'Estado Hiperosmolar Hiperglucémico (EHH/HHS)',
+        icon: '💧',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Clasificación por osmolaridad efectiva y protocolo escalonado de fluidos, potasio e insulina en el estado hiperosmolar hiperglucémico (ADA 2024, JBDS-IP 2022).',
+        formulas: ['Osmolaridad Efectiva', 'Na Corregido', 'Fluidos', 'Insulina']
+    },
+    {
+        id: 41,
+        name: 'Crisis Hipertensiva',
+        fullName: 'Crisis Hipertensiva — Urgencia vs Emergencia',
+        icon: '🩺',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Clasifica urgencia vs emergencia hipertensiva según daño agudo de órgano diana y recomienda fármaco IV, objetivo y velocidad de reducción por escenario (ACC/AHA 2017, ESC/ESH 2023).',
+        formulas: ['Daño de Órgano Diana', 'Fármaco IV por Escenario']
+    },
+    {
+        id: 42,
+        name: 'Estatus Epiléptico',
+        fullName: 'Estatus Epiléptico — Protocolo Escalonado',
+        icon: '⚡',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Protocolo escalonado por tiempo: benzodiacepina, segunda línea IV y manejo refractario con anestesia, con dosis calculadas por peso (AES 2016, ESETT).',
+        formulas: ['Benzodiacepina', 'Segunda Línea IV', 'Anestesia (Refractario)']
+    },
+    {
+        id: 43,
+        name: 'Sepsis / Shock Séptico',
+        fullName: 'Sepsis / Shock Séptico — Bundle Terapéutico',
+        icon: '🚨',
+        category: 'infecciones',
+        categoryLabel: 'Infecciones',
+        description: 'Bundle de la primera hora: lactato, hemocultivos, antibiótico empírico, fluidoterapia y vasopresores con checklist de cumplimiento (Surviving Sepsis Campaign 2021).',
+        formulas: ['Bolo de Cristaloides', 'PAM Objetivo', 'Vasopresores']
+    },
+    {
+        id: 44,
+        name: 'Edema Agudo de Pulmón',
+        fullName: 'Edema Agudo de Pulmón / ICA Descompensada',
+        icon: '🌊',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Clasifica el perfil hemodinámico (caliente/frío, húmedo/seco — Forrester/Nohria-Stevenson) y recomienda vasodilatador, diurético, VNI o soporte inotrópico/vasopresor según el perfil (ESC HF 2021/2023).',
+        formulas: ['Perfil Hemodinámico', 'Vasodilatador/Diurético', 'Soporte Inotrópico']
+    },
+    {
+        id: 45,
+        name: 'Protocolo de Arritmias',
+        fullName: 'Protocolo de Arritmias — Estable vs Inestable',
+        icon: '💓',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Guía la decisión de cardioversión/desfibrilación vs manejo farmacológico según el tipo de arritmia y la estabilidad hemodinámica, con líneas de antiarrítmicos por escenario (AHA ACLS 2020).',
+        formulas: ['Estable vs Inestable', 'Cardioversión/Desfibrilación', 'Líneas de Antiarrítmicos']
     },
     {
         id: 38,

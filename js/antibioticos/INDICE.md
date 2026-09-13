@@ -1,6 +1,8 @@
 # Guía Antibiótica — Índice de Patologías
-**Total: 67 enfermedades · Última actualización: 2026-04-29**
-Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines · WHO 2022
+**Total: 88 enfermedades · Última actualización: 2026-09-12**
+Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines · WHO 2022 · ACOG · AASLD · CDC
+
+*Nota: el conteo anterior (67) estaba desactualizado en +1 — `antibiotics-data-misc.js` tiene 8 entradas, no 9 (ya corregido en su comentario de cabecera). Baseline real antes del lote 6: 66.*
 
 ---
 
@@ -95,7 +97,7 @@ Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines 
 
 ---
 
-## 🌍 Especiales (2) — `antibiotics-data.js`
+## 🌍 Especiales (1) — `antibiotics-data.js`
 
 | id | Enfermedad | Subtypes |
 |----|-----------|---------|
@@ -177,3 +179,37 @@ Fuentes: Sanford Guide 2024 · IDSA · ATS · ESCMID · EAU · Tokyo Guidelines 
 - [x] Empiema/Absceso subdural intracraneal (post-sinusal · post-quirúrgico)
 - [x] Trombosis séptica del seno cavernoso
 - [x] Peritonitis en diálisis peritoneal (empírica IP · dirigida por cultivo)
+
+### ✅ Lote 6 — Abdominal/Obstétrico, Neuro/Ocular, Respiratorio-Piel-Uro, Tropical (COMPLETADO — 2026-09-12, 22 enfermedades)
+
+**`antibiotics-data-batch2-abdominal.js`** (6):
+- [x] Peritonitis Bacteriana Espontánea — PBE (episodio agudo · profilaxis 1ria/2ria)
+- [x] Diverticulitis Aguda (no complicada · complicada: absceso/perforación)
+- [x] Corioamnionitis (anteparto/intraparto · cesárea)
+- [x] Endometritis Postparto (vaginal · post-cesárea)
+- [x] Aborto Séptico (sin shock · con shock séptico)
+- [x] Absceso Perianal / Perirrectal (simple · complicado: Crohn/inmunosupresión)
+
+**`antibiotics-data-batch2-neuro-ocular.js`** (5):
+- [x] Absceso Cerebral (otógeno/sinusal · hematógeno/endocarditis · postquirúrgico)
+- [x] Espondilodiscitis / Osteomielitis Vertebral (nativa · instrumentada)
+- [x] Infección de Derivación Ventricular / VP shunt (temprana · tardía)
+- [x] Endoftalmitis (postquirúrgica · endógena)
+- [x] Celulitis Orbitaria / Periorbitaria (preseptal · postseptal-urgencia)
+
+**`antibiotics-data-batch2-resp-piel-uro.js`** (6):
+- [x] Neumonía por Aspiración (comunitaria · nosocomial)
+- [x] Empiema Pleural (exudativo/fibrinopurulento · organizado)
+- [x] Mordeduras — Animal/Humana (perro-gato · humana)
+- [x] Impétigo / Forunculosis (impétigo · forúnculo-ántrax cutáneo)
+- [x] Epididimitis / Orquitis Aguda (<35a ITS · >35a entérica)
+- [x] Mediastinitis (post-esternotomía · descendente necrotizante)
+
+**`antibiotics-data-tropical2.js`** (5):
+- [x] Dengue (sin signos de alarma · con signos de alarma/grave)
+- [x] Fiebre Tifoidea (no complicada · grave/complicada)
+- [x] Enfermedad de Chagas (fase aguda · reactivación inmunosuprimido)
+- [x] Botulismo (alimentario · de herida)
+- [x] Peste — Yersinia pestis (bubónica · neumónica)
+
+**Aliases clave del lote 6:** PBE, ascitis infectada, diverticulitis, corioamnionitis, endometritis puerperal, aborto séptico, absceso anal, absceso cerebral, discitis, shunt infection, endoftalmitis, celulitis orbitaria, broncoaspiración, empiema, mordedura de perro/gato/humana, impétigo, forúnculo, epididimitis, mediastinitis, dengue, tifoidea, Chagas, botulismo, peste

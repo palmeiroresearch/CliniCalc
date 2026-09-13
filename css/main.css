@@ -403,6 +403,7 @@ body {
 [data-category="neuro"]         { --cat-color: #6366f1; --cat-color-bg: rgba(99,102,241,0.13); }
 [data-category="otros"]         { --cat-color: #64748b; --cat-color-bg: rgba(100,116,139,0.13); }
 [data-category="critico"]       { --cat-color: #f59e0b; --cat-color-bg: rgba(245,158,11,0.13); }
+[data-category="pulmonar"]      { --cat-color: #14b8a6; --cat-color-bg: rgba(20,184,166,0.13); }
 
 /* === CALCULATORS GRID === */
 .calculators-grid {
