@@ -63,19 +63,21 @@ const UI = {
     // === BIBLIOTECA === //
     renderLibraryCalculators(categoryFilter = 'all') {
         const favorites = Storage.getFavorites();
+        const mainScreen = Storage.getMainScreen();
         const list = document.getElementById('libraryCalculatorsList');
-        
+
         let filteredCalcs = CALCULATORS_CONFIG;
         if (categoryFilter !== 'all') {
             filteredCalcs = CALCULATORS_CONFIG.filter(c => c.category === categoryFilter);
         }
-        
+
         let html = '';
         filteredCalcs.forEach(calc => {
             const isFav = favorites.includes(calc.id);
-            
+            const isMain = mainScreen.includes(calc.id);
+
             html += `
-                <div class="calculator-list-item ${isFav ? 'favorited' : ''}"
+                <div class="calculator-list-item ${isFav ? 'favorited' : ''} ${isMain ? 'on-mainscreen' : ''}"
                      onclick="openCalculator(${calc.id})"
                      data-category="${calc.category}">
                     <div class="calc-list-icon">${calc.icon}</div>
@@ -83,14 +85,22 @@ const UI = {
                         <div class="calc-list-name">${calc.fullName}</div>
                         <div class="calc-list-description">${calc.description}</div>
                     </div>
-                    <div class="calc-list-favorite"
-                         onclick="event.stopPropagation(); toggleFavorite(${calc.id})">
-                        ${isFav ? '⭐' : '☆'}
+                    <div class="calc-list-actions">
+                        <div class="calc-list-mainscreen"
+                             title="${isMain ? 'Quitar de pantalla principal' : 'Añadir a pantalla principal'}"
+                             onclick="event.stopPropagation(); toggleCalcInMainScreen(${calc.id})">
+                            📌
+                        </div>
+                        <div class="calc-list-favorite"
+                             title="${isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}"
+                             onclick="event.stopPropagation(); toggleFavorite(${calc.id})">
+                            ${isFav ? '⭐' : '☆'}
+                        </div>
                     </div>
                 </div>
             `;
         });
-        
+
         list.innerHTML = html;
     },
 

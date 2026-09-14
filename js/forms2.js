@@ -5626,6 +5626,1583 @@ function calculateParoProtocol(event) {
     Storage.addToHistory({ calculatorId: 46, calculatorName: 'Paro Cardíaco', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 47. DENGUE — CLASIFICACIÓN OMS GRUPO A/B/C === //
+function createDengueForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="dengueForm" onsubmit="calculateDengueProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Criterios de Gravedad (Grupo C)</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Cualquiera marcado clasifica como Dengue Grave.</p>
+                ${[
+                    ['dengueGrav1', 'Extravasación grave de plasma con shock o dificultad respiratoria'],
+                    ['dengueGrav2', 'Sangrado grave (a criterio clínico)'],
+                    ['dengueGrav3', 'Compromiso grave de órgano (SNC, hígado con AST/ALT ≥1000, corazón u otro)']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Signos de Alarma (Grupo B)</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Aparecen típicamente en la caída de la fiebre (día 3-7).</p>
+                ${[
+                    ['dengueAlarma1', 'Dolor abdominal intenso y continuo'],
+                    ['dengueAlarma2', 'Vómitos persistentes (≥3 en 1h o ≥4 en 6h)'],
+                    ['dengueAlarma3', 'Acumulación de líquidos clínicamente detectable (ascitis, derrame pleural)'],
+                    ['dengueAlarma4', 'Sangrado de mucosas'],
+                    ['dengueAlarma5', 'Letargia o irritabilidad'],
+                    ['dengueAlarma6', 'Hepatomegalia > 2 cm'],
+                    ['dengueAlarma7', 'Hematocrito en ascenso progresivo con caída rápida de plaquetas (laboratorio)']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Condiciones Asociadas</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Aunque no haya signos de alarma, cualquiera marcada obliga a manejo hospitalario (Grupo B).</p>
+                ${[
+                    ['dengueComorb1', 'Embarazo'],
+                    ['dengueComorb2', 'Menor de 1 año o mayor de 65 años'],
+                    ['dengueComorb3', 'Obesidad, Diabetes Mellitus o Enfermedad Renal Crónica'],
+                    ['dengueComorb4', 'Enfermedad hemolítica crónica u otra condición de riesgo social/de acceso a salud']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Datos para Fluidoterapia (Grupo B/C)</div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="dengueWeight" step="any" min="10" max="300" class="form-input">
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                        <input type="number" id="dengueSbp" step="any" min="40" max="250" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAD (mmHg)</label>
+                        <input type="number" id="dengueDbp" step="any" min="20" max="150" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en OMS 2009 · PAHO Dengue Guidelines.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Protocolo
+            </button>
+        </form>
+        <div id="dengueResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildDengueProtocolHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.severity.badge} ${r.severity.label}</div>
+            ${r.forzadoPorComorbilidad ? '<div style="font-size:12px; opacity:0.9; margin-top:6px;">Clasificado como Grupo B por condición asociada, aunque no presenta signos de alarma.</div>' : ''}
+        </div>`;
+
+    let manejoHtml;
+    if (r.grupo === 'A') {
+        manejoHtml = section('💧', 'Manejo Ambulatorio', '#22c55e', `
+            <div>Hidratación oral abundante (sales de rehidratación, jugos, líquidos con electrolitos)</div>
+            <div style="margin-top:4px;"><strong>Paracetamol</strong> para fiebre/dolor — <span style="color:#dc2626; font-weight:600;">NO AINEs ni Ácido Acetilsalicílico</span> (riesgo hemorrágico)</div>
+            <div style="margin-top:4px;">Control diario ambulatorio con hematocrito y plaquetas seriados</div>
+            <div style="margin-top:4px;">Educar en signos de alarma para reconsulta inmediata</div>
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Ver también <strong>Calculadora 30, Guía de Antibioterapia Empírica → "Dengue"</strong> para el detalle de soporte sintomático ya documentado ahí.</div>`);
+    } else if (r.grupo === 'B') {
+        const fluidHtml = r.fluidos ? `
+            <div><strong>Fase 1 (1-2h):</strong> <span style="color:var(--brand-accent); font-weight:700;">${r.fluidos.fase1}</span></div>
+            <div style="margin-top:4px;"><strong>Fase 2 (2-4h):</strong> ${r.fluidos.fase2}</div>
+            <div style="margin-top:4px;"><strong>Fase 3 (mantenimiento):</strong> ${r.fluidos.fase3}, ajustar según clínica/hematocrito</div>`
+            : `<div style="color:#f59e0b;">Ingresa el peso para calcular las tasas de infusión.</div>`;
+        manejoHtml = section('🏥', 'Hospitalización + Fluidoterapia IV', '#dc2626', `
+            <div>Cristaloides IV (SSN 0.9% o Ringer Lactato) en 3 fases decrecientes:</div>
+            <div style="margin-top:6px;">${fluidHtml}</div>
+            <div style="margin-top:8px;">Reevaluación clínica cada 1-4h — signos vitales, diuresis, hematocrito seriado cada 4-6h</div>
+            <div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Reducir el ritmo de infusión progresivamente conforme mejora — evitar sobrecarga de líquidos.</div>`);
+    } else {
+        const boloHtml = r.fluidos ? `
+            <div><strong>Shock compensado</strong> (PAS normal, presión de pulso &lt; 20 mmHg): bolo <span style="color:var(--brand-accent); font-weight:700;">${r.fluidos.boloCompensado}</span>, reevaluar</div>
+            <div style="margin-top:4px;"><strong>Shock hipotenso</strong> (PAS &lt; 90 o caída &gt; 20% del basal): bolo rápido <span style="color:var(--brand-accent); font-weight:700;">${r.fluidos.boloHipotenso}</span>, repetir si no mejora</div>`
+            : `<div style="color:#f59e0b;">Ingresa peso y PA para diferenciar el tipo de shock y calcular el bolo.</div>`;
+        manejoHtml = section('🚨', 'UCI — Shock por Dengue', '#7f1d1d', `
+            ${boloHtml}
+            <div style="margin-top:8px;">Considerar hemoderivados si sangrado significativo o hematocrito en descenso pese a reanimación adecuada (sugiere sangrado oculto)</div>
+            <div style="margin-top:4px;">Monitorización horaria: PA, FC, diuresis, hematocrito seriado</div>
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Fase de reabsorción (día 7-10): vigilar sobrecarga de volumen — no fluidos de rutina en esta fase, considerar diuréticos si hay signos de sobrecarga.</div>`);
+    }
+
+    return `${headerHTML}${manejoHtml}`;
+}
+
+function calculateDengueProtocol(event) {
+    event.preventDefault();
+    const weightRaw = document.getElementById('dengueWeight').value;
+    const sbpRaw = document.getElementById('dengueSbp').value;
+    const dbpRaw = document.getElementById('dengueDbp').value;
+
+    const inputs = {
+        gravedad: {
+            g1: document.getElementById('dengueGrav1').checked,
+            g2: document.getElementById('dengueGrav2').checked,
+            g3: document.getElementById('dengueGrav3').checked
+        },
+        alarma: {
+            a1: document.getElementById('dengueAlarma1').checked,
+            a2: document.getElementById('dengueAlarma2').checked,
+            a3: document.getElementById('dengueAlarma3').checked,
+            a4: document.getElementById('dengueAlarma4').checked,
+            a5: document.getElementById('dengueAlarma5').checked,
+            a6: document.getElementById('dengueAlarma6').checked,
+            a7: document.getElementById('dengueAlarma7').checked
+        },
+        comorbilidad: {
+            c1: document.getElementById('dengueComorb1').checked,
+            c2: document.getElementById('dengueComorb2').checked,
+            c3: document.getElementById('dengueComorb3').checked,
+            c4: document.getElementById('dengueComorb4').checked
+        },
+        weight: weightRaw === '' ? null : parseFloat(weightRaw),
+        sbp: sbpRaw === '' ? null : parseFloat(sbpRaw),
+        dbp: dbpRaw === '' ? null : parseFloat(dbpRaw)
+    };
+
+    const r = Calculators.calculateDengue(inputs);
+    const container = document.getElementById('dengueResult');
+    container.innerHTML = buildDengueProtocolHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('dengueForm').reset(); document.getElementById('dengueResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 47, calculatorName: 'Dengue', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 48. CÓDIGO ICTUS — TROMBOLISIS / TROMBECTOMÍA === //
+function createCodigoIctusForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="ictusForm" onsubmit="calculateCodigoIctusProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Horas desde el inicio de síntomas / última vez visto bien</label>
+                    <input type="number" id="ictusHoras" step="any" min="0" max="72" class="form-input" placeholder="ej. 2.5" oninput="toggleIctusFields()">
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="ictusVentanaIncierta" style="width:18px; height:18px;" onchange="toggleIctusFields()">
+                    <span style="font-size:13px;">Hora de inicio incierta / al despertar sin última hora visto bien conocida</span>
+                </label>
+                <div class="form-group" style="margin-top:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">NIHSS <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">opcional — calcular en Calculadora 17, NIHSS</span></label>
+                    <input type="number" id="ictusNihss" step="1" min="0" max="42" class="form-input">
+                </div>
+                <div class="form-group" style="margin-top:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="ictusWeight" step="any" min="20" max="300" class="form-input">
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                        <input type="number" id="ictusSbp" step="any" min="60" max="260" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAD (mmHg)</label>
+                        <input type="number" id="ictusDbp" step="any" min="30" max="150" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Exclusión Absoluta para Trombolisis</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Cualquiera marcada contraindica la Alteplasa.</p>
+                ${[
+                    ['ictusExAbs1', 'Hemorragia intracraneal en la TC'],
+                    ['ictusExAbs2', 'Ictus isquémico o TCE severo en los últimos 3 meses'],
+                    ['ictusExAbs3', 'Cirugía intracraneal o espinal reciente'],
+                    ['ictusExAbs4', 'Antecedente de hemorragia intracraneal'],
+                    ['ictusExAbs5', 'Neoplasia, malformación arteriovenosa o aneurisma intracraneal'],
+                    ['ictusExAbs6', 'Sangrado activo o diátesis hemorrágica conocida'],
+                    ['ictusExAbs7', 'Plaquetas &lt; 100.000/mm³'],
+                    ['ictusExAbs8', 'INR &gt; 1.7 o anticoagulado (warfarina/DOAC) sin reversión'],
+                    ['ictusExAbs9', 'PA no controlable &lt; 185/110 pese a tratamiento'],
+                    ['ictusExAbs10', 'Glucemia &lt; 50 mg/dL'],
+                    ['ictusExAbs11', 'Endocarditis infecciosa o disección aórtica']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" class="ictus-ex-abs" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div id="ictusExRelWrap" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Exclusión Relativa (ventana extendida 3-4.5h)</div>
+                ${[
+                    ['ictusExRel1', 'Edad &gt; 80 años'],
+                    ['ictusExRel2', 'Uso de anticoagulantes orales (independiente del INR)'],
+                    ['ictusExRel3', 'NIHSS &gt; 25'],
+                    ['ictusExRel4', 'Antecedente combinado de ictus previo + Diabetes Mellitus']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" class="ictus-ex-rel" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Trombectomía Mecánica</div>
+                ${[
+                    ['ictusTromb1', 'Oclusión de gran vaso confirmada (angio-TC/angio-RM)'],
+                    ['ictusTromb2', 'Ventana &lt; 24h desde el inicio/última vez visto bien'],
+                    ['ictusTromb3', 'ASPECTS ≥ 6 o estudio de perfusión favorable'],
+                    ['ictusTromb4', 'Rankin funcional previo ≤ 1']
+                ].map(([id, label]) => `
+                    <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" id="${id}" class="ictus-tromb" style="width:18px; height:18px; margin-top:2px;">
+                        <span style="font-size:13px;">${label}</span>
+                    </label>`).join('')}
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Basado en AHA/ASA 2019 Guideline for Early Management of Acute Ischemic Stroke.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Generar Checklist
+            </button>
+        </form>
+        <div id="ictusResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleIctusFields() {
+    const horas = parseFloat(document.getElementById('ictusHoras').value);
+    const incierta = document.getElementById('ictusVentanaIncierta').checked;
+    const enVentanaExtendida = !incierta && !isNaN(horas) && horas > 3 && horas <= 4.5;
+    document.getElementById('ictusExRelWrap').style.display = enVentanaExtendida ? 'block' : 'none';
+}
+
+function buildCodigoIctusHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.severity.badge} ${r.severity.label}</div>
+            <div style="font-size:13px; opacity:0.9; margin-top:4px;">${r.ventanaIncierta ? 'Ventana incierta' : `${r.horasInicio}h desde el inicio/última vez visto bien`}</div>
+        </div>`;
+
+    let cuerpoHtml;
+    if (r.candidatoTrombolisis) {
+        const paHtml = r.requierePAPrevia ? `
+            <div style="color:#dc2626; font-weight:700; margin-bottom:6px;">⚠️ PA &gt; 185/110 — tratar ANTES de administrar Alteplasa</div>
+            <div>Labetalol IV o Nicardipino IV hasta lograr PA &lt; 185/110. Si no se logra → NO administrar trombolisis.</div>` : '';
+        cuerpoHtml = section('💉', 'Trombolisis IV — Alteplasa', '#22c55e', `
+            ${paHtml}
+            ${r.doseAlteplasaTotal ? `
+                <div><strong>Dosis total:</strong> 0.9 mg/kg = <span style="color:var(--brand-accent); font-weight:700;">${r.doseAlteplasaTotal} mg</span> (máx. 90 mg)</div>
+                <div style="margin-top:4px;"><strong>Bolo (1 min):</strong> ${r.doseBolo} mg (10%)</div>
+                <div style="margin-top:4px;"><strong>Infusión (60 min):</strong> ${r.doseInfusion} mg (90%)</div>`
+                : '<div style="color:#f59e0b;">Ingresa el peso para calcular la dosis de Alteplasa.</div>'}
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Referenciar NIHSS (Calculadora 17) y Glasgow (Calculadora 18) para documentar el déficit basal antes de iniciar.</div>
+        `);
+    } else {
+        const razones = [...r.exclusionAbsolutaMarcada, ...(r.dentroVentanaExtendida ? r.exclusionRelativaMarcada : [])];
+        cuerpoHtml = section('🚫', 'NO Candidato a Trombolisis', '#dc2626', `
+            <div>${!r.dentroVentanaEstandar ? (r.ventanaIncierta ? 'Ventana de tiempo incierta.' : 'Fuera de ventana de 4.5h.') : `${r.numExclusionAbsoluta} criterio(s) de exclusión marcado(s).`}</div>
+            <div style="margin-top:8px; font-weight:700;">Manejo alternativo:</div>
+            <div style="margin-top:4px;">Hipertensión permisiva — tratar solo si PA &gt; 220/120 mmHg (salvo comorbilidad que requiera control más estricto)</div>
+            <div style="margin-top:4px;">Doble antiagregación (AAS + Clopidogrel) si ictus menor/AIT de alto riesgo, iniciada en &lt; 24h por 21 días</div>
+        `);
+    }
+
+    const trombectomiaHtml = section(r.cumpleTrombectomia ? '✅' : '➖', 'Trombectomía Mecánica', r.cumpleTrombectomia ? '#22c55e' : '#64748b',
+        r.cumpleTrombectomia
+            ? '<div>Cumple criterios de trombectomía mecánica — remitir a neurointervencionismo de inmediato. Puede combinarse con la trombolisis IV si también es candidato.</div>'
+            : '<div>No cumple todos los criterios marcados para trombectomía en este momento — reevaluar si cambian los hallazgos de imagen.</div>');
+
+    const postHtml = section('📋', 'Manejo Post-Trombolisis', '#8b5cf6', `
+        <div>Sin antiagregantes ni anticoagulantes en las primeras 24h</div>
+        <div style="margin-top:4px;">Mantener PA &lt; 180/105 mmHg durante 24h</div>
+        <div style="margin-top:4px;">Vigilancia neurológica: cada 15min×2h → cada 30min×6h → cada 1h×16h</div>
+        <div style="margin-top:4px; color:#dc2626; font-weight:600;">Señales de transformación hemorrágica (deterioro súbito, cefalea intensa, HTA aguda) → suspender infusión si en curso, TC urgente, considerar crioprecipitado/ácido tranexámico</div>
+        <div style="margin-top:4px;">TC de control a las 24h antes de iniciar antiagregación</div>`);
+
+    return `${headerHTML}${cuerpoHtml}${trombectomiaHtml}${postHtml}`;
+}
+
+function calculateCodigoIctusProtocol(event) {
+    event.preventDefault();
+    const horasRaw = document.getElementById('ictusHoras').value;
+    const weightRaw = document.getElementById('ictusWeight').value;
+    const sbpRaw = document.getElementById('ictusSbp').value;
+    const dbpRaw = document.getElementById('ictusDbp').value;
+
+    const exclusionAbsoluta = {};
+    document.querySelectorAll('.ictus-ex-abs').forEach(cb => { exclusionAbsoluta[cb.id] = cb.checked; });
+    const exclusionRelativa = {};
+    document.querySelectorAll('.ictus-ex-rel').forEach(cb => { exclusionRelativa[cb.id] = cb.checked; });
+    const trombectomia = {};
+    document.querySelectorAll('.ictus-tromb').forEach(cb => { trombectomia[cb.id] = cb.checked; });
+
+    const inputs = {
+        horasInicio: horasRaw === '' ? null : parseFloat(horasRaw),
+        ventanaIncierta: document.getElementById('ictusVentanaIncierta').checked,
+        weight: weightRaw === '' ? null : parseFloat(weightRaw),
+        sbp: sbpRaw === '' ? null : parseFloat(sbpRaw),
+        dbp: dbpRaw === '' ? null : parseFloat(dbpRaw),
+        exclusionAbsoluta, exclusionRelativa, trombectomia
+    };
+
+    const r = Calculators.calculateCodigoIctus(inputs);
+    const container = document.getElementById('ictusResult');
+    container.innerHTML = buildCodigoIctusHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('ictusForm').reset(); document.getElementById('ictusResult').style.display='none'; toggleIctusFields();" style="width:100%; margin-top:12px;">
+            🔄 Nuevo Protocolo
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 48, calculatorName: 'Código Ictus', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 49. GASOMETRÍA ARTERIAL — INTERPRETACIÓN SISTEMÁTICA ÁCIDO-BASE === //
+function createGasometriaForm() {
+    return `
+        <form id="gasoForm" onsubmit="calculateGasometriaProtocol(event)">
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Gasometría</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">pH</label>
+                        <input type="number" id="gasoPh" required step="0.01" min="6.5" max="7.8" class="form-input" placeholder="7.40">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">pCO₂ (mmHg)</label>
+                        <input type="number" id="gasoPco2" required step="any" min="10" max="150" class="form-input" placeholder="40">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">HCO₃⁻ (mEq/L)</label>
+                        <input type="number" id="gasoHco3" required step="any" min="2" max="60" class="form-input" placeholder="24">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Si hay componente respiratorio, ¿es agudo o crónico?</label>
+                    <select id="gasoCronico" class="form-input">
+                        <option value="no">Agudo (&lt; 24-48h, ej. asma/crisis aguda)</option>
+                        <option value="si">Crónico (días-semanas, ej. EPOC retenedor de CO₂)</option>
+                    </select>
+                    <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">Solo se usa si el análisis identifica un componente respiratorio primario o compensador.</p>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Electrolitos <span style="font-size:11px; font-weight:500; color:var(--text-tertiary); text-transform:none;">— opcional, para Anion Gap</span></div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">Na⁺ (mEq/L)</label>
+                        <input type="number" id="gasoSodium" step="any" min="100" max="180" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">Cl⁻ (mEq/L)</label>
+                        <input type="number" id="gasoChloride" step="any" min="60" max="140" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">Albúmina (g/dL)</label>
+                        <input type="number" id="gasoAlbumin" step="any" min="1" max="6" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Oxigenación <span style="font-size:11px; font-weight:500; color:var(--text-tertiary); text-transform:none;">— opcional</span></div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">PaO₂ (mmHg)</label>
+                        <input type="number" id="gasoPao2" step="any" min="20" max="600" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">FiO₂ (%)</label>
+                        <input type="number" id="gasoFio2" step="any" min="21" max="100" class="form-input" placeholder="21-100">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-tertiary);">Edad (años)</label>
+                        <input type="number" id="gasoEdad" step="1" min="0" max="120" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;">
+                    <strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Enfoque sistemático Boston/Winter — la interpretación numérica no reemplaza la correlación clínica.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">
+                🧮 Interpretar Gasometría
+            </button>
+        </form>
+        <div id="gasoResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildGasometriaHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const PRIMARIO_LABELS = {
+        normal: 'Gasometría Normal',
+        acidosis_metabolica: 'Acidosis Metabólica',
+        alcalosis_metabolica: 'Alcalosis Metabólica',
+        acidosis_respiratoria: 'Acidosis Respiratoria',
+        alcalosis_respiratoria: 'Alcalosis Respiratoria',
+        acidosis_mixta: 'Acidosis Mixta (Metabólica + Respiratoria)',
+        alcalosis_mixta: 'Alcalosis Mixta (Metabólica + Respiratoria)',
+        ambiguo_acidmet_o_alcresp: 'Patrón Ambiguo — Acidosis Metabólica vs. Alcalosis Respiratoria',
+        ambiguo_acidresp_o_alcmet: 'Patrón Ambiguo — Acidosis Respiratoria vs. Alcalosis Metabólica'
+    };
+
+    const HALLAZGO_LABELS = {
+        apropiada: 'Compensación apropiada — trastorno simple',
+        acidosis_respiratoria_concomitante: 'pCO₂ más alta de lo esperado → acidosis respiratoria concomitante',
+        alcalosis_respiratoria_concomitante: 'pCO₂ más baja de lo esperado → alcalosis respiratoria concomitante',
+        acidosis_metabolica_concomitante: 'HCO₃⁻ más bajo de lo esperado → acidosis metabólica concomitante',
+        alcalosis_metabolica_concomitante: 'HCO₃⁻ más alto de lo esperado → alcalosis metabólica concomitante'
+    };
+
+    const DELTA_LABELS = {
+        hiperclorémica_predominante: 'Acidosis hiperclorémica predominante (AG poco relevante)',
+        mixta_ag_hiperclorémica: 'Acidosis con AG elevado + acidosis hiperclorémica concomitante',
+        agma_pura: 'Acidosis con AG elevado PURA (sin otro trastorno metabólico oculto)',
+        ag_mas_alcalosis_metabolica: 'Acidosis con AG elevado + alcalosis metabólica concomitante (o proceso crónico previo)'
+    };
+
+    const headerHTML = `
+        <div style="background:${r.severity.colorHex}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.severity.badge} ${PRIMARIO_LABELS[r.primario] || r.primario}</div>
+            <div style="font-size:13px; opacity:0.9; margin-top:4px;">pH ${r.ph} · pCO₂ ${r.pco2} mmHg · HCO₃⁻ ${r.hco3} mEq/L</div>
+        </div>`;
+
+    const congruenciaHtml = !r.congruente ? `
+        <div style="background:#431407; color:#fdba74; border:2px solid #f97316; border-radius:var(--radius-lg); padding:14px; margin-bottom:12px; font-size:13px;">
+            <strong>⚠️ Valores posiblemente incongruentes</strong> — el pH medido no concuerda con el esperado a partir de pCO₂/HCO₃⁻ (ecuación de Henderson). Verificar la muestra o considerar error de laboratorio antes de confiar en la interpretación.
+        </div>` : '';
+
+    let trastornoContent = `<div>Valores dentro de rango normal (pH 7.35-7.45, pCO₂ 35-45, HCO₃⁻ 22-26).</div>`;
+    if (r.esMixtoObvio) {
+        trastornoContent = `<div style="color:#dc2626; font-weight:700;">Ambos componentes (pCO₂ y HCO₃⁻) están alterados en la MISMA dirección de pH — esto no puede explicarse por una compensación fisiológica única, por lo que es necesariamente un trastorno doble/mixto.</div>`;
+    } else if (r.primario && r.primario.startsWith('ambiguo_')) {
+        trastornoContent = `
+            <div style="color:#f59e0b; font-weight:700;">Patrón compatible con más de una interpretación primaria:</div>
+            <div style="margin-top:6px;"><strong>Hipótesis 1 (${r.compensacion.tipo === 'acidosis_respiratoria' || r.compensacion.tipo === 'acidosis_metabolica' ? 'primaria' : 'primaria'}):</strong> ${PRIMARIO_LABELS[r.compensacion.tipo] || r.compensacion.tipo} — ${r.compensacion.formula}, esperado ${r.compensacion.esperadoMin}-${r.compensacion.esperadoMax}, medido ${r.compensacion.medido} ${r.compensacion.fit ? '✓ ajusta' : '✗ no ajusta bien'}</div>
+            <div style="margin-top:4px;"><strong>Hipótesis 2:</strong> ${PRIMARIO_LABELS[r.hipotesisAlternativa.tipo] || r.hipotesisAlternativa.tipo} — ${r.hipotesisAlternativa.formula}, esperado ${r.hipotesisAlternativa.esperadoMin}-${r.hipotesisAlternativa.esperadoMax}, medido ${r.hipotesisAlternativa.medido} ${r.hipotesisAlternativa.fit ? '✓ ajusta' : '✗ no ajusta bien'}</div>
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Correlacionar con la clínica: antecedente respiratorio crónico (EPOC) sugiere origen respiratorio; vómitos/diuréticos/succión nasogástrica sugieren origen metabólico.</div>`;
+    } else if (r.primario !== 'normal' && r.compensacion) {
+        trastornoContent = `
+            <div><strong>Trastorno primario:</strong> ${PRIMARIO_LABELS[r.primario]}</div>
+            <div style="margin-top:6px;"><strong>Compensación esperada (${r.compensacion.formula}):</strong> ${r.compensacion.esperadoMin}-${r.compensacion.esperadoMax}, medido ${r.compensacion.medido}</div>
+            <div style="margin-top:4px; color:${r.compensacion.hallazgo === 'apropiada' ? 'var(--success)' : '#dc2626'}; font-weight:700;">${HALLAZGO_LABELS[r.compensacion.hallazgo]}</div>
+            ${r.hipotesisAlternativa ? `<div style="margin-top:6px; color:var(--text-secondary); font-size:12px;">Hipótesis alternativa descartada: ${PRIMARIO_LABELS[r.hipotesisAlternativa.tipo]} (esperado ${r.hipotesisAlternativa.esperadoMin}-${r.hipotesisAlternativa.esperadoMax}, no ajusta).</div>` : ''}`;
+    }
+
+    let agContent = '<div style="color:var(--text-secondary);">Ingresa Na⁺ y Cl⁻ para calcular el Anion Gap.</div>';
+    if (r.agResult) {
+        agContent = `
+            <div><strong>Anion Gap:</strong> ${r.agResult.value} mEq/L${r.agResult.correctedValue !== null ? ` (corregido por albúmina: ${r.agResult.correctedValue} mEq/L)` : ''}</div>
+            <div style="margin-top:4px; color:${r.agResult.agElevado ? '#dc2626' : 'var(--success)'}; font-weight:600;">${r.agResult.agElevado ? 'Anion Gap elevado' : 'Anion Gap normal'}</div>
+            ${r.deltaRatio !== null ? `
+                <div style="margin-top:8px;"><strong>Delta Ratio:</strong> ${r.deltaRatio}</div>
+                <div style="margin-top:4px;">${DELTA_LABELS[r.deltaInterpretacion]}</div>` : ''}`;
+    }
+
+    let oxContent = '<div style="color:var(--text-secondary);">Ingresa PaO₂ y FiO₂ para evaluar oxigenación.</div>';
+    if (r.oxigenacion) {
+        oxContent = `
+            <div><strong>Índice de Kirby (PaO₂/FiO₂):</strong> ${r.oxigenacion.kirby}</div>
+            ${r.oxigenacion.sdra ? `<div style="margin-top:4px; color:#dc2626; font-weight:600;">Compatible con SDRA ${r.oxigenacion.sdra} (criterios de Berlín), en el contexto clínico apropiado</div>` : '<div style="margin-top:4px; color:var(--success);">Sin criterio de SDRA por índice de Kirby</div>'}
+            ${r.oxigenacion.gradienteAa !== null ? `<div style="margin-top:8px;"><strong>Gradiente A-a:</strong> ${r.oxigenacion.gradienteAa} mmHg (esperado por edad: ≈ ${r.oxigenacion.gradienteEsperado} mmHg)</div>` : ''}`;
+    }
+
+    return `${headerHTML}${congruenciaHtml}
+        ${section('🔬', '1. Trastorno Ácido-Base', '#f59e0b', trastornoContent)}
+        ${section('📐', '2. Anion Gap', '#8b5cf6', agContent)}
+        ${section('🫁', '3. Oxigenación', '#0ea5e9', oxContent)}`;
+}
+
+function calculateGasometriaProtocol(event) {
+    event.preventDefault();
+    const optNum = (id) => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+
+    const fio2Raw = optNum('gasoFio2');
+    const inputs = {
+        ph: parseFloat(document.getElementById('gasoPh').value),
+        pco2: parseFloat(document.getElementById('gasoPco2').value),
+        hco3: parseFloat(document.getElementById('gasoHco3').value),
+        cronico: document.getElementById('gasoCronico').value === 'si',
+        sodium: optNum('gasoSodium'),
+        chloride: optNum('gasoChloride'),
+        albumin: optNum('gasoAlbumin'),
+        pao2: optNum('gasoPao2'),
+        fio2: fio2Raw,
+        edad: optNum('gasoEdad')
+    };
+
+    const r = Calculators.calculateGasometria(inputs);
+    const container = document.getElementById('gasoResult');
+    container.innerHTML = buildGasometriaHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('gasoForm').reset(); document.getElementById('gasoResult').style.display='none';" style="width:100%; margin-top:12px;">
+            🔄 Nueva Interpretación
+        </button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 49, calculatorName: 'Gasometría Arterial', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 50. QTc CORREGIDO === //
+function createQTcForm() {
+    return `
+        <form id="qtcForm" onsubmit="calculateQTcForm(event)">
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Intervalo QT medido (ms)</label>
+                <input type="number" id="qtcQt" step="any" min="200" max="800" class="form-input" required>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Frecuencia Cardíaca (lpm)</label>
+                <input type="number" id="qtcHr" step="any" min="20" max="250" class="form-input" required>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Sexo</label>
+                <select id="qtcSex" class="form-input">
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                </select>
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Relevante junto a <strong>Protocolo de Arritmias (Calculadora 45)</strong> y fármacos QT-prolongantes de <strong>Vasoactivos IV (Calculadora 29)</strong> (ej. amiodarona).</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular QTc</button>
+        </form>
+        <div id="qtcResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateQTcForm(event) {
+    event.preventDefault();
+    const inputs = {
+        qt: parseFloat(document.getElementById('qtcQt').value),
+        hr: parseFloat(document.getElementById('qtcHr').value),
+        sex: document.getElementById('qtcSex').value
+    };
+    const result = Calculators.calculateQTc(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('qtcResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">QTc (BAZETT)</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.qtcBazett} <span style="font-size:20px; font-weight:500;">ms</span></div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:12px;">${result.interpretation.label}</div>
+            <div style="background:rgba(30,56,114,0.15); padding:12px; border-radius:8px; font-size:13px; display:flex; justify-content:space-around;">
+                <span><strong>Fridericia</strong> ${result.qtcFridericia}ms</span>
+                <span><strong>Framingham</strong> ${result.qtcFramingham}ms</span>
+            </div>
+        </div>
+        ${result.frecuenciaExtrema ? `<div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:8px; margin-bottom:16px; font-size:12px; color:#92400e;">⚠️ FC fuera de 60-90 lpm — Bazett puede sobre/subcorregir; considerar Fridericia o Framingham como más fiables en este rango.</div>` : ''}
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <h4 style="font-size:14px; font-weight:700; margin-bottom:8px;">Interpretación</h4>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('qtcForm').reset(); document.getElementById('qtcResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 50, calculatorName: 'QTc Corregido', inputs, result, interpretation: result.interpretation });
+}
+
+// === 51. ABCD2 SCORE === //
+function createABCD2Form() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px; flex-shrink:0;">
+            <span style="font-size:14px;">${text}</span>
+        </label>`;
+    return `
+        <form id="abcd2Form" onsubmit="calculateABCD2Form(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${check('abcd2Edad', 'Edad ≥ 60 años (1 pt)')}
+                ${check('abcd2Pa', 'PA ≥ 140/90 mmHg en la evaluación inicial (1 pt)')}
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin:14px 0 8px; text-transform:uppercase; letter-spacing:0.05em;">Características Clínicas</div>
+                <select id="abcd2Clinica" class="form-input">
+                    <option value="otra">Otros síntomas (0 pts)</option>
+                    <option value="habla">Alteración del habla sin debilidad (1 pt)</option>
+                    <option value="debilidad">Debilidad unilateral (2 pts)</option>
+                </select>
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin:14px 0 8px; text-transform:uppercase; letter-spacing:0.05em;">Duración</div>
+                <select id="abcd2Duracion" class="form-input">
+                    <option value="menor10">&lt; 10 minutos (0 pts)</option>
+                    <option value="entre10y59">10-59 minutos (1 pt)</option>
+                    <option value="mayor60">≥ 60 minutos (2 pts)</option>
+                </select>
+                <div style="margin-top:14px;">${check('abcd2Diabetes', 'Diabetes Mellitus (1 pt)')}</div>
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Complementa <strong>NIHSS (Calculadora 17)</strong> y <strong>Código Ictus (Calculadora 48)</strong> en la evaluación tras un AIT.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular ABCD2</button>
+        </form>
+        <div id="abcd2Result" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateABCD2Form(event) {
+    event.preventDefault();
+    const inputs = {
+        edad60: document.getElementById('abcd2Edad').checked,
+        pa: document.getElementById('abcd2Pa').checked,
+        clinica: document.getElementById('abcd2Clinica').value,
+        duracion: document.getElementById('abcd2Duracion').value,
+        diabetes: document.getElementById('abcd2Diabetes').checked
+    };
+    const result = Calculators.calculateABCD2(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('abcd2Result');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">ABCD2 SCORE</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">/7</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <h4 style="font-size:14px; font-weight:700; margin-bottom:8px;">Interpretación</h4>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('abcd2Form').reset(); document.getElementById('abcd2Result').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 51, calculatorName: 'ABCD2 Score', inputs, result, interpretation: result.interpretation });
+}
+
+// === 52. ESCALA DE RANKIN MODIFICADA (mRS) === //
+function createRankinForm() {
+    const opts = Calculators.RANKIN_LEVELS.map(l => `<option value="${l.level}">${l.level} — ${l.label}</option>`).join('');
+    return `
+        <form id="rankinForm" onsubmit="calculateRankinForm(event)">
+            <div class="form-group" style="margin-bottom:20px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Nivel de discapacidad funcional</label>
+                <select id="rankinLevel" class="form-input">${opts}</select>
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Uso dual: Rankin <strong>previo</strong> (basal, pre-ictus — Código Ictus exige ≤1 para trombectomía) o Rankin <strong>al alta</strong> (resultado funcional). Ver <strong>Código Ictus (Calculadora 48)</strong>.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Ver Descripción</button>
+        </form>
+        <div id="rankinResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateRankinForm(event) {
+    event.preventDefault();
+    const inputs = { level: parseInt(document.getElementById('rankinLevel').value) };
+    const result = Calculators.calculateRankin(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('rankinResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">ESCALA DE RANKIN MODIFICADA</div>
+            <div style="font-size:36px; font-weight:800;">mRS ${result.value}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('rankinForm').reset(); document.getElementById('rankinResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nueva Consulta</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 52, calculatorName: 'Escala de Rankin Modificada', inputs, result, interpretation: result.interpretation });
+}
+
+// === 53. PROFILAXIS DE TVE — CAPRINI / PADUA === //
+function createVTEForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px; flex-shrink:0;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="vteForm" onsubmit="calculateVTEForm(event)">
+            <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="vteTipo" value="medico" checked onchange="toggleVTEType()"> Paciente médico (Padua)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="vteTipo" value="quirurgico" onchange="toggleVTEType()"> Paciente quirúrgico (Caprini)
+                </label>
+            </div>
+
+            <div id="vtePaduaWrap" style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${check('vtePCancer', 'Cáncer activo (3 pts)')}
+                ${check('vtePTvp', 'TVE previa, excluyendo trombosis venosa superficial (3 pts)')}
+                ${check('vtePMovilidad', 'Movilidad reducida — reposo en cama ≥3 días (3 pts)')}
+                ${check('vtePTrombofilia', 'Trombofilia conocida (3 pts)')}
+                ${check('vtePTrauma', 'Trauma o cirugía reciente (≤1 mes) (2 pts)')}
+                ${check('vtePEdad70', 'Edad ≥ 70 años (1 pt)')}
+                ${check('vtePIcResp', 'Insuficiencia cardíaca y/o respiratoria (1 pt)')}
+                ${check('vtePIamAvc', 'IAM o ACV isquémico agudo (1 pt)')}
+                ${check('vtePInfeccion', 'Infección aguda y/o enfermedad reumatológica (1 pt)')}
+                ${check('vtePObesidad', 'Obesidad (IMC ≥ 30) (1 pt)')}
+                ${check('vtePHormonal', 'Tratamiento hormonal en curso (1 pt)')}
+            </div>
+
+            <div id="vteCapriniWrap" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Edad</div>
+                <select id="vteEdadTier" class="form-input" style="margin-bottom:14px;">
+                    <option value="menor41">&lt; 41 años (0 pts)</option>
+                    <option value="41-60">41-60 años (1 pt)</option>
+                    <option value="61-74">61-74 años (2 pts)</option>
+                    <option value="75+">≥ 75 años (3 pts)</option>
+                </select>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:6px;">Versión focalizada — subconjunto representativo de los factores de mayor peso (no las ~40 variables completas del Caprini original).</p>
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:10px 0 4px;">1 punto c/u</div>
+                ${check('vteCCirugiaMenor', 'Cirugía menor planeada')}
+                ${check('vteCImc25', 'IMC ≥ 25')}
+                ${check('vteCVarices', 'Venas varicosas')}
+                ${check('vteCEmbarazo', 'Embarazo o puerperio')}
+                ${check('vteCAcoTrh', 'Anticonceptivos orales o THR')}
+                ${check('vteCSepsis', 'Sepsis (&lt; 1 mes)')}
+                ${check('vteCEpoc', 'Enfermedad pulmonar grave incl. neumonía (&lt; 1 mes)')}
+                ${check('vteCIam', 'IAM reciente')}
+                ${check('vteCIc', 'Insuficiencia cardíaca (&lt; 1 mes)')}
+                ${check('vteCEncamado', 'Paciente médico encamado')}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 4px;">2 puntos c/u</div>
+                ${check('vteCArtroscopia', 'Cirugía artroscópica')}
+                ${check('vteCMayorAbierta', 'Cirugía mayor abierta (&gt; 45 min)')}
+                ${check('vteCLaparoscopica', 'Cirugía laparoscópica (&gt; 45 min)')}
+                ${check('vteCMalignidad', 'Malignidad activa')}
+                ${check('vteCEncamado72h', 'Confinado a cama (&gt; 72h)')}
+                ${check('vteCYeso', 'Inmovilización con yeso')}
+                ${check('vteCAcceso', 'Acceso venoso central')}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 4px;">3 puntos c/u</div>
+                ${check('vteCHistoriaTVE', 'Historia personal de TVE/TEP')}
+                ${check('vteCHistoriaFam', 'Historia familiar de TVE/TEP')}
+                ${check('vteCTrombofiliaC', 'Trombofilia congénita/adquirida conocida')}
+                ${check('vteCHit', 'Trombocitopenia inducida por heparina (HIT)')}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 4px;">5 puntos c/u</div>
+                ${check('vteCIctus', 'Ictus (&lt; 1 mes)')}
+                ${check('vteCArtroplastia', 'Artroplastia mayor electiva de miembro inferior')}
+                ${check('vteCFractura', 'Fractura de cadera/pelvis/pierna (&lt; 1 mes)')}
+                ${check('vteCTrauma', 'Trauma múltiple (&lt; 1 mes)')}
+                ${check('vteCLesionMedular', 'Lesión medular aguda (&lt; 1 mes)')}
+            </div>
+
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Distinto de <strong>Wells TEP (Calculadora 14)</strong>, que es diagnóstico de TEP ya establecido — esta herramienta decide si el paciente hospitalizado necesita profilaxis.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Riesgo de TVE</button>
+        </form>
+        <div id="vteResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleVTEType() {
+    const tipo = document.querySelector('input[name="vteTipo"]:checked').value;
+    document.getElementById('vtePaduaWrap').style.display = tipo === 'medico' ? 'block' : 'none';
+    document.getElementById('vteCapriniWrap').style.display = tipo === 'quirurgico' ? 'block' : 'none';
+}
+
+function calculateVTEForm(event) {
+    event.preventDefault();
+    const tipo = document.querySelector('input[name="vteTipo"]:checked').value;
+    let inputs;
+    if (tipo === 'medico') {
+        inputs = {
+            tipo, factores: {
+                cancer: document.getElementById('vtePCancer').checked,
+                tvpPrevia: document.getElementById('vtePTvp').checked,
+                movilidadReducida: document.getElementById('vtePMovilidad').checked,
+                trombofilia: document.getElementById('vtePTrombofilia').checked,
+                traumaCirugiaReciente: document.getElementById('vtePTrauma').checked,
+                edad70: document.getElementById('vtePEdad70').checked,
+                icCardioRespiratoria: document.getElementById('vtePIcResp').checked,
+                iamAvcAgudo: document.getElementById('vtePIamAvc').checked,
+                infeccionReumatico: document.getElementById('vtePInfeccion').checked,
+                obesidad: document.getElementById('vtePObesidad').checked,
+                hormonal: document.getElementById('vtePHormonal').checked
+            }
+        };
+    } else {
+        inputs = {
+            tipo, edadTier: document.getElementById('vteEdadTier').value,
+            factores: {
+                cirugiaMenor: document.getElementById('vteCCirugiaMenor').checked,
+                imc25: document.getElementById('vteCImc25').checked,
+                varices: document.getElementById('vteCVarices').checked,
+                embarazoPuerperio: document.getElementById('vteCEmbarazo').checked,
+                acoTrh: document.getElementById('vteCAcoTrh').checked,
+                sepsisReciente: document.getElementById('vteCSepsis').checked,
+                epocNeumoniaReciente: document.getElementById('vteCEpoc').checked,
+                iamReciente: document.getElementById('vteCIam').checked,
+                icReciente: document.getElementById('vteCIc').checked,
+                encamadoMedico: document.getElementById('vteCEncamado').checked,
+                artroscopia: document.getElementById('vteCArtroscopia').checked,
+                cirugiaMayorAbierta: document.getElementById('vteCMayorAbierta').checked,
+                cirugiaLaparoscopicaLarga: document.getElementById('vteCLaparoscopica').checked,
+                malignidadActiva: document.getElementById('vteCMalignidad').checked,
+                encamado72h: document.getElementById('vteCEncamado72h').checked,
+                yesoInmovilizador: document.getElementById('vteCYeso').checked,
+                accesoVenosoCentral: document.getElementById('vteCAcceso').checked,
+                historiaTVE: document.getElementById('vteCHistoriaTVE').checked,
+                historiaFamiliarTVE: document.getElementById('vteCHistoriaFam').checked,
+                trombofiliaConocida: document.getElementById('vteCTrombofiliaC').checked,
+                hit: document.getElementById('vteCHit').checked,
+                ictusReciente: document.getElementById('vteCIctus').checked,
+                artroplastiaMayorMI: document.getElementById('vteCArtroplastia').checked,
+                fracturaCaderaPelvisPiernaReciente: document.getElementById('vteCFractura').checked,
+                traumaMultipleReciente: document.getElementById('vteCTrauma').checked,
+                lesionMedularAguda: document.getElementById('vteCLesionMedular').checked
+            }
+        };
+    }
+
+    const result = Calculators.calculateVTEProphylaxis(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('vteResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">${result.escala.toUpperCase()}</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">pts</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('vteForm').reset(); document.getElementById('vteResult').style.display='none'; toggleVTEType();" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 53, calculatorName: 'Profilaxis de TVE (Caprini/Padua)', inputs, result, interpretation: result.interpretation });
+}
+
+// === 54. SCORE 4Ts (HIT) === //
+function create4TsForm() {
+    const sel = (id, opts) => `<select id="${id}" class="form-input">${opts.map(o => `<option value="${o.v}">${o.v} pts — ${o.t}</option>`).join('')}</select>`;
+    return `
+        <form id="ts4Form" onsubmit="calculate4TsForm(event)">
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Trombocitopenia</div>
+            <div style="margin-bottom:16px;">${sel('ts4Plaquetas', [
+                { v: 0, t: 'Caída &lt;30% o nadir &lt;10.000/mm³' },
+                { v: 1, t: 'Caída 30-50% o nadir 10.000-19.000/mm³' },
+                { v: 2, t: 'Caída &gt;50% Y nadir ≥20.000/mm³' }
+            ])}</div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Cronología</div>
+            <div style="margin-bottom:16px;">${sel('ts4Tiempo', [
+                { v: 0, t: 'Caída reciente (&lt;4 días) sin exposición previa a heparina' },
+                { v: 1, t: 'Consistente pero incierto, o inicio &gt;día 10, o caída ≤1 día con exposición 30-100 días antes' },
+                { v: 2, t: 'Inicio claro días 5-10, o ≤1 día si exposición a heparina en últimos 30 días' }
+            ])}</div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Trombosis u otras secuelas</div>
+            <div style="margin-bottom:16px;">${sel('ts4Trombosis', [
+                { v: 0, t: 'Ninguna' },
+                { v: 1, t: 'Trombosis progresiva/recurrente, lesiones cutáneas eritematosas, sospecha no confirmada' },
+                { v: 2, t: 'Trombosis nueva confirmada, necrosis cutánea, reacción sistémica aguda post-bolo IV' }
+            ])}</div>
+
+            <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Otras causas de trombocitopenia</div>
+            <div style="margin-bottom:20px;">${sel('ts4Otras', [
+                { v: 0, t: 'Causa definida presente' },
+                { v: 1, t: 'Causa posible' },
+                { v: 2, t: 'Ninguna otra causa aparente' }
+            ])}</div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Score 4Ts</button>
+        </form>
+        <div id="ts4Result" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculate4TsForm(event) {
+    event.preventDefault();
+    const inputs = {
+        plaquetas: parseInt(document.getElementById('ts4Plaquetas').value),
+        tiempo: parseInt(document.getElementById('ts4Tiempo').value),
+        trombosis: parseInt(document.getElementById('ts4Trombosis').value),
+        otrasCausas: parseInt(document.getElementById('ts4Otras').value)
+    };
+    const result = Calculators.calculate4Ts(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('ts4Result');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">SCORE 4Ts</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">/8</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('ts4Form').reset(); document.getElementById('ts4Result').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 54, calculatorName: 'Score 4Ts (HIT)', inputs, result, interpretation: result.interpretation });
+}
+
+// === 55. FÓRMULA DE PARKLAND (QUEMADOS) === //
+function createParklandForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="parklandForm" onsubmit="calculateParklandProtocol(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="parklandWeight" step="any" min="1" max="300" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">% Superficie Corporal Total quemada (2º-3er grado)</label>
+                    <input type="number" id="parklandTbsa" step="any" min="1" max="100" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Horas transcurridas desde la quemadura</label>
+                    <input type="number" id="parklandHoras" step="any" min="0" max="48" class="form-input" placeholder="No desde la llegada al hospital">
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="parklandPediatrico" style="width:18px; height:18px;">
+                    <span style="font-size:13px;">Paciente pediátrico (añadir líquidos de mantenimiento Holliday-Segar)</span>
+                </label>
+            </div>
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;"><strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. El tiempo se cuenta desde el momento de la quemadura, no desde la llegada.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Fluidoterapia</button>
+        </form>
+        <div id="parklandResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildParklandHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const headerHTML = `
+        <div style="background:#3b82f6; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">💧 Fórmula de Parkland</div>
+            <div style="font-size:13px; opacity:0.9; margin-top:4px;">Volumen total 24h: ${r.volumenTotal} mL</div>
+        </div>`;
+
+    const fasesHtml = section('⏱️', 'Fluidoterapia por Fases', '#3b82f6', `
+        <div><strong>Primeras 8h (desde la quemadura):</strong> ${r.primeras8h} mL</div>
+        <div style="margin-top:4px;"><strong>Siguientes 16h:</strong> ${r.siguientes16h} mL</div>
+        ${r.tasaActual !== null ? `<div style="margin-top:8px; color:var(--brand-accent); font-weight:700;">${r.fase}: tasa actual ≈ ${r.tasaActual} mL/h</div>` : (r.fase ? `<div style="margin-top:8px; color:#f59e0b;">${r.fase}</div>` : '')}
+        <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Usar Ringer Lactato preferentemente. Ajustar según diuresis objetivo (0.5-1 mL/kg/h adultos).</div>`);
+
+    const pediatricoHtml = r.mantenimientoPediatrico ? section('👶', 'Mantenimiento Pediátrico (Holliday-Segar)', '#8b5cf6', `
+        <div>Añadir <strong>${r.mantenimientoPediatrico.mlDia} mL/día</strong> (≈${r.mantenimientoPediatrico.mlHora} mL/h) sobre el volumen de Parkland.</div>`) : '';
+
+    return `${headerHTML}${fasesHtml}${pediatricoHtml}`;
+}
+
+function calculateParklandProtocol(event) {
+    event.preventDefault();
+    const units = Storage.getSettings().units;
+    let weightKg = parseFloat(document.getElementById('parklandWeight').value);
+    if (units.weight === 'lb') weightKg = weightKg / 2.20462;
+    const horasRaw = document.getElementById('parklandHoras').value;
+
+    const inputs = {
+        weightKg,
+        tbsa: parseFloat(document.getElementById('parklandTbsa').value),
+        horasTranscurridas: horasRaw === '' ? null : parseFloat(horasRaw),
+        pediatrico: document.getElementById('parklandPediatrico').checked
+    };
+
+    const r = Calculators.calculateParkland(inputs);
+    const container = document.getElementById('parklandResult');
+    container.innerHTML = buildParklandHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('parklandForm').reset(); document.getElementById('parklandResult').style.display='none';" style="width:100%; margin-top:12px;">🔄 Nuevo Cálculo</button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 55, calculatorName: 'Fórmula de Parkland', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 56. DELIRIO Y SEDACIÓN EN UCI — RASS + CAM-ICU === //
+function createRassCamForm() {
+    const opts = Calculators.RASS_LEVELS.map(l => `<option value="${l.level}" ${l.level === 0 ? 'selected' : ''}>${l.label}${l.description ? ' — ' + l.description : ''}</option>`).join('');
+    return `
+        <form id="rassCamForm" onsubmit="calculateRassCamProtocol(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Paso 1 — RASS</div>
+                <select id="rassLevel" class="form-input" onchange="toggleCamIcuVisibility()">${opts}</select>
+            </div>
+
+            <div id="camIcuWrap" style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Paso 2 — CAM-ICU</div>
+                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+                    <input type="checkbox" id="camF1" style="width:18px; height:18px; margin-top:2px;">
+                    <span style="font-size:13px;"><strong>Feature 1</strong> — Inicio agudo o curso fluctuante del estado mental</span>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+                    <input type="checkbox" id="camF2" style="width:18px; height:18px; margin-top:2px;">
+                    <span style="font-size:13px;"><strong>Feature 2</strong> — Inatención (test de atención alterado)</span>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+                    <input type="checkbox" id="camF3" style="width:18px; height:18px; margin-top:2px;">
+                    <span style="font-size:13px;"><strong>Feature 3</strong> — Nivel de conciencia alterado (RASS distinto de 0)</span>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+                    <input type="checkbox" id="camF4" style="width:18px; height:18px; margin-top:2px;">
+                    <span style="font-size:13px;"><strong>Feature 4</strong> — Pensamiento desorganizado</span>
+                </label>
+                <p style="font-size:11px; color:var(--text-tertiary); margin:0;">Positivo = Feature 1 Y Feature 2 Y (Feature 3 O Feature 4)</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Evaluar</button>
+        </form>
+        <div id="rassCamResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleCamIcuVisibility() {
+    const rass = parseInt(document.getElementById('rassLevel').value);
+    document.getElementById('camIcuWrap').style.display = rass >= -3 ? 'block' : 'none';
+}
+
+function calculateRassCamProtocol(event) {
+    event.preventDefault();
+    const rass = parseInt(document.getElementById('rassLevel').value);
+    const evaluable = rass >= -3;
+    const inputs = {
+        rass,
+        camIcu: evaluable ? {
+            inicioAgudo: document.getElementById('camF1').checked,
+            inatencion: document.getElementById('camF2').checked,
+            nivelConciencia: document.getElementById('camF3').checked,
+            pensamientoDesorganizado: document.getElementById('camF4').checked
+        } : null
+    };
+
+    const r = Calculators.calculateDelirioSedacion(inputs);
+    const colorMap = { success: '#22c55e', warning: '#f59e0b', danger: '#ef4444' };
+    const container = document.getElementById('rassCamResult');
+    container.innerHTML = `
+        <div style="background:${colorMap[r.interpretation.color]}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">${r.interpretation.label}</div>
+            <div style="font-size:13px; opacity:0.9; margin-top:4px;">RASS ${r.rass} — ${r.rassLabel}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:16px; border-radius:var(--radius-lg); font-size:13px; line-height:1.7; margin-bottom:12px;">${r.interpretation.description}</div>
+        <button class="btn btn-secondary" onclick="document.getElementById('rassCamForm').reset(); document.getElementById('rassCamResult').style.display='none'; toggleCamIcuVisibility();" style="width:100%; margin-top:0;">🔄 Nueva Evaluación</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 56, calculatorName: 'Delirio y Sedación en UCI (RASS/CAM-ICU)', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 57. ESCALAS DE ABSTINENCIA — CIWA-Ar / COWS === //
+function createAbstinenciaForm() {
+    const scale7 = (id, label) => `
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">${label}</label>
+            <select id="${id}" class="form-input">
+                <option value="0">0 — Ausente</option>
+                <option value="1">1 — Muy leve</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4 — Moderada</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7 — Extrema</option>
+            </select>
+        </div>`;
+    const cowsSel = (id, label, opts) => `
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">${label}</label>
+            <select id="${id}" class="form-input">
+                ${opts.map(o => `<option value="${o.v}">${o.v} — ${o.t}</option>`).join('')}
+            </select>
+        </div>`;
+
+    return `
+        <form id="abstForm" onsubmit="calculateAbstinenciaForm(event)">
+            <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="abstTipo" value="alcohol" checked onchange="toggleAbstinenciaType()"> Alcohol (CIWA-Ar)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="abstTipo" value="opioides" onchange="toggleAbstinenciaType()"> Opioides (COWS)
+                </label>
+            </div>
+
+            <div id="ciwaWrap" style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${scale7('ciwaNausea', 'Náuseas / Vómitos')}
+                ${scale7('ciwaTemblor', 'Temblor')}
+                ${scale7('ciwaSudor', 'Sudoración paroxística')}
+                ${scale7('ciwaAnsiedad', 'Ansiedad')}
+                ${scale7('ciwaAgitacion', 'Agitación')}
+                ${scale7('ciwaTactil', 'Alteraciones táctiles')}
+                ${scale7('ciwaAuditivo', 'Alteraciones auditivas')}
+                ${scale7('ciwaVisual', 'Alteraciones visuales')}
+                ${scale7('ciwaCefalea', 'Cefalea / sensación de plenitud')}
+                <div style="margin-bottom:4px;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Orientación / obnubilación</label>
+                    <select id="ciwaOrientacion" class="form-input">
+                        <option value="0">0 — Orientado, suma series correctamente</option>
+                        <option value="1">1 — No suma series o duda de la fecha</option>
+                        <option value="2">2 — Desorientado en fecha ≤2 días</option>
+                        <option value="3">3 — Desorientado en fecha &gt;2 días</option>
+                        <option value="4">4 — Desorientado en lugar y/o persona</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="cowsWrap" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${cowsSel('cowsPulso', 'Pulso en reposo', [{v:0,t:'≤80 lpm'},{v:1,t:'81-100 lpm'},{v:2,t:'101-120 lpm'},{v:4,t:'&gt;120 lpm'}])}
+                ${cowsSel('cowsSudor', 'Sudoración', [{v:0,t:'Ninguna'},{v:1,t:'Escalofríos/rubor subjetivo'},{v:2,t:'Rubor/humedad facial'},{v:3,t:'Gotas de sudor en frente'},{v:4,t:'Sudor profuso'}])}
+                ${cowsSel('cowsInquietud', 'Inquietud', [{v:0,t:'Capaz de estar quieto'},{v:1,t:'Refiere dificultad'},{v:3,t:'Mueve piernas/brazos con inquietud'},{v:5,t:'Incapaz de estar quieto &gt;pocos min'}])}
+                ${cowsSel('cowsPupilas', 'Tamaño pupilar', [{v:0,t:'Normal/pinpoint'},{v:1,t:'Posiblemente más grandes'},{v:2,t:'Moderadamente dilatadas'},{v:5,t:'Dilatadas, solo se ve el reborde'}])}
+                ${cowsSel('cowsHuesos', 'Dolor óseo/articular', [{v:0,t:'Ninguno'},{v:1,t:'Leve difuso'},{v:2,t:'Paciente reporta severo'},{v:4,t:'Se frota articulaciones, no puede estar quieto'}])}
+                ${cowsSel('cowsNariz', 'Rinorrea / lagrimeo', [{v:0,t:'Ausente'},{v:1,t:'Congestión/ojos húmedos'},{v:2,t:'Nariz que moquea/lagrimeo'},{v:4,t:'Constante'}])}
+                ${cowsSel('cowsGi', 'Malestar gastrointestinal', [{v:0,t:'Ninguno'},{v:1,t:'Calambres'},{v:2,t:'Náusea / deposición suelta'},{v:3,t:'Vómito/diarrea'},{v:5,t:'Múltiples episodios'}])}
+                ${cowsSel('cowsTemblor', 'Temblor', [{v:0,t:'Ausente'},{v:1,t:'Se palpa pero no se ve'},{v:2,t:'Leve, visible'},{v:4,t:'Grosero / espasmos musculares'}])}
+                ${cowsSel('cowsBostezo', 'Bostezos', [{v:0,t:'Ninguno'},{v:1,t:'1-2 veces'},{v:2,t:'≥3 veces'},{v:4,t:'Varias veces por minuto'}])}
+                ${cowsSel('cowsAnsiedad', 'Ansiedad/irritabilidad', [{v:0,t:'Ninguna'},{v:1,t:'Creciente'},{v:2,t:'Obviamente irritable/ansioso'},{v:4,t:'Dificulta la evaluación'}])}
+                ${cowsSel('cowsPiel', 'Piel de gallina', [{v:0,t:'Piel lisa'},{v:3,t:'Piloerección palpable'},{v:5,t:'Piloerección prominente'}])}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Score</button>
+        </form>
+        <div id="abstResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleAbstinenciaType() {
+    const tipo = document.querySelector('input[name="abstTipo"]:checked').value;
+    document.getElementById('ciwaWrap').style.display = tipo === 'alcohol' ? 'block' : 'none';
+    document.getElementById('cowsWrap').style.display = tipo === 'opioides' ? 'block' : 'none';
+}
+
+function calculateAbstinenciaForm(event) {
+    event.preventDefault();
+    const tipo = document.querySelector('input[name="abstTipo"]:checked').value;
+    let items;
+    if (tipo === 'alcohol') {
+        items = ['ciwaNausea', 'ciwaTemblor', 'ciwaSudor', 'ciwaAnsiedad', 'ciwaAgitacion', 'ciwaTactil', 'ciwaAuditivo', 'ciwaVisual', 'ciwaCefalea', 'ciwaOrientacion']
+            .map(id => parseInt(document.getElementById(id).value));
+    } else {
+        items = ['cowsPulso', 'cowsSudor', 'cowsInquietud', 'cowsPupilas', 'cowsHuesos', 'cowsNariz', 'cowsGi', 'cowsTemblor', 'cowsBostezo', 'cowsAnsiedad', 'cowsPiel']
+            .map(id => parseInt(document.getElementById(id).value));
+    }
+    const inputs = { tipo, items };
+    const result = Calculators.calculateAbstinencia(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('abstResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">${result.escala}</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">${result.unit}</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('abstForm').reset(); document.getElementById('abstResult').style.display='none'; toggleAbstinenciaType();" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 57, calculatorName: 'Escalas de Abstinencia (CIWA-Ar/COWS)', inputs, result, interpretation: result.interpretation });
+}
+
+// === 58. HEMORRAGIA DIGESTIVA ALTA — GLASGOW-BLATCHFORD / ROCKALL === //
+function createHDAForm() {
+    const units = Storage.getSettings().units;
+    const bunUnit = units.bun || 'mg/dL';
+    return `
+        <form id="hdaForm" onsubmit="calculateHDAProtocol(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Glasgow-Blatchford (al ingreso)</div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Urea/BUN (${bunUnit})</label>
+                    <input type="number" id="hdaUrea" step="any" min="0" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Hemoglobina (g/dL)</label>
+                    <input type="number" id="hdaHb" step="any" min="1" max="25" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Sexo</label>
+                    <select id="hdaSexo" class="form-input">
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
+                    <input type="number" id="hdaSbp" step="any" min="40" max="250" class="form-input" required>
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="hdaPulso100" style="width:18px; height:18px;"><span style="font-size:13px;">Pulso ≥ 100 lpm</span></label>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="hdaMelena" style="width:18px; height:18px;"><span style="font-size:13px;">Melena presente</span></label>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="hdaSincope" style="width:18px; height:18px;"><span style="font-size:13px;">Síncope</span></label>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="hdaHepatopatia" style="width:18px; height:18px;"><span style="font-size:13px;">Hepatopatía conocida</span></label>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="hdaIcc" style="width:18px; height:18px;"><span style="font-size:13px;">Insuficiencia cardíaca</span></label>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Rockall (pre-endoscopia)</div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Edad</label>
+                    <input type="number" id="hdaEdad" step="1" min="0" max="120" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Shock</label>
+                    <select id="hdaShock" class="form-input">
+                        <option value="ninguno">Sin shock (PAS≥100, FC&lt;100)</option>
+                        <option value="taquicardia">Taquicardia (PAS≥100, FC≥100)</option>
+                        <option value="hipotension">Hipotensión (PAS&lt;100)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Comorbilidad</label>
+                    <select id="hdaComorbilidad" class="form-input">
+                        <option value="ninguna">Ninguna mayor</option>
+                        <option value="icIhdMayor">ICC / cardiopatía isquémica / comorbilidad mayor</option>
+                        <option value="renalHepaticaMalignidad">Insuficiencia renal/hepática o malignidad diseminada</option>
+                    </select>
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" id="hdaEndoDisponible" style="width:18px; height:18px;" onchange="toggleHDAEndoscopia()">
+                    <span style="font-size:13px;">Resultado de endoscopia disponible (completar Rockall)</span>
+                </label>
+                <div id="hdaEndoWrap" style="display:none; margin-top:12px;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Diagnóstico endoscópico</label>
+                        <select id="hdaDiagnostico" class="form-input">
+                            <option value="ninguno">Mallory-Weiss / sin lesión / sin estigmas</option>
+                            <option value="otro">Otro diagnóstico</option>
+                            <option value="malignidad">Malignidad del tracto GI superior</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Estigmas de sangrado reciente</label>
+                        <select id="hdaEstigmas" class="form-input">
+                            <option value="ninguno">Ninguno / mancha oscura</option>
+                            <option value="sangradoActivoVasoVisible">Sangre visible, coágulo adherente, vaso visible/sangrado activo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Ambos Scores</button>
+        </form>
+        <div id="hdaResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function toggleHDAEndoscopia() {
+    document.getElementById('hdaEndoWrap').style.display = document.getElementById('hdaEndoDisponible').checked ? 'block' : 'none';
+}
+
+function buildHDAHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const gbsColor = r.gbsMuyBajoRiesgo ? '#22c55e' : (r.gbs <= 3 ? '#f59e0b' : '#ef4444');
+    const headerHTML = `
+        <div style="background:${gbsColor}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">🩸 ${r.interpretation.label}</div>
+        </div>`;
+
+    const gbsHtml = section('📋', 'Glasgow-Blatchford', gbsColor, `<div>${r.interpretation.description}</div>`);
+
+    const rockallColor = { bajo: '#22c55e', intermedio: '#f59e0b', alto: '#ef4444' }[r.rockallBanda];
+    const rockallHtml = section('🔬', `Rockall ${r.rockallCompleto ? '(completo)' : '(pre-endoscopia)'}`, rockallColor, `
+        <div><strong>Score:</strong> ${r.rockallTotal} pts — riesgo ${r.rockallBanda}</div>
+        ${!r.rockallCompleto ? `<div style="margin-top:6px; color:var(--text-secondary); font-size:12px;">Score pre-endoscopia (máx. 7). Completar hallazgos endoscópicos para el score total (máx. 11).</div>` : ''}
+        <div style="margin-top:6px;">Bandas: 0-2 bajo riesgo · 3-4 intermedio · ≥5 alto riesgo de mortalidad/resangrado.</div>`);
+
+    return `${headerHTML}${gbsHtml}${rockallHtml}`;
+}
+
+function calculateHDAProtocol(event) {
+    event.preventDefault();
+    const units = Storage.getSettings().units;
+    let ureaVal = parseFloat(document.getElementById('hdaUrea').value);
+    const ureaMmol = (units.bun === 'mmol/L') ? ureaVal : ureaVal * 0.357;
+
+    const endoDisponible = document.getElementById('hdaEndoDisponible').checked;
+
+    const inputs = {
+        blatchford: {
+            ureaMmol,
+            hb: parseFloat(document.getElementById('hdaHb').value),
+            sexo: document.getElementById('hdaSexo').value,
+            sbp: parseFloat(document.getElementById('hdaSbp').value),
+            pulso100: document.getElementById('hdaPulso100').checked,
+            melena: document.getElementById('hdaMelena').checked,
+            sincope: document.getElementById('hdaSincope').checked,
+            hepatopatia: document.getElementById('hdaHepatopatia').checked,
+            icc: document.getElementById('hdaIcc').checked
+        },
+        rockall: {
+            edad: parseFloat(document.getElementById('hdaEdad').value),
+            shock: document.getElementById('hdaShock').value,
+            comorbilidad: document.getElementById('hdaComorbilidad').value,
+            diagnostico: endoDisponible ? document.getElementById('hdaDiagnostico').value : null,
+            estigmas: endoDisponible ? document.getElementById('hdaEstigmas').value : null
+        }
+    };
+
+    const r = Calculators.calculateHDA(inputs);
+    const container = document.getElementById('hdaResult');
+    container.innerHTML = buildHDAHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('hdaForm').reset(); document.getElementById('hdaResult').style.display='none'; toggleHDAEndoscopia();" style="width:100%; margin-top:12px;">🔄 Nuevo Cálculo</button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 58, calculatorName: 'Hemorragia Digestiva Alta (Blatchford/Rockall)', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 59. PANCREATITIS AGUDA — RANSON / BISAP === //
+function createPancreatitisForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="pancForm" onsubmit="calculatePancreatitisForm(event)">
+            <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="pancEscala" value="ranson" checked onchange="togglePancreatitisScale()"> Ranson
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="radio" name="pancEscala" value="bisap" onchange="togglePancreatitisScale()"> BISAP
+                </label>
+            </div>
+
+            <div id="ransonWrap" style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Al Ingreso</div>
+                ${check('ransonEdad55', 'Edad &gt; 55 años')}
+                ${check('ransonLeuco', 'Leucocitos &gt; 16.000/mm³')}
+                ${check('ransonGlucosa', 'Glucemia &gt; 200 mg/dL')}
+                ${check('ransonLdh', 'LDH &gt; 350 UI/L')}
+                ${check('ransonAst', 'AST &gt; 250 UI/L')}
+                <label style="display:flex; align-items:center; gap:10px; margin:14px 0 10px; cursor:pointer;">
+                    <input type="checkbox" id="ranson48Disponible" style="width:18px; height:18px;" onchange="togglePancreatitis48h()">
+                    <span style="font-size:13px; font-weight:600;">Datos de 48h disponibles</span>
+                </label>
+                <div id="ranson48Wrap" style="display:none;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">A las 48h</div>
+                    ${check('ransonHto', 'Caída de Hematocrito &gt; 10%')}
+                    ${check('ransonBun', 'Aumento de BUN &gt; 5 mg/dL')}
+                    ${check('ransonCa', 'Calcio &lt; 8 mg/dL')}
+                    ${check('ransonPao2', 'PaO₂ &lt; 60 mmHg')}
+                    ${check('ransonDeficit', 'Déficit de base &gt; 4 mEq/L')}
+                    ${check('ransonSecuestro', 'Secuestro de líquidos &gt; 6L')}
+                </div>
+            </div>
+
+            <div id="bisapWrap" style="display:none; background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${check('bisapBun', 'BUN &gt; 25 mg/dL')}
+                ${check('bisapGcs', 'Estado mental alterado (Glasgow &lt; 15)')}
+                ${check('bisapSirs', 'SIRS ≥ 2 criterios')}
+                ${check('bisapEdad', 'Edad &gt; 60 años')}
+                ${check('bisapDerrame', 'Derrame pleural')}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Score</button>
+        </form>
+        <div id="pancResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function togglePancreatitisScale() {
+    const escala = document.querySelector('input[name="pancEscala"]:checked').value;
+    document.getElementById('ransonWrap').style.display = escala === 'ranson' ? 'block' : 'none';
+    document.getElementById('bisapWrap').style.display = escala === 'bisap' ? 'block' : 'none';
+}
+
+function togglePancreatitis48h() {
+    document.getElementById('ranson48Wrap').style.display = document.getElementById('ranson48Disponible').checked ? 'block' : 'none';
+}
+
+function calculatePancreatitisForm(event) {
+    event.preventDefault();
+    const escala = document.querySelector('input[name="pancEscala"]:checked').value;
+    let inputs;
+    if (escala === 'bisap') {
+        inputs = {
+            escala, bisap: {
+                bun25: document.getElementById('bisapBun').checked,
+                gcsAlterado: document.getElementById('bisapGcs').checked,
+                sirs2: document.getElementById('bisapSirs').checked,
+                edad60: document.getElementById('bisapEdad').checked,
+                derramePleural: document.getElementById('bisapDerrame').checked
+            }
+        };
+    } else {
+        const h48Disponible = document.getElementById('ranson48Disponible').checked;
+        inputs = {
+            escala, ranson: {
+                ingreso: {
+                    edad55: document.getElementById('ransonEdad55').checked,
+                    leucocitos16000: document.getElementById('ransonLeuco').checked,
+                    glucosa200: document.getElementById('ransonGlucosa').checked,
+                    ldh350: document.getElementById('ransonLdh').checked,
+                    ast250: document.getElementById('ransonAst').checked
+                },
+                h48: h48Disponible ? {
+                    caidaHto10: document.getElementById('ransonHto').checked,
+                    aumentoBun5: document.getElementById('ransonBun').checked,
+                    calcio8: document.getElementById('ransonCa').checked,
+                    pao260: document.getElementById('ransonPao2').checked,
+                    deficitBase4: document.getElementById('ransonDeficit').checked,
+                    secuestroLiquidos6L: document.getElementById('ransonSecuestro').checked
+                } : null
+            }
+        };
+    }
+
+    const result = Calculators.calculatePancreatitis(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('pancResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">${result.escala}</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">${result.unit}</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('pancForm').reset(); document.getElementById('pancResult').style.display='none'; togglePancreatitisScale(); togglePancreatitis48h();" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 59, calculatorName: 'Pancreatitis Aguda (Ranson/BISAP)', inputs, result, interpretation: result.interpretation });
+}
+
+// === 60. INTOXICACIÓN POR PARACETAMOL — NOMOGRAMA + NAC === //
+function createParacetamolForm() {
+    const units = Storage.getSettings().units;
+    const wUnit = units.weight || 'kg';
+    return `
+        <form id="paracetForm" onsubmit="calculateParacetamolForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:14px; cursor:pointer;">
+                    <input type="checkbox" id="paracetAguda" checked style="width:18px; height:18px;">
+                    <span style="font-size:13px;">Ingesta única aguda con tiempo conocido (desmarcar si es crónica/escalonada o tiempo desconocido)</span>
+                </label>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Horas desde la ingesta</label>
+                    <input type="number" id="paracetHoras" step="any" min="0" max="48" class="form-input">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Nivel sérico de paracetamol (µg/mL)</label>
+                    <input type="number" id="paracetNivel" step="any" min="0" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit})</label>
+                    <input type="number" id="paracetWeight" step="any" min="1" max="300" class="form-input" required>
+                </div>
+            </div>
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;"><strong>⚠️</strong> El nomograma de Rumack-Matthew solo es válido entre las 4-24h de una ingesta única aguda con tiempo conocido.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Evaluar</button>
+        </form>
+        <div id="paracetResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildParacetamolHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const color = r.interpretation.color === 'danger' ? '#ef4444' : (r.interpretation.color === 'warning' ? '#f59e0b' : '#22c55e');
+    const headerHTML = `
+        <div style="background:${color}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">💊 ${r.interpretation.label}</div>
+        </div>`;
+
+    const detailHtml = section('📋', 'Detalle', color, `<div>${r.interpretation.description}</div>`);
+
+    const nacHtml = r.naDosis ? section('💉', 'Dosis de N-Acetilcisteína (IV, 3 bolsas)', '#3b82f6', `
+        <div><strong>Carga:</strong> ${r.naDosis.carga}</div>
+        <div style="margin-top:4px;"><strong>Mantenimiento 1:</strong> ${r.naDosis.mantenimiento1}</div>
+        <div style="margin-top:4px;"><strong>Mantenimiento 2:</strong> ${r.naDosis.mantenimiento2}</div>`) : '';
+
+    return `${headerHTML}${detailHtml}${nacHtml}`;
+}
+
+function calculateParacetamolForm(event) {
+    event.preventDefault();
+    const units = Storage.getSettings().units;
+    let weightKg = parseFloat(document.getElementById('paracetWeight').value);
+    if (units.weight === 'lb') weightKg = weightKg / 2.20462;
+    const horasRaw = document.getElementById('paracetHoras').value;
+
+    const inputs = {
+        ingestaAguda: document.getElementById('paracetAguda').checked,
+        horas: horasRaw === '' ? null : parseFloat(horasRaw),
+        nivel: parseFloat(document.getElementById('paracetNivel').value),
+        weightKg
+    };
+
+    const r = Calculators.calculateParacetamol(inputs);
+    const container = document.getElementById('paracetResult');
+    container.innerHTML = buildParacetamolHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('paracetForm').reset(); document.getElementById('paracetResult').style.display='none';" style="width:100%; margin-top:12px;">🔄 Nuevo Cálculo</button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 60, calculatorName: 'Intoxicación por Paracetamol', inputs, result: r, interpretation: r.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);

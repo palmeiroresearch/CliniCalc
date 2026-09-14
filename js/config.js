@@ -1,9 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 46 Calculadoras Médicas
+// Metadata de las 60 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.8.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -465,6 +465,36 @@ const CALCULATORS_CONFIG = [
         formulas: ['RCP/Desfibrilación', 'Búsqueda de Causa por Hallazgos (6H/5T)']
     },
     {
+        id: 47,
+        name: 'Dengue',
+        fullName: 'Dengue — Clasificación OMS (Grupo A/B/C)',
+        icon: '🦟',
+        category: 'infecciones',
+        categoryLabel: 'Infecciones',
+        description: 'Clasifica Dengue sin signos de alarma (A), con signos de alarma (B) o grave (C), con fluidoterapia IV escalonada por peso para B/C (OMS 2009, PAHO).',
+        formulas: ['Clasificación A/B/C', 'Fluidoterapia por Peso']
+    },
+    {
+        id: 48,
+        name: 'Código Ictus',
+        fullName: 'Código Ictus — Checklist de Trombolisis/Trombectomía',
+        icon: '🧠',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Evalúa elegibilidad para Alteplasa (ventana, exclusiones absolutas/relativas, dosis por peso) y para trombectomía mecánica, con manejo post-trombolisis (AHA/ASA 2019).',
+        formulas: ['Ventana Horaria', 'Dosis de Alteplasa', 'Criterios de Trombectomía']
+    },
+    {
+        id: 49,
+        name: 'Gasometría Arterial',
+        fullName: 'Intérprete de Gasometría Arterial (Ácido-Base Sistemático)',
+        icon: '🧪',
+        category: 'electrolitos',
+        categoryLabel: 'Electrolitos',
+        description: 'Identifica el trastorno ácido-base primario, evalúa la compensación esperada (Winter y reglas de compensación), Anion Gap con Delta Ratio, e índice de Kirby/gradiente A-a (enfoque sistemático Boston).',
+        formulas: ['Trastorno Primario', 'Compensación Esperada', 'Anion Gap + Delta Ratio', 'Índice de Kirby']
+    },
+    {
         id: 38,
         name: 'FIB-4 / APRI',
         fullName: 'FIB-4 / APRI — Fibrosis Hepática',
@@ -493,6 +523,118 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Cardiología',
         description: 'Estratificación de insuficiencia cardíaca en IAM. Marca los hallazgos clínicos → clase I–IV automática con mortalidad y manejo (Killip & Kimball 1967).',
         formulas: ['Killip & Kimball 1967']
+    },
+
+    // === CATEGORÍA: CARDIOLOGÍA / NEUROLOGÍA / UCI / GASTRO / TOXICOLOGÍA (LOTE 50-60) === //
+    {
+        id: 50,
+        name: 'QTc Corregido',
+        fullName: 'QTc Corregido (Bazett / Fridericia / Framingham)',
+        icon: '📈',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Corrige el intervalo QT por frecuencia cardíaca con 3 fórmulas y estratifica riesgo de Torsades de Pointes.',
+        formulas: ['Bazett', 'Fridericia', 'Framingham']
+    },
+    {
+        id: 51,
+        name: 'ABCD2',
+        fullName: 'ABCD2 Score (Riesgo de Ictus tras AIT)',
+        icon: '🧠',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Estima el riesgo de ictus a 2 días tras un accidente isquémico transitorio.',
+        formulas: ['ABCD2']
+    },
+    {
+        id: 52,
+        name: 'Rankin (mRS)',
+        fullName: 'Escala de Rankin Modificada (mRS)',
+        icon: '♿',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Grado de discapacidad funcional — uso dual: basal previo al ictus o resultado funcional al alta.',
+        formulas: ['mRS 0-6']
+    },
+    {
+        id: 53,
+        name: 'Profilaxis TVE',
+        fullName: 'Profilaxis de TVE — Caprini / Padua',
+        icon: '🩹',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Decide la necesidad de profilaxis farmacológica/mecánica de TVE en pacientes médicos (Padua) o quirúrgicos (Caprini focalizado).',
+        formulas: ['Padua', 'Caprini (focalizado)']
+    },
+    {
+        id: 54,
+        name: 'Score 4Ts',
+        fullName: 'Score 4Ts — Trombocitopenia Inducida por Heparina',
+        icon: '🩸',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Estima la probabilidad de HIT a partir de 4 dominios clínicos en pacientes con heparina.',
+        formulas: ['4Ts']
+    },
+    {
+        id: 55,
+        name: 'Parkland',
+        fullName: 'Fórmula de Parkland (Fluidoterapia en Quemados)',
+        icon: '🔥',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Calcula el volumen de cristaloides en 24h por peso y %SCT quemada, con ajuste por tiempo transcurrido.',
+        formulas: ['4 mL × kg × %SCT']
+    },
+    {
+        id: 56,
+        name: 'Delirio/Sedación UCI',
+        fullName: 'Delirio y Sedación en UCI — RASS + CAM-ICU',
+        icon: '💤',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Evalúa nivel de sedación (RASS) y, si es evaluable, detecta delirio (CAM-ICU).',
+        formulas: ['RASS', 'CAM-ICU']
+    },
+    {
+        id: 57,
+        name: 'Escalas de Abstinencia',
+        fullName: 'Escalas de Abstinencia — CIWA-Ar / COWS',
+        icon: '🚭',
+        category: 'critico',
+        categoryLabel: 'UCI / Crítico',
+        description: 'Cuantifica la severidad de la abstinencia alcohólica (CIWA-Ar) u opioide (COWS) y guía el tratamiento.',
+        formulas: ['CIWA-Ar', 'COWS']
+    },
+    {
+        id: 58,
+        name: 'Hemorragia Digestiva Alta',
+        fullName: 'Hemorragia Digestiva Alta — Glasgow-Blatchford / Rockall',
+        icon: '🩸',
+        category: 'gastro',
+        categoryLabel: 'Gastroenterología',
+        description: 'Glasgow-Blatchford al ingreso (riesgo de necesitar intervención) y Rockall pre/post-endoscopia (mortalidad/resangrado).',
+        formulas: ['Glasgow-Blatchford', 'Rockall']
+    },
+    {
+        id: 59,
+        name: 'Pancreatitis Aguda',
+        fullName: 'Pancreatitis Aguda — Ranson / BISAP',
+        icon: '🫃',
+        category: 'gastro',
+        categoryLabel: 'Gastroenterología',
+        description: 'Estratifica severidad y mortalidad de la pancreatitis aguda al ingreso y a las 48h (Ranson) o de forma simplificada (BISAP).',
+        formulas: ['Ranson', 'BISAP']
+    },
+    {
+        id: 60,
+        name: 'Paracetamol',
+        fullName: 'Intoxicación por Paracetamol — Nomograma + NAC',
+        icon: '💊',
+        category: 'toxicologia',
+        categoryLabel: 'Toxicología',
+        description: 'Evalúa el nivel sérico contra el nomograma de Rumack-Matthew y calcula la dosis de N-acetilcisteína por peso.',
+        formulas: ['Nomograma de Rumack-Matthew', 'Dosis de NAC']
     }
 ];
 

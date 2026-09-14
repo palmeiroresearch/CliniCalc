@@ -2385,5 +2385,711 @@ const Calculators = {
                 description: 'Protocolo de paro cardíaco con búsqueda guiada de causa (6H/5T) generado.'
             }
         };
+    },
+
+    // === 47. DENGUE — CLASIFICACIÓN OMS GRUPO A/B/C === //
+    calculateDengue(inputs) {
+        let { alarma, gravedad, comorbilidad, weight, sbp, dbp } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weight && weightUnit === 'lb') weight = weight / 2.20462;
+
+        const tieneGravedad = Object.values(gravedad || {}).some(Boolean);
+        const tieneAlarma = Object.values(alarma || {}).some(Boolean);
+        const tieneComorbilidad = Object.values(comorbilidad || {}).some(Boolean);
+
+        let grupo;
+        if (tieneGravedad) grupo = 'C';
+        else if (tieneAlarma || tieneComorbilidad) grupo = 'B';
+        else grupo = 'A';
+
+        const forzadoPorComorbilidad = grupo === 'B' && !tieneAlarma && tieneComorbilidad;
+
+        const pulsePressure = (typeof sbp === 'number' && typeof dbp === 'number') ? sbp - dbp : null;
+        const shockHipotenso = typeof sbp === 'number' && sbp < 90;
+        const shockCompensado = !shockHipotenso && pulsePressure !== null && pulsePressure < 20;
+
+        // Fluidos (solo Grupo B/C, requieren peso)
+        let fluidos = null;
+        if (weight && (grupo === 'B' || grupo === 'C')) {
+            if (grupo === 'B') {
+                fluidos = {
+                    fase1: Math.round(weight * 5) + '-' + Math.round(weight * 7) + ' mL/h (1-2h)',
+                    fase2: Math.round(weight * 3) + '-' + Math.round(weight * 5) + ' mL/h (2-4h)',
+                    fase3: Math.round(weight * 2) + '-' + Math.round(weight * 3) + ' mL/h (mantenimiento)'
+                };
+            } else {
+                fluidos = {
+                    boloCompensado: Math.round(weight * 5) + '-' + Math.round(weight * 10) + ' mL en 1h',
+                    boloHipotenso: Math.round(weight * 20) + ' mL en 15-30min'
+                };
+            }
+        }
+
+        const severity = {
+            C: { label: 'Dengue Grave — Grupo C', colorHex: '#7f1d1d', badge: '🚨' },
+            B: { label: 'Dengue con Signos de Alarma — Grupo B', colorHex: '#dc2626', badge: '🔴' },
+            A: { label: 'Dengue sin Signos de Alarma — Grupo A', colorHex: '#22c55e', badge: '🟢' }
+        }[grupo];
+
+        return {
+            grupo, forzadoPorComorbilidad, shockHipotenso, shockCompensado, pulsePressure,
+            weight, fluidos, severity,
+            value: 0, unit: '',
+            interpretation: {
+                label: severity.label, color: grupo === 'A' ? 'success' : 'danger',
+                description: `Clasificación de Dengue: Grupo ${grupo} (OMS 2009). Protocolo de manejo generado.`
+            }
+        };
+    },
+
+    // === 48. CÓDIGO ICTUS — TROMBOLISIS / TROMBECTOMÍA === //
+    calculateCodigoIctus(inputs) {
+        let { horasInicio, ventanaIncierta, weight, sbp, dbp, exclusionAbsoluta, exclusionRelativa, trombectomia } = inputs;
+
+        const weightUnit = Storage.getSetting('units.weight');
+        if (weight && weightUnit === 'lb') weight = weight / 2.20462;
+
+        const tieneExclusionAbsoluta = Object.values(exclusionAbsoluta || {}).filter(Boolean);
+        const numExclusionAbsoluta = tieneExclusionAbsoluta.length;
+        const tieneExclusionRelativa = Object.values(exclusionRelativa || {}).filter(Boolean);
+
+        const dentroVentanaEstandar = !ventanaIncierta && typeof horasInicio === 'number' && horasInicio <= 4.5;
+        const dentroVentanaExtendida = !ventanaIncierta && typeof horasInicio === 'number' && horasInicio > 3 && horasInicio <= 4.5;
+
+        const requierePAPrevia = (typeof sbp === 'number' && sbp > 185) || (typeof dbp === 'number' && dbp > 110);
+
+        const candidatoTrombolisis = dentroVentanaEstandar
+            && numExclusionAbsoluta === 0
+            && (!dentroVentanaExtendida || tieneExclusionRelativa.length === 0);
+
+        let doseAlteplasaTotal = null, doseBolo = null, doseInfusion = null;
+        if (candidatoTrombolisis && weight) {
+            const raw = weight * 0.9;
+            doseAlteplasaTotal = Math.min(Math.round(raw * 10) / 10, 90);
+            doseBolo = Math.round(doseAlteplasaTotal * 0.1 * 10) / 10;
+            doseInfusion = Math.round(doseAlteplasaTotal * 0.9 * 10) / 10;
+        }
+
+        const cumpleTrombectomia = trombectomia && Object.values(trombectomia).every(Boolean)
+            && !ventanaIncierta && typeof horasInicio === 'number' && horasInicio <= 24;
+
+        const severity = candidatoTrombolisis
+            ? { label: 'Candidato a Trombolisis IV', colorHex: '#22c55e', badge: '✅' }
+            : { label: 'NO Candidato a Trombolisis', colorHex: '#dc2626', badge: '🔴' };
+
+        return {
+            horasInicio, ventanaIncierta, dentroVentanaEstandar, dentroVentanaExtendida,
+            candidatoTrombolisis, requierePAPrevia,
+            exclusionAbsolutaMarcada: tieneExclusionAbsoluta, numExclusionAbsoluta,
+            exclusionRelativaMarcada: tieneExclusionRelativa,
+            weight, doseAlteplasaTotal, doseBolo, doseInfusion,
+            cumpleTrombectomia, severity,
+            value: 0, unit: '',
+            interpretation: {
+                label: severity.label, color: candidatoTrombolisis ? 'success' : 'danger',
+                description: 'Checklist de Código Ictus (trombolisis/trombectomía) generado (AHA/ASA 2019).'
+            }
+        };
+    },
+
+    // === 49. GASOMETRÍA ARTERIAL — INTERPRETACIÓN SISTEMÁTICA ÁCIDO-BASE === //
+    calculateGasometria(inputs) {
+        const { ph, pco2, hco3, sodium, chloride, albumin, cronico, pao2, fio2, edad } = inputs;
+
+        // 1. Verificación de congruencia: H+ desde pH vs H+ desde ecuación de Henderson
+        const hFromPh = Math.pow(10, 9 - ph);
+        const hFromRatio = 24 * pco2 / hco3;
+        const congruente = Math.abs(hFromPh - hFromRatio) / hFromRatio <= 0.15;
+
+        // 2. Trastorno primario — clasificación unificada por el PATRÓN hco3/pco2, no por el signo del pH
+        //    (una compensación fisiológica NUNCA mueve hco3 y pco2 en la misma dirección "acidificante"
+        //     ni en la misma dirección "alcalinizante" simultáneamente — esas combinaciones son SIEMPRE
+        //     un trastorno mixto doble. Las combinaciones donde ambos se mueven en direcciones opuestas
+        //     de pH son las fisiológicamente esperables de una compensación, pero cuando AMBOS valores
+        //     están fuera de rango en la MISMA dirección de pH (ambos "suben" o ambos "bajan") el origen
+        //     es ambiguo entre primario respiratorio compensado y primario metabólico compensado —
+        //     se resuelve probando las DOS hipótesis con sus fórmulas de compensación esperada.)
+        const hco3Bajo = hco3 < 22, hco3Alto = hco3 > 26, hco3Normal = !hco3Bajo && !hco3Alto;
+        const pco2Alto = pco2 > 45, pco2Bajo = pco2 < 35, pco2Normal = !pco2Alto && !pco2Bajo;
+
+        const testAcidosisMetabolica = () => {
+            const min = 1.5 * hco3 + 8 - 2, max = 1.5 * hco3 + 8 + 2;
+            return { tipo: 'acidosis_metabolica', variable: 'pCO2', esperadoMin: Math.round(min * 10) / 10, esperadoMax: Math.round(max * 10) / 10, medido: pco2, fit: pco2 >= min && pco2 <= max, formula: 'Winter: pCO2 = 1.5×HCO3 + 8 (±2)' };
+        };
+        const testAlcalosisMetabolica = () => {
+            const esp = 40 + 0.7 * (hco3 - 24), min = esp - 2, max = esp + 2;
+            return { tipo: 'alcalosis_metabolica', variable: 'pCO2', esperadoMin: Math.round(min * 10) / 10, esperadoMax: Math.round(max * 10) / 10, medido: pco2, fit: pco2 >= min && pco2 <= max, formula: 'pCO2 = 40 + 0.7×(HCO3-24) (±2)' };
+        };
+        const testAcidosisRespiratoria = (cron) => {
+            const factor = cron ? 4 : 1, esp = 24 + factor * ((pco2 - 40) / 10), min = esp - 3, max = esp + 3;
+            return { tipo: 'acidosis_respiratoria', variable: 'HCO3', esperadoMin: Math.round(min * 10) / 10, esperadoMax: Math.round(max * 10) / 10, medido: hco3, fit: hco3 >= min && hco3 <= max, formula: `HCO3 = 24 + ${factor}×(ΔpCO2/10) [${cron ? 'crónica' : 'aguda'}]` };
+        };
+        const testAlcalosisRespiratoria = (cron) => {
+            const factor = cron ? 4 : 2, esp = 24 - factor * ((40 - pco2) / 10), min = esp - 3, max = esp + 3;
+            return { tipo: 'alcalosis_respiratoria', variable: 'HCO3', esperadoMin: Math.round(min * 10) / 10, esperadoMax: Math.round(max * 10) / 10, medido: hco3, fit: hco3 >= min && hco3 <= max, formula: `HCO3 = 24 - ${factor}×(ΔpCO2/10) [${cron ? 'crónica' : 'aguda'}]` };
+        };
+
+        let primario, compensacion = null, esMixtoObvio = false, hipotesisAlternativa = null;
+
+        if (hco3Normal && pco2Normal) {
+            primario = 'normal';
+        } else if (hco3Bajo && pco2Alto) {
+            // ambos acidificantes a la vez — imposible como compensación única, es una acidosis doble
+            primario = 'acidosis_mixta'; esMixtoObvio = true;
+        } else if (hco3Alto && pco2Bajo) {
+            // ambos alcalinizantes a la vez — alcalosis doble
+            primario = 'alcalosis_mixta'; esMixtoObvio = true;
+        } else if (hco3Bajo) {
+            // hco3 bajo + pco2 normal o bajo
+            if (pco2Bajo) {
+                const hipMet = testAcidosisMetabolica();          // primario metabólico, pCO2 compensador (bajo)
+                const hipResp = testAlcalosisRespiratoria(cronico); // primario respiratorio, HCO3 compensador (bajo)
+                if (hipMet.fit && !hipResp.fit) { primario = 'acidosis_metabolica'; compensacion = hipMet; }
+                else if (hipResp.fit && !hipMet.fit) { primario = 'alcalosis_respiratoria'; compensacion = hipResp; }
+                else if (hipMet.fit && hipResp.fit) { primario = 'ambiguo_acidmet_o_alcresp'; compensacion = hipMet; hipotesisAlternativa = hipResp; }
+                else { primario = 'acidosis_metabolica'; compensacion = hipMet; hipotesisAlternativa = hipResp; }
+            } else {
+                primario = 'acidosis_metabolica';
+                compensacion = testAcidosisMetabolica();
+            }
+        } else if (hco3Alto) {
+            // hco3 alto + pco2 normal o alto
+            if (pco2Alto) {
+                const hipResp = testAcidosisRespiratoria(cronico); // primario respiratorio, HCO3 compensador (alto)
+                const hipMet = testAlcalosisMetabolica();          // primario metabólico, pCO2 compensador (alto)
+                if (hipResp.fit && !hipMet.fit) { primario = 'acidosis_respiratoria'; compensacion = hipResp; }
+                else if (hipMet.fit && !hipResp.fit) { primario = 'alcalosis_metabolica'; compensacion = hipMet; }
+                else if (hipResp.fit && hipMet.fit) { primario = 'ambiguo_acidresp_o_alcmet'; compensacion = hipResp; hipotesisAlternativa = hipMet; }
+                else { primario = 'acidosis_respiratoria'; compensacion = hipResp; hipotesisAlternativa = hipMet; }
+            } else {
+                primario = 'alcalosis_metabolica';
+                compensacion = testAlcalosisMetabolica();
+            }
+        } else if (pco2Alto) {
+            // solo pCO2 alto, hco3 normal (proceso agudo, compensación renal aún no establecida)
+            primario = 'acidosis_respiratoria';
+            compensacion = testAcidosisRespiratoria(cronico);
+        } else {
+            // solo pCO2 bajo, hco3 normal
+            primario = 'alcalosis_respiratoria';
+            compensacion = testAlcalosisRespiratoria(cronico);
+        }
+
+        // "hallazgo" homogéneo para mostrar en el resultado: si la compensación no ajusta, señalar
+        // el componente concomitante específico según hacia qué lado se desvía el valor medido
+        if (compensacion && !esMixtoObvio) {
+            if (compensacion.fit) {
+                compensacion.hallazgo = 'apropiada';
+            } else if (compensacion.variable === 'pCO2') {
+                compensacion.hallazgo = compensacion.medido < compensacion.esperadoMin ? 'alcalosis_respiratoria_concomitante' : 'acidosis_respiratoria_concomitante';
+            } else {
+                compensacion.hallazgo = compensacion.medido < compensacion.esperadoMin ? 'acidosis_metabolica_concomitante' : 'alcalosis_metabolica_concomitante';
+            }
+        }
+
+        // 4. Anion Gap — reutiliza Calculators.calculateAnionGap (no reimplementar).
+        //    Elegible siempre que HCO3 esté bajo (independiente de cuál haya quedado como "primario"),
+        //    porque el AG depende fisiológicamente de HCO3 bajo por ácido no medido, no de la etiqueta.
+        let agResult = null, deltaRatio = null, deltaInterpretacion = null;
+        const hasElectrolytes = typeof sodium === 'number' && typeof chloride === 'number';
+        if (hasElectrolytes) {
+            agResult = this.calculateAnionGap({ sodium, chloride, bicarbonate: hco3, albumin: (typeof albumin === 'number' ? albumin : null) });
+            const agValue = agResult.correctedValue !== null ? agResult.correctedValue : agResult.value;
+            const agElevado = agValue > 12;
+            if (agElevado && hco3Bajo && hco3 !== 24) {
+                deltaRatio = Math.round(((agValue - 12) / (24 - hco3)) * 100) / 100;
+                if (deltaRatio < 0.4) deltaInterpretacion = 'hiperclorémica_predominante';
+                else if (deltaRatio <= 0.8) deltaInterpretacion = 'mixta_ag_hiperclorémica';
+                else if (deltaRatio <= 2) deltaInterpretacion = 'agma_pura';
+                else deltaInterpretacion = 'ag_mas_alcalosis_metabolica';
+            }
+            agResult.agElevado = agElevado;
+            agResult.agValue = Math.round(agValue * 10) / 10;
+        }
+
+        // 5. Oxigenación
+        let oxigenacion = null;
+        if (typeof pao2 === 'number' && typeof fio2 === 'number' && fio2 > 0) {
+            const fio2Frac = fio2 > 1 ? fio2 / 100 : fio2;
+            const kirby = Math.round(pao2 / fio2Frac);
+            let sdra = null;
+            if (kirby <= 100) sdra = 'severo';
+            else if (kirby <= 200) sdra = 'moderado';
+            else if (kirby <= 300) sdra = 'leve';
+            let gradienteAa = null, gradienteEsperado = null;
+            if (typeof edad === 'number') {
+                const pao2Alveolar = fio2Frac * (760 - 47) - (pco2 / 0.8);
+                gradienteAa = Math.round((pao2Alveolar - pao2) * 10) / 10;
+                gradienteEsperado = Math.round((edad / 4 + 4) * 10) / 10;
+            }
+            oxigenacion = { kirby, sdra, gradienteAa, gradienteEsperado };
+        }
+
+        const severity = primario === 'normal'
+            ? { label: 'Gasometría Normal', colorHex: '#22c55e', badge: '🟢' }
+            : { label: 'Trastorno Ácido-Base Detectado', colorHex: '#f59e0b', badge: '🧪' };
+
+        return {
+            ph, pco2, hco3, congruente, primario, esMixtoObvio, compensacion, hipotesisAlternativa,
+            agResult, deltaRatio, deltaInterpretacion, oxigenacion, severity,
+            value: ph, unit: '',
+            interpretation: {
+                label: severity.label, color: primario === 'normal' ? 'success' : 'warning',
+                description: 'Interpretación sistemática de gasometría arterial generada (enfoque Boston/Winter).'
+            }
+        };
+    },
+
+    // === 50. QTc CORREGIDO === //
+    calculateQTc(inputs) {
+        const { qt, hr, sex } = inputs;
+        const rrSec = 60 / hr;
+        const round1 = v => Math.round(v * 10) / 10;
+        const qtcBazett = round1(qt / Math.sqrt(rrSec));
+        const qtcFridericia = round1(qt / Math.cbrt(rrSec));
+        const qtcFramingham = round1(qt + 154 * (1 - rrSec));
+
+        const isFemale = sex === 'F';
+        const normalMax = isFemale ? 460 : 450;
+        const altoRiesgoMin = 500;
+
+        let label, color, description;
+        if (qtcBazett >= altoRiesgoMin) {
+            label = 'QTc muy prolongado — alto riesgo de Torsades de Pointes';
+            color = 'danger';
+            description = 'QTc (Bazett) ≥500ms — riesgo alto de arritmia ventricular polimórfica. Revisar y suspender fármacos QT-prolongantes, corregir K⁺/Mg²⁺/Ca²⁺, monitorización continua.';
+        } else if (qtcBazett > normalMax) {
+            label = 'QTc prolongado';
+            color = 'warning';
+            description = `QTc por encima del límite normal (>${normalMax}ms, sexo ${isFemale ? 'femenino' : 'masculino'}). Revisar fármacos QT-prolongantes y electrolitos.`;
+        } else {
+            label = 'QTc normal';
+            color = 'success';
+            description = `QTc dentro de rango normal (<${normalMax}ms).`;
+        }
+
+        return {
+            qtcBazett, qtcFridericia, qtcFramingham,
+            rrSec: round1(rrSec),
+            frecuenciaExtrema: hr > 90 || hr < 60,
+            value: qtcBazett, unit: 'ms',
+            interpretation: { label, color, description }
+        };
+    },
+
+    // === 51. ABCD2 SCORE === //
+    calculateABCD2(inputs) {
+        const { edad60, pa, clinica, duracion, diabetes } = inputs;
+        let score = 0;
+        if (edad60) score += 1;
+        if (pa) score += 1;
+        if (clinica === 'debilidad') score += 2;
+        else if (clinica === 'habla') score += 1;
+        if (duracion === 'mayor60') score += 2;
+        else if (duracion === 'entre10y59') score += 1;
+        if (diabetes) score += 1;
+
+        let label, color, description;
+        if (score <= 3) {
+            label = 'Riesgo bajo';
+            color = 'success';
+            description = 'Riesgo de ictus a 2 días ≈1%. Estudio ambulatorio preferente aceptable según contexto clínico.';
+        } else if (score <= 5) {
+            label = 'Riesgo moderado';
+            color = 'warning';
+            description = 'Riesgo de ictus a 2 días ≈4%. Se recomienda estudio urgente (neuroimagen, doppler de troncos supraaórticos) y valorar ingreso.';
+        } else {
+            label = 'Riesgo alto';
+            color = 'danger';
+            description = 'Riesgo de ictus a 2 días ≈8%. Ingreso y estudio urgente recomendado — ver también NIHSS (Calculadora 17) y Código Ictus (Calculadora 48) si el déficit progresa.';
+        }
+
+        return { value: score, unit: 'pts', interpretation: { label, color, description } };
+    },
+
+    // === 52. ESCALA DE RANKIN MODIFICADA (mRS) === //
+    RANKIN_LEVELS: [
+        { level: 0, label: 'Sin síntomas' },
+        { level: 1, label: 'Sin discapacidad significativa — capaz de realizar sus actividades y obligaciones habituales pese a los síntomas' },
+        { level: 2, label: 'Discapacidad leve — incapaz de realizar todas sus actividades previas, pero capaz de velar por sus propios asuntos sin ayuda' },
+        { level: 3, label: 'Discapacidad moderada — requiere alguna ayuda, pero capaz de caminar sin asistencia' },
+        { level: 4, label: 'Discapacidad moderadamente severa — incapaz de caminar sin asistencia e incapaz de atender sus necesidades corporales sin ayuda' },
+        { level: 5, label: 'Discapacidad severa — confinado a cama, incontinencia, requiere cuidado y atención constante de enfermería' },
+        { level: 6, label: 'Muerte' }
+    ],
+
+    calculateRankin(inputs) {
+        const level = inputs.level;
+        const entry = this.RANKIN_LEVELS.find(l => l.level === level);
+        const color = level <= 1 ? 'success' : level <= 3 ? 'warning' : 'danger';
+        return {
+            value: level, unit: '',
+            interpretation: { label: `mRS ${level}`, color, description: entry.label }
+        };
+    },
+
+    // === 53. PROFILAXIS DE TVE — CAPRINI / PADUA === //
+    calculateVTEProphylaxis(inputs) {
+        if (inputs.tipo === 'medico') {
+            const f = inputs.factores;
+            let score = 0;
+            if (f.cancer) score += 3;
+            if (f.tvpPrevia) score += 3;
+            if (f.movilidadReducida) score += 3;
+            if (f.trombofilia) score += 3;
+            if (f.traumaCirugiaReciente) score += 2;
+            if (f.edad70) score += 1;
+            if (f.icCardioRespiratoria) score += 1;
+            if (f.iamAvcAgudo) score += 1;
+            if (f.infeccionReumatico) score += 1;
+            if (f.obesidad) score += 1;
+            if (f.hormonal) score += 1;
+
+            const altoRiesgo = score >= 4;
+            return {
+                escala: 'Padua', value: score, unit: 'pts', altoRiesgo,
+                interpretation: {
+                    label: altoRiesgo ? 'Alto riesgo de TVE' : 'Bajo riesgo de TVE',
+                    color: altoRiesgo ? 'danger' : 'success',
+                    description: altoRiesgo
+                        ? 'Score de Padua ≥4 — profilaxis farmacológica indicada (HBPM/HNF) salvo contraindicación; si contraindicada, profilaxis mecánica.'
+                        : 'Score de Padua <4 — profilaxis farmacológica no indicada de rutina; deambulación precoz.'
+                }
+            };
+        }
+
+        // Quirúrgico — Caprini (versión focalizada: subconjunto representativo de cada nivel de peso, no las ~40 variables completas)
+        const f = inputs.factores;
+        let score = 0;
+        if (inputs.edadTier === '41-60') score += 1;
+        else if (inputs.edadTier === '61-74') score += 2;
+        else if (inputs.edadTier === '75+') score += 3;
+
+        ['cirugiaMenor', 'imc25', 'varices', 'embarazoPuerperio', 'acoTrh', 'sepsisReciente', 'epocNeumoniaReciente', 'iamReciente', 'icReciente', 'encamadoMedico']
+            .forEach(k => { if (f[k]) score += 1; });
+        ['artroscopia', 'cirugiaMayorAbierta', 'cirugiaLaparoscopicaLarga', 'malignidadActiva', 'encamado72h', 'yesoInmovilizador', 'accesoVenosoCentral']
+            .forEach(k => { if (f[k]) score += 2; });
+        ['historiaTVE', 'historiaFamiliarTVE', 'trombofiliaConocida', 'hit']
+            .forEach(k => { if (f[k]) score += 3; });
+        ['ictusReciente', 'artroplastiaMayorMI', 'fracturaCaderaPelvisPiernaReciente', 'traumaMultipleReciente', 'lesionMedularAguda']
+            .forEach(k => { if (f[k]) score += 5; });
+
+        let label, color, description;
+        if (score === 0) { label = 'Riesgo muy bajo'; color = 'success'; description = 'Deambulación precoz, sin profilaxis farmacológica.'; }
+        else if (score <= 2) { label = 'Riesgo bajo'; color = 'success'; description = 'Profilaxis mecánica (medias de compresión / compresión neumática intermitente).'; }
+        else if (score <= 4) { label = 'Riesgo moderado'; color = 'warning'; description = 'Profilaxis farmacológica (HBPM/HNF) y/o mecánica según riesgo de sangrado.'; }
+        else { label = 'Riesgo alto'; color = 'danger'; description = 'Profilaxis farmacológica + mecánica combinada — riesgo significativo de TVE/TEP.'; }
+
+        return { escala: 'Caprini (focalizado)', value: score, unit: 'pts', interpretation: { label, color, description } };
+    },
+
+    // === 54. SCORE 4Ts (HIT) === //
+    calculate4Ts(inputs) {
+        const { plaquetas, tiempo, trombosis, otrasCausas } = inputs;
+        const score = plaquetas + tiempo + trombosis + otrasCausas;
+        let label, color, description;
+        if (score <= 3) { label = 'Baja probabilidad de HIT'; color = 'success'; description = 'Probabilidad de HIT <5%. HIT poco probable — no suspender heparina solo por este score, pero seguir vigilando plaquetas.'; }
+        else if (score <= 5) { label = 'Probabilidad intermedia de HIT'; color = 'warning'; description = 'Probabilidad de HIT ~14%. Suspender heparina, iniciar anticoagulante alternativo no heparínico, solicitar test de laboratorio (ELISA anti-PF4/heparina o funcional).'; }
+        else { label = 'Alta probabilidad de HIT'; color = 'danger'; description = 'Probabilidad de HIT ~64%. Suspender TODA heparina (incluidos catéteres heparinizados y HBPM), iniciar anticoagulante alternativo no heparínico de inmediato, no esperar confirmación de laboratorio.'; }
+        return { value: score, unit: 'pts', interpretation: { label, color, description } };
+    },
+
+    // === 55. FÓRMULA DE PARKLAND (QUEMADOS) === //
+    _holidaySegar(weightKg) {
+        let mlDia;
+        if (weightKg <= 10) mlDia = weightKg * 100;
+        else if (weightKg <= 20) mlDia = 1000 + (weightKg - 10) * 50;
+        else mlDia = 1500 + (weightKg - 20) * 20;
+        return { mlDia: Math.round(mlDia), mlHora: Math.round(mlDia / 24) };
+    },
+
+    calculateParkland(inputs) {
+        const { weightKg, tbsa, horasTranscurridas, pediatrico } = inputs;
+        const volumenTotal = 4 * weightKg * tbsa; // mL en 24h
+        const primeras8h = volumenTotal / 2;
+        const siguientes16h = volumenTotal / 2;
+
+        let tasaActual = null, fase = null;
+        if (typeof horasTranscurridas === 'number') {
+            if (horasTranscurridas < 8) {
+                const horasRestantesFase1 = 8 - horasTranscurridas;
+                tasaActual = Math.round(primeras8h / horasRestantesFase1);
+                fase = 'Fase 1 (primeras 8h desde la quemadura)';
+            } else if (horasTranscurridas < 24) {
+                const horasRestantesFase2 = 24 - horasTranscurridas;
+                tasaActual = Math.round(siguientes16h / horasRestantesFase2);
+                fase = 'Fase 2 (8-24h desde la quemadura)';
+            } else {
+                fase = 'Fuera de la ventana de 24h — reevaluar necesidades de mantenimiento';
+            }
+        }
+
+        const mantenimientoPediatrico = pediatrico ? this._holidaySegar(weightKg) : null;
+
+        return {
+            volumenTotal: Math.round(volumenTotal),
+            primeras8h: Math.round(primeras8h),
+            siguientes16h: Math.round(siguientes16h),
+            tasaActual, fase, mantenimientoPediatrico,
+            value: Math.round(volumenTotal), unit: 'mL/24h',
+            interpretation: {
+                label: 'Fórmula de Parkland',
+                color: 'info',
+                description: `Volumen total 24h: ${Math.round(volumenTotal)} mL. Mitad en las primeras 8h desde la quemadura (no desde la llegada), resto en las 16h siguientes.`
+            }
+        };
+    },
+
+    // === 56. DELIRIO Y SEDACIÓN EN UCI — RASS + CAM-ICU === //
+    RASS_LEVELS: [
+        { level: 4, label: '+4 Combativo', description: 'Violento, peligro inmediato para el personal' },
+        { level: 3, label: '+3 Muy agitado', description: 'Se arranca tubos/catéteres, agresivo' },
+        { level: 2, label: '+2 Agitado', description: 'Movimientos frecuentes sin propósito, lucha con el ventilador' },
+        { level: 1, label: '+1 Inquieto', description: 'Ansioso, movimientos no agresivos' },
+        { level: 0, label: '0 Alerta y calmado', description: '' },
+        { level: -1, label: '-1 Somnoliento', description: 'No completamente alerta, despierta (>10s) a la voz con contacto visual' },
+        { level: -2, label: '-2 Sedación leve', description: 'Despierta brevemente (<10s) a la voz con contacto visual' },
+        { level: -3, label: '-3 Sedación moderada', description: 'Movimiento o apertura ocular a la voz (sin contacto visual)' },
+        { level: -4, label: '-4 Sedación profunda', description: 'Sin respuesta a la voz, movimiento o apertura ocular al estímulo físico' },
+        { level: -5, label: '-5 No despertable', description: 'Sin respuesta a la voz ni al estímulo físico' }
+    ],
+
+    calculateDelirioSedacion(inputs) {
+        const { rass, camIcu } = inputs;
+        const rassEntry = this.RASS_LEVELS.find(l => l.level === rass);
+        const evaluable = rass >= -3;
+
+        let camResult = null;
+        if (evaluable && camIcu) {
+            const feature1 = camIcu.inicioAgudo;
+            const feature2 = camIcu.inatencion;
+            const feature3 = camIcu.nivelConciencia;
+            const feature4 = camIcu.pensamientoDesorganizado;
+            const positivo = feature1 && feature2 && (feature3 || feature4);
+            camResult = { positivo, feature1, feature2, feature3, feature4 };
+        }
+
+        return {
+            rass, rassLabel: rassEntry.label, rassDescription: rassEntry.description,
+            evaluable, camResult,
+            value: rass, unit: '',
+            interpretation: evaluable
+                ? (camResult
+                    ? {
+                        label: camResult.positivo ? 'CAM-ICU positivo — Delirio presente' : 'CAM-ICU negativo — sin delirio',
+                        color: camResult.positivo ? 'danger' : 'success',
+                        description: camResult.positivo
+                            ? 'Iniciar manejo no farmacológico del delirio (reorientación, luz natural, movilización precoz, retirar sujeción/sonda si es posible); evitar benzodiacepinas.'
+                            : 'Sin evidencia de delirio en esta evaluación — reevaluar periódicamente.'
+                    }
+                    : { label: 'RASS evaluable — completar CAM-ICU', color: 'warning', description: 'El nivel de sedación permite evaluar delirio; completar las 4 características del CAM-ICU.' })
+                : { label: 'CAM-ICU no evaluable', color: 'warning', description: 'RASS ≤ -4 (sedación profunda o no despertable) — el delirio no puede evaluarse de forma fiable. Reevaluar tras aligerar la sedación.' }
+        };
+    },
+
+    // === 57. ESCALAS DE ABSTINENCIA — CIWA-Ar / COWS === //
+    calculateAbstinencia(inputs) {
+        const { tipo, items } = inputs;
+        const score = items.reduce((a, b) => a + b, 0);
+
+        if (tipo === 'alcohol') {
+            let label, color, description;
+            if (score < 8) { label = 'Abstinencia mínima'; color = 'success'; description = 'CIWA-Ar <8 — generalmente no requiere tratamiento farmacológico; reevaluar periódicamente.'; }
+            else if (score <= 15) { label = 'Abstinencia leve-moderada'; color = 'warning'; description = 'CIWA-Ar 8-15 — considerar benzodiacepina guiada por síntomas (protocolo CIWA), reevaluar cada 1-2h.'; }
+            else if (score <= 20) { label = 'Abstinencia moderada-severa'; color = 'danger'; description = 'CIWA-Ar 15-20 — benzodiacepinas a dosis más altas, vigilancia estrecha, riesgo de progresión.'; }
+            else { label = 'Abstinencia severa — riesgo de delirium tremens'; color = 'danger'; description = 'CIWA-Ar >20 — alto riesgo de delirium tremens/convulsiones. Benzodiacepinas IV a dosis altas, considerar UCI.'; }
+            return { escala: 'CIWA-Ar', value: score, unit: '/67', interpretation: { label, color, description } };
+        }
+
+        let label, color, description;
+        if (score < 5) { label = 'Sin abstinencia / mínima'; color = 'success'; description = 'COWS <5 — sin abstinencia significativa.'; }
+        else if (score <= 12) { label = 'Abstinencia leve'; color = 'success'; description = 'COWS 5-12 — abstinencia leve, manejo sintomático.'; }
+        else if (score <= 24) { label = 'Abstinencia moderada'; color = 'warning'; description = 'COWS 13-24 — abstinencia moderada; un score ≥12-13 suele ser suficiente para iniciar buprenorfina si esa es la estrategia elegida.'; }
+        else if (score <= 36) { label = 'Abstinencia moderadamente severa'; color = 'danger'; description = 'COWS 25-36 — considerar manejo hospitalario.'; }
+        else { label = 'Abstinencia severa'; color = 'danger'; description = 'COWS >36 — abstinencia severa, manejo hospitalario/monitorización estrecha.'; }
+        return { escala: 'COWS', value: score, unit: '/48', interpretation: { label, color, description } };
+    },
+
+    // === 58. HEMORRAGIA DIGESTIVA ALTA — GLASGOW-BLATCHFORD / ROCKALL === //
+    calculateHDA(inputs) {
+        const { blatchford, rockall } = inputs;
+
+        let gbs = 0;
+        const ureaMmol = blatchford.ureaMmol;
+        if (ureaMmol >= 25) gbs += 6;
+        else if (ureaMmol >= 10) gbs += 4;
+        else if (ureaMmol >= 8) gbs += 3;
+        else if (ureaMmol >= 6.5) gbs += 2;
+
+        const hb = blatchford.hb;
+        const esHombre = blatchford.sexo === 'M';
+        if (esHombre) {
+            if (hb < 10) gbs += 6;
+            else if (hb < 12) gbs += 3;
+            else if (hb < 13) gbs += 1;
+        } else {
+            if (hb < 10) gbs += 6;
+            else if (hb < 12) gbs += 1;
+        }
+
+        const sbp = blatchford.sbp;
+        if (sbp < 90) gbs += 3;
+        else if (sbp < 100) gbs += 2;
+        else if (sbp < 110) gbs += 1;
+
+        if (blatchford.pulso100) gbs += 1;
+        if (blatchford.melena) gbs += 1;
+        if (blatchford.sincope) gbs += 2;
+        if (blatchford.hepatopatia) gbs += 2;
+        if (blatchford.icc) gbs += 2;
+
+        const gbsMuyBajoRiesgo = gbs === 0;
+
+        let rocklPre = 0;
+        if (rockall.edad >= 80) rocklPre += 2;
+        else if (rockall.edad >= 60) rocklPre += 1;
+
+        if (rockall.shock === 'hipotension') rocklPre += 2;
+        else if (rockall.shock === 'taquicardia') rocklPre += 1;
+
+        if (rockall.comorbilidad === 'renalHepaticaMalignidad') rocklPre += 3;
+        else if (rockall.comorbilidad === 'icIhdMayor') rocklPre += 2;
+
+        let rockallTotal = rocklPre;
+        let rockallCompleto = false;
+        if (rockall.diagnostico != null && rockall.estigmas != null) {
+            rockallCompleto = true;
+            if (rockall.diagnostico === 'malignidad') rockallTotal += 2;
+            else if (rockall.diagnostico === 'otro') rockallTotal += 1;
+            if (rockall.estigmas === 'sangradoActivoVasoVisible') rockallTotal += 2;
+        }
+
+        let rockallBanda;
+        if (rockallTotal <= 2) rockallBanda = 'bajo';
+        else if (rockallTotal <= 4) rockallBanda = 'intermedio';
+        else rockallBanda = 'alto';
+
+        return {
+            gbs, gbsMuyBajoRiesgo,
+            rocklPre, rockallTotal, rockallCompleto, rockallBanda,
+            value: gbs, unit: 'pts',
+            interpretation: {
+                label: gbsMuyBajoRiesgo ? 'Glasgow-Blatchford 0 — riesgo muy bajo' : `Glasgow-Blatchford ${gbs}`,
+                color: gbsMuyBajoRiesgo ? 'success' : (gbs <= 3 ? 'warning' : 'danger'),
+                description: gbsMuyBajoRiesgo
+                    ? 'Riesgo muy bajo de necesitar intervención — manejo ambulatorio seguro sin necesidad de ingreso ni endoscopia urgente.'
+                    : 'Score >0 — ingreso hospitalario recomendado y endoscopia según disponibilidad/gravedad.'
+            }
+        };
+    },
+
+    // === 59. PANCREATITIS AGUDA — RANSON / BISAP === //
+    calculatePancreatitis(inputs) {
+        const { escala } = inputs;
+
+        if (escala === 'bisap') {
+            const b = inputs.bisap;
+            let score = 0;
+            if (b.bun25) score += 1;
+            if (b.gcsAlterado) score += 1;
+            if (b.sirs2) score += 1;
+            if (b.edad60) score += 1;
+            if (b.derramePleural) score += 1;
+
+            const altoRiesgo = score >= 3;
+            return {
+                escala: 'BISAP', value: score, unit: '/5', altoRiesgo,
+                interpretation: {
+                    label: altoRiesgo ? 'BISAP ≥3 — alto riesgo' : 'BISAP <3 — bajo riesgo',
+                    color: altoRiesgo ? 'danger' : 'success',
+                    description: altoRiesgo
+                        ? 'Score BISAP ≥3 asociado a mayor mortalidad y riesgo de falla orgánica — considerar UCI y TC contrastada a las 72h si hay deterioro.'
+                        : 'Score BISAP bajo — riesgo de gravedad menor, continuar vigilancia clínica.'
+                }
+            };
+        }
+
+        const ing = inputs.ranson.ingreso;
+        let ptsIngreso = 0;
+        if (ing.edad55) ptsIngreso++;
+        if (ing.leucocitos16000) ptsIngreso++;
+        if (ing.glucosa200) ptsIngreso++;
+        if (ing.ldh350) ptsIngreso++;
+        if (ing.ast250) ptsIngreso++;
+
+        let pts48h = null, total = ptsIngreso;
+        if (inputs.ranson.h48) {
+            const h48 = inputs.ranson.h48;
+            pts48h = 0;
+            if (h48.caidaHto10) pts48h++;
+            if (h48.aumentoBun5) pts48h++;
+            if (h48.calcio8) pts48h++;
+            if (h48.pao260) pts48h++;
+            if (h48.deficitBase4) pts48h++;
+            if (h48.secuestroLiquidos6L) pts48h++;
+            total = ptsIngreso + pts48h;
+        }
+
+        let mortalidad;
+        if (total <= 2) mortalidad = '<5%';
+        else if (total <= 4) mortalidad = '15-20%';
+        else if (total <= 6) mortalidad = '~40%';
+        else mortalidad = '~100%';
+
+        return {
+            escala: 'Ranson', ptsIngreso, pts48h, value: total, unit: 'pts', mortalidad,
+            interpretation: {
+                label: `Ranson ${total} pts`,
+                color: total <= 2 ? 'success' : (total <= 4 ? 'warning' : 'danger'),
+                description: pts48h === null
+                    ? `Subtotal al ingreso: ${ptsIngreso} pts. Completar los criterios a las 48h para el score total. Mortalidad estimada con el total: ${mortalidad}.`
+                    : `Score total (ingreso + 48h): ${total} pts. Mortalidad estimada: ${mortalidad}.`
+            }
+        };
+    },
+
+    // === 60. INTOXICACIÓN POR PARACETAMOL — NOMOGRAMA + NAC === //
+    _nacDosis(weightKg) {
+        return {
+            carga: `${Math.round(weightKg * 150)} mg en 200 mL, IV en 1h`,
+            mantenimiento1: `${Math.round(weightKg * 50)} mg en 500 mL, IV en 4h`,
+            mantenimiento2: `${Math.round(weightKg * 100)} mg en 1000 mL, IV en 16h`
+        };
+    },
+
+    calculateParacetamol(inputs) {
+        const { horas, nivel, weightKg, ingestaAguda } = inputs;
+
+        if (!ingestaAguda || horas == null || horas > 24 || horas < 4) {
+            return {
+                nomogramaAplicable: false,
+                value: nivel, unit: 'µg/mL',
+                naDosis: this._nacDosis(weightKg),
+                interpretation: {
+                    label: 'Nomograma no aplicable',
+                    color: 'warning',
+                    description: 'El nomograma de Rumack-Matthew solo es válido para ingesta única aguda con tiempo conocido entre 4 y 24h. Para ingesta crónica/escalonada o tiempo desconocido: tratar empíricamente si nivel >20-30 µg/mL, clínica compatible o transaminasas alteradas — no aplicar la línea del nomograma.'
+                }
+            };
+        }
+
+        const umbral = 150 * Math.pow(2, -(horas - 4) / 4);
+        const porEncimaLinea = nivel >= umbral;
+
+        return {
+            nomogramaAplicable: true,
+            umbral: Math.round(umbral * 10) / 10,
+            porEncimaLinea,
+            naDosis: porEncimaLinea ? this._nacDosis(weightKg) : null,
+            value: nivel, unit: 'µg/mL',
+            interpretation: {
+                label: porEncimaLinea ? 'Por encima de la línea de tratamiento — NAC indicada' : 'Por debajo de la línea de tratamiento',
+                color: porEncimaLinea ? 'danger' : 'success',
+                description: porEncimaLinea
+                    ? `Nivel ${nivel} µg/mL a las ${horas}h está por encima del umbral (${Math.round(umbral * 10) / 10} µg/mL) — iniciar N-acetilcisteína.`
+                    : `Nivel ${nivel} µg/mL a las ${horas}h está por debajo del umbral (${Math.round(umbral * 10) / 10} µg/mL) — hepatotoxicidad poco probable, no requiere NAC por este criterio.`
+            }
+        };
     }
 };

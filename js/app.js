@@ -57,14 +57,22 @@ function switchTab(tabName) {
     }
 }
 
+// === FILTRO ACTIVO DE LA BIBLIOTECA === //
+// Lee la categoría del chip activo para no perder el filtro al re-renderizar
+// tras marcar favorito o pantalla principal desde la Biblioteca.
+function getActiveLibraryFilter() {
+    const activeChip = document.querySelector('.filter-chip.active');
+    return activeChip ? activeChip.dataset.category : 'all';
+}
+
 // === FAVORITOS === //
 function toggleFavorite(calcId) {
     const isFav = Storage.toggleFavorite(calcId);
-    
+
     // Actualizar UI
     UI.renderMainScreenCalculators();
-    UI.renderLibraryCalculators();
-    
+    UI.renderLibraryCalculators(getActiveLibraryFilter());
+
     UI.showToast(
         isFav ? 'Añadido a favoritos' : 'Eliminado de favoritos',
         'success'
@@ -75,7 +83,7 @@ function toggleFavorite(calcId) {
 function toggleCalcInMainScreen(calcId) {
     const mainScreen = Storage.getMainScreen();
     const isActive = mainScreen.includes(calcId);
-    
+
     if (isActive) {
         const result = Storage.removeFromMainScreen(calcId);
         if (!result.success) {
@@ -91,8 +99,9 @@ function toggleCalcInMainScreen(calcId) {
         }
         UI.showToast('Calculadora añadida a pantalla principal', 'success');
     }
-    
+
     UI.renderMainScreenCalculators();
+    UI.renderLibraryCalculators(getActiveLibraryFilter());
     UI.renderManageCalculatorsList();
     UI.updateActiveCalcCount();
 }
@@ -231,6 +240,20 @@ function loadCalculatorForm(calc) {
         case 44: container.innerHTML = createEAPForm(); break;
         case 45: container.innerHTML = createArritmiaForm(); break;
         case 46: container.innerHTML = createParoForm(); break;
+        case 47: container.innerHTML = createDengueForm(); break;
+        case 48: container.innerHTML = createCodigoIctusForm(); break;
+        case 49: container.innerHTML = createGasometriaForm(); break;
+        case 50: container.innerHTML = createQTcForm(); break;
+        case 51: container.innerHTML = createABCD2Form(); break;
+        case 52: container.innerHTML = createRankinForm(); break;
+        case 53: container.innerHTML = createVTEForm(); break;
+        case 54: container.innerHTML = create4TsForm(); break;
+        case 55: container.innerHTML = createParklandForm(); break;
+        case 56: container.innerHTML = createRassCamForm(); break;
+        case 57: container.innerHTML = createAbstinenciaForm(); break;
+        case 58: container.innerHTML = createHDAForm(); break;
+        case 59: container.innerHTML = createPancreatitisForm(); break;
+        case 60: container.innerHTML = createParacetamolForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">

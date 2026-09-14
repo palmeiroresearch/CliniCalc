@@ -404,6 +404,8 @@ body {
 [data-category="otros"]         { --cat-color: #64748b; --cat-color-bg: rgba(100,116,139,0.13); }
 [data-category="critico"]       { --cat-color: #f59e0b; --cat-color-bg: rgba(245,158,11,0.13); }
 [data-category="pulmonar"]      { --cat-color: #14b8a6; --cat-color-bg: rgba(20,184,166,0.13); }
+[data-category="gastro"]        { --cat-color: #a16207; --cat-color-bg: rgba(161,98,7,0.13); }
+[data-category="toxicologia"]   { --cat-color: #d946ef; --cat-color-bg: rgba(217,70,239,0.13); }
 
 /* === CALCULATORS GRID === */
 .calculators-grid {
@@ -615,6 +617,13 @@ body {
     color: var(--text-secondary);
 }
 
+.calc-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
 .calc-list-favorite {
     font-size: 20px;
     flex-shrink: 0;
@@ -624,6 +633,19 @@ body {
 
 .calculator-list-item.favorited .calc-list-favorite {
     opacity: 1;
+}
+
+.calc-list-mainscreen {
+    font-size: 19px;
+    flex-shrink: 0;
+    opacity: 0.3;
+    filter: grayscale(1);
+    transition: all var(--transition-fast);
+}
+
+.calculator-list-item.on-mainscreen .calc-list-mainscreen {
+    opacity: 1;
+    filter: none;
 }
 
 /* === SETTINGS === */
