@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
     './css/main.css',
     './css/additional-styles.css',
     './js/config.js',
+    './js/ota-updater.js',
     './js/storage.js',
     './js/calculators.js',
     './js/ui.js',
