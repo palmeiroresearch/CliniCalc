@@ -1,9 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 60 Calculadoras Médicas
+// Metadata de las 61 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9.2';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -635,6 +635,18 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Toxicología',
         description: 'Evalúa el nivel sérico contra el nomograma de Rumack-Matthew y calcula la dosis de N-acetilcisteína por peso.',
         formulas: ['Nomograma de Rumack-Matthew', 'Dosis de NAC']
+    },
+
+    // === CATEGORÍA: LABORATORIO === //
+    {
+        id: 61,
+        name: 'Valores de Referencia',
+        fullName: 'Valores de Referencia de Laboratorio',
+        icon: '🧫',
+        category: 'laboratorio',
+        categoryLabel: 'Laboratorio',
+        description: 'Tabla navegable de intervalos de referencia — hematología, química sanguínea, iones/gases, hormonas y marcadores, inmunología, nefrología y orina.',
+        formulas: ['Búsqueda por test', 'Filtro por categoría']
     }
 ];
 

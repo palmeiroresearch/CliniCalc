@@ -254,6 +254,7 @@ function loadCalculatorForm(calc) {
         case 58: container.innerHTML = createHDAForm(); break;
         case 59: container.innerHTML = createPancreatitisForm(); break;
         case 60: container.innerHTML = createParacetamolForm(); break;
+        case 61: container.innerHTML = createLabReferenceForm(); _labShowInitial(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
