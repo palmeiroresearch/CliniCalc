@@ -8,19 +8,15 @@
 // (Capacitor). Diseñado para ser 100% best-effort: cualquier fallo de red
 // o del manifiesto se ignora en silencio y la app sigue con el bundle que
 // ya tiene instalado. Nunca debe bloquear ni romper el arranque offline.
+//
+// Expone window.OtaUpdater.checkNow() para que la UI (ej. el botón
+// "Buscar actualización" en Ajustes) pueda mostrar el estado REAL del OTA
+// en vez de confundirlo con el chequeo del Service Worker (que es un
+// mecanismo aparte, pensado para la PWA/navegador).
 
 (function () {
-    if (!window.Capacitor || !Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) {
-        return;
-    }
-
-    const CapacitorUpdater = Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater;
-    if (!CapacitorUpdater) return;
-
-    // Confirma que el bundle actual cargó bien. Debe llamarse ANTES de
-    // cualquier red — si no se llama a tiempo (10s), el plugin hace
-    // rollback automático al bundle anterior/builtin.
-    CapacitorUpdater.notifyAppReady().catch(() => {});
+    const isNative = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+    const CapacitorUpdater = isNative && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater;
 
     const MANIFEST_URL = './ota/manifest.json';
     const FETCH_TIMEOUT_MS = 8000;
@@ -36,38 +32,79 @@
         return false;
     }
 
-    async function checkForUpdate() {
+    async function fetchManifest() {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
         try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
             const response = await fetch(MANIFEST_URL, { cache: 'no-store', signal: controller.signal });
-            clearTimeout(timeout);
-            if (!response.ok) return;
-
+            if (!response.ok) return null;
             const manifest = await response.json();
-            if (!manifest || !manifest.version || !manifest.url) return;
+            if (!manifest || !manifest.version || !manifest.url) return null;
+            return manifest;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
 
-            const currentVersion = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : null;
-            if (!currentVersion || !isNewerVersion(manifest.version, currentVersion)) return;
+    // Chequeo manual, para uso desde la UI. Devuelve SIEMPRE un objeto
+    // describiendo qué pasó — nunca lanza — para que quien lo llama pueda
+    // mostrar un mensaje preciso al usuario.
+    async function checkNow() {
+        if (!isNative || !CapacitorUpdater) {
+            return { supported: false };
+        }
 
+        const activeVersion = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : null;
+
+        try {
+            const current = await CapacitorUpdater.current();
+            const runningVersion = (current && current.bundle && current.bundle.id !== 'builtin')
+                ? current.bundle.version
+                : activeVersion;
+
+            const manifest = await fetchManifest();
+            if (!manifest) {
+                return { supported: true, error: 'manifest', runningVersion };
+            }
+
+            if (!isNewerVersion(manifest.version, runningVersion)) {
+                return { supported: true, upToDate: true, runningVersion, latestVersion: manifest.version };
+            }
+
+            // Hay una versión más nueva: descargarla y dejarla lista.
             const bundle = await CapacitorUpdater.download({
                 version: manifest.version,
                 url: manifest.url
             });
-
-            // next() aplica el bundle recién descargado la próxima vez que la
-            // app pase a segundo plano o se reabra — no interrumpe la sesión
-            // actual (a diferencia de set(), que recarga de inmediato).
             await CapacitorUpdater.next({ id: bundle.id });
 
-            console.log('[OTA] Actualización', manifest.version, 'descargada — se aplicará al reabrir la app.');
+            return {
+                supported: true,
+                upToDate: false,
+                staged: true,
+                runningVersion,
+                latestVersion: manifest.version
+            };
         } catch (err) {
-            // Sin red, timeout, manifiesto inválido, descarga fallida, etc.
-            // No hacer nada más: la app sigue funcionando con el bundle actual.
-            console.warn('[OTA] Chequeo de actualización omitido:', err && err.message);
+            return { supported: true, error: (err && err.message) || 'unknown', runningVersion };
         }
     }
 
-    checkForUpdate();
+    window.OtaUpdater = { checkNow, isNewerVersion };
+
+    // --- Chequeo automático y silencioso al arrancar (comportamiento previo) ---
+    if (!isNative || !CapacitorUpdater) return;
+
+    // Confirma que el bundle actual cargó bien. Debe llamarse ANTES de
+    // cualquier red — si no se llama a tiempo (10s), el plugin hace
+    // rollback automático al bundle anterior/builtin.
+    CapacitorUpdater.notifyAppReady().catch(() => {});
+
+    checkNow().then((result) => {
+        if (result && result.staged) {
+            console.log('[OTA] Actualización', result.latestVersion, 'descargada — se aplicará al reabrir la app.');
+        } else if (result && result.error) {
+            console.warn('[OTA] Chequeo de actualización omitido:', result.error);
+        }
+    });
 })();

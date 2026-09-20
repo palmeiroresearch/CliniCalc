@@ -728,19 +728,39 @@ function registerServiceWorker() {
 
 async function checkForUpdates() {
     const btn = document.getElementById('checkUpdateBtn');
-    if (!swRegistration) {
-        UI.showToast('Service Worker no disponible', 'error');
-        return;
-    }
-
     btn.disabled = true;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;"><span class="update-spinner" style="width:14px;height:14px;border-width:2px;"></span> Verificando...</span>';
 
-    let updateDetected = false;
-    swRegistration.addEventListener('updatefound', () => { updateDetected = true; }, { once: true });
-
     try {
+        // Dentro de la app nativa (APK), el mecanismo real es el OTA propio
+        // (@capgo/capacitor-updater self-hosted) — el Service Worker no
+        // aplica igual ahí, así que usamos window.OtaUpdater en vez de
+        // swRegistration.update() cuando corremos nativo.
+        if (window.OtaUpdater && window.Capacitor && Capacitor.isNativePlatform()) {
+            const result = await window.OtaUpdater.checkNow();
+
+            if (result.error === 'manifest') {
+                UI.showToast('No se pudo verificar (sin conexión o el manifiesto no respondió)', 'error');
+            } else if (result.error) {
+                UI.showToast('Error al verificar actualizaciones', 'error');
+            } else if (result.staged) {
+                UI.showToast(`Nueva versión ${result.latestVersion} descargada — se aplicará al cerrar y reabrir la app`, 'success');
+            } else if (result.upToDate) {
+                UI.showToast(`Ya tienes la versión más reciente (${result.runningVersion}) ✓`, 'success');
+            }
+            return;
+        }
+
+        // Contexto web/PWA: comportamiento original, basado en Service Worker.
+        if (!swRegistration) {
+            UI.showToast('Service Worker no disponible', 'error');
+            return;
+        }
+
+        let updateDetected = false;
+        swRegistration.addEventListener('updatefound', () => { updateDetected = true; }, { once: true });
+
         await swRegistration.update();
         await new Promise(r => setTimeout(r, 1200));
         if (!updateDetected && !swRegistration.waiting) {
