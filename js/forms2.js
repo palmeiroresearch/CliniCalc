@@ -7203,6 +7203,695 @@ function calculateParacetamolForm(event) {
     Storage.addToHistory({ calculatorId: 60, calculatorName: 'Intoxicación por Paracetamol', inputs, result: r, interpretation: r.interpretation });
 }
 
+// === 62. RIESGO CARDIOVASCULAR — ASCVD 2013 (POOLED COHORT EQUATIONS) === //
+function createASCVDForm() {
+    return `
+        <form id="ascvdForm" onsubmit="calculateASCVDForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Sexo</label>
+                    <select id="ascvdSex" class="form-input">
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Raza</label>
+                    <select id="ascvdRaza" class="form-input">
+                        <option value="blanco">Blanco / otra</option>
+                        <option value="afroamericano">Afroamericano</option>
+                    </select>
+                    <p style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">La ecuación original (Goff 2013) solo validó estos dos grupos; "Blanco/otra" se usa como aproximación para otras etnias.</p>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Edad (40-79 años)</label>
+                    <input type="number" id="ascvdAge" step="1" min="40" max="79" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Colesterol Total (mg/dL)</label>
+                    <input type="number" id="ascvdTotalChol" step="any" min="100" max="400" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Colesterol HDL (mg/dL)</label>
+                    <input type="number" id="ascvdHdl" step="any" min="10" max="150" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Presión Arterial Sistólica (mmHg)</label>
+                    <input type="number" id="ascvdSbp" step="any" min="80" max="250" class="form-input" required>
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="ascvdTratada" style="width:18px; height:18px;"><span style="font-size:13px;">En tratamiento antihipertensivo</span></label>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="ascvdDiabetes" style="width:18px; height:18px;"><span style="font-size:13px;">Diabetes Mellitus</span></label>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="ascvdFumador" style="width:18px; height:18px;"><span style="font-size:13px;">Fumador activo</span></label>
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Ecuación de riesgo poblacional (Pooled Cohort Equations, AHA/ACC 2013) — válida para edades 40-79 años sin ASCVD previa. La AHA recomienda desde 2023 su sucesor PREVENT (próximamente en CliniCalc).</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Riesgo a 10 Años</button>
+        </form>
+        <div id="ascvdResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateASCVDForm(event) {
+    event.preventDefault();
+    const inputs = {
+        sex: document.getElementById('ascvdSex').value,
+        raza: document.getElementById('ascvdRaza').value,
+        age: parseFloat(document.getElementById('ascvdAge').value),
+        totalChol: parseFloat(document.getElementById('ascvdTotalChol').value),
+        hdl: parseFloat(document.getElementById('ascvdHdl').value),
+        sbp: parseFloat(document.getElementById('ascvdSbp').value),
+        tratada: document.getElementById('ascvdTratada').checked,
+        diabetes: document.getElementById('ascvdDiabetes').checked,
+        fumador: document.getElementById('ascvdFumador').checked
+    };
+    const result = Calculators.calculateASCVD(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('ascvdResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">RIESGO ASCVD A 10 AÑOS (2013)</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value}<span style="font-size:20px; font-weight:500;">%</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        ${result.raceAproximada ? `<div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:8px; margin-bottom:16px; font-size:12px; color:#92400e;">⚠️ Calculado con los coeficientes de "blanco/otra" — la ecuación original no validó otros grupos étnicos específicamente.</div>` : ''}
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('ascvdForm').reset(); document.getElementById('ascvdResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 62, calculatorName: 'Riesgo Cardiovascular ASCVD 2013', inputs, result, interpretation: result.interpretation });
+}
+
+// === 63. WELLS DVT === //
+function createWellsDVTForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="wellsDvtForm" onsubmit="calculateWellsDVTForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${check('dvtCancer', 'Cáncer activo (tratamiento en curso, últimos 6 meses, o paliativo)')}
+                ${check('dvtParalisis', 'Parálisis, paresia o inmovilización reciente en yeso de MMII')}
+                ${check('dvtEncamado', 'Encamado &gt;3 días o cirugía mayor en las últimas 12 semanas')}
+                ${check('dvtDolorLocalizado', 'Dolor localizado en el trayecto del sistema venoso profundo')}
+                ${check('dvtPiernaEdematizada', 'Pierna completamente edematizada')}
+                ${check('dvtEdemaPantorrilla', 'Edema de pantorrilla &gt;3cm vs. la pierna asintomática')}
+                ${check('dvtEdemaFovea', 'Edema con fóvea confinado a la pierna sintomática')}
+                ${check('dvtVenasColaterales', 'Venas colaterales superficiales no varicosas')}
+                ${check('dvtTvpPrevia', 'TVP previa documentada')}
+                ${check('dvtDiagnosticoAlternativo', 'Diagnóstico alternativo al menos tan probable como TVP (−2 pts)')}
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Distinto de <strong>Wells TEP (Calculadora 14)</strong>, que evalúa tromboembolismo pulmonar.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Wells DVT</button>
+        </form>
+        <div id="wellsDvtResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateWellsDVTForm(event) {
+    event.preventDefault();
+    const inputs = {
+        cancer: document.getElementById('dvtCancer').checked,
+        paralisisInmovilizacion: document.getElementById('dvtParalisis').checked,
+        encamado: document.getElementById('dvtEncamado').checked,
+        dolorLocalizado: document.getElementById('dvtDolorLocalizado').checked,
+        piernaEdematizada: document.getElementById('dvtPiernaEdematizada').checked,
+        edemaPantorrilla: document.getElementById('dvtEdemaPantorrilla').checked,
+        edemaFovea: document.getElementById('dvtEdemaFovea').checked,
+        venasColaterales: document.getElementById('dvtVenasColaterales').checked,
+        tvpPrevia: document.getElementById('dvtTvpPrevia').checked,
+        diagnosticoAlternativo: document.getElementById('dvtDiagnosticoAlternativo').checked
+    };
+    const result = Calculators.calculateWellsDVT(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('wellsDvtResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">WELLS DVT</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">pts</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('wellsDvtForm').reset(); document.getElementById('wellsDvtResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 63, calculatorName: 'Wells DVT', inputs, result, interpretation: result.interpretation });
+}
+
+// === 64. ÍNDICE DE RIESGO CARDÍACO REVISADO (RCRI/LEE) === //
+function createRCRIForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="rcriForm" onsubmit="calculateRCRIForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                ${check('rcriCirugia', 'Cirugía de alto riesgo (intraperitoneal, intratorácica, o vascular suprainguinal)')}
+                ${check('rcriCardiopatia', 'Cardiopatía isquémica conocida')}
+                ${check('rcriIcc', 'Insuficiencia cardíaca congestiva')}
+                ${check('rcriCerebrovascular', 'Enfermedad cerebrovascular (ACV/AIT previo)')}
+                ${check('rcriDiabetesInsulina', 'Diabetes Mellitus insulinodependiente')}
+                ${check('rcriCreatinina', 'Creatinina preoperatoria &gt; 2.0 mg/dL (&gt; 177 µmol/L)')}
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Evaluación de riesgo cardíaco perioperatorio en cirugía no cardíaca (Lee et al. 1999).</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular RCRI</button>
+        </form>
+        <div id="rcriResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateRCRIForm(event) {
+    event.preventDefault();
+    const inputs = {
+        cirugiaAltoRiesgo: document.getElementById('rcriCirugia').checked,
+        cardiopatiaIsquemica: document.getElementById('rcriCardiopatia').checked,
+        icc: document.getElementById('rcriIcc').checked,
+        enfermedadCerebrovascular: document.getElementById('rcriCerebrovascular').checked,
+        diabetesInsulina: document.getElementById('rcriDiabetesInsulina').checked,
+        creatininaMayor2: document.getElementById('rcriCreatinina').checked
+    };
+    const result = Calculators.calculateRCRI(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('rcriResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">RCRI (LEE)</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">/6</span></div>
+            <div style="font-size:14px; font-weight:600;">Clase ${result.clase}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('rcriForm').reset(); document.getElementById('rcriResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 64, calculatorName: 'Índice de Riesgo Cardíaco Revisado', inputs, result, interpretation: result.interpretation });
+}
+
+// === 65. HUNT & HESS / WFNS (HEMORRAGIA SUBARACNOIDEA) === //
+function createHuntHessWFNSForm() {
+    const hhOpts = Calculators.HUNT_HESS_LEVELS.map(l => `<option value="${l.level}">${l.label} — ${l.description}</option>`).join('');
+    const wfnsOpts = Calculators.WFNS_LEVELS.map(l => `<option value="${l.level}">${l.label} — ${l.description}</option>`).join('');
+    return `
+        <form id="huntHessForm" onsubmit="calculateHuntHessWFNSForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Hunt & Hess</div>
+                <select id="huntHessLevel" class="form-input" style="margin-bottom:16px;">${hhOpts}</select>
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">WFNS</div>
+                <select id="wfnsLevel" class="form-input">${wfnsOpts}</select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Evaluar</button>
+        </form>
+        <div id="huntHessResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateHuntHessWFNSForm(event) {
+    event.preventDefault();
+    const inputs = {
+        huntHess: parseInt(document.getElementById('huntHessLevel').value),
+        wfns: parseInt(document.getElementById('wfnsLevel').value)
+    };
+    const result = Calculators.calculateHuntHessWFNS(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('huntHessResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">HEMORRAGIA SUBARACNOIDEA</div>
+            <div style="font-size:16px; font-weight:700; margin-bottom:8px;">Hunt & Hess: ${result.hhLabel}</div>
+            <div style="font-size:16px; font-weight:700;">WFNS: ${result.wfnsLabel}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('huntHessForm').reset(); document.getElementById('huntHessResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nueva Evaluación</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 65, calculatorName: 'Hunt & Hess / WFNS', inputs, result, interpretation: result.interpretation });
+}
+
+// === 66. ICH SCORE (HEMORRAGIA INTRACEREBRAL) === //
+function createICHScoreForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="ichForm" onsubmit="calculateICHScoreForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Escala de Glasgow (GCS) — ver Calculadora 18</label>
+                    <input type="number" id="ichGcs" step="1" min="3" max="15" class="form-input" required>
+                </div>
+                ${check('ichVolumen', 'Volumen del hematoma ≥ 30 cm³')}
+                ${check('ichHiv', 'Hemorragia intraventricular presente')}
+                ${check('ichInfratentorial', 'Origen infratentorial')}
+                ${check('ichEdad80', 'Edad ≥ 80 años')}
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular ICH Score</button>
+        </form>
+        <div id="ichResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateICHScoreForm(event) {
+    event.preventDefault();
+    const inputs = {
+        gcs: parseInt(document.getElementById('ichGcs').value),
+        volumenMayor30: document.getElementById('ichVolumen').checked,
+        hiv: document.getElementById('ichHiv').checked,
+        infratentorial: document.getElementById('ichInfratentorial').checked,
+        edadMayor80: document.getElementById('ichEdad80').checked
+    };
+    const result = Calculators.calculateICHScore(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('ichResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">ICH SCORE</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">/6</span></div>
+            <div style="font-size:14px; font-weight:600;">Mortalidad a 30 días: ${result.mortalidad}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('ichForm').reset(); document.getElementById('ichResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 66, calculatorName: 'ICH Score', inputs, result, interpretation: result.interpretation });
+}
+
+// === 67. TRAUMA CRANEOCERVICAL — CANADIAN CT HEAD RULE + CANADIAN C-SPINE RULE === //
+function createTraumaCraneocervicalForm() {
+    const check = (id, text, cls) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" class="${cls}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="traumaForm" onsubmit="calculateTraumaCraneocervicalProtocol(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Canadian CT Head Rule (TCE leve, GCS 13-15)</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Criterios de alto riesgo</p>
+                ${check('cthGcs15', 'GCS &lt; 15 a las 2h post-lesión', '')}
+                ${check('cthFracturaAbierta', 'Sospecha de fractura craneal abierta o deprimida', '')}
+                ${check('cthSignoBase', 'Signo de fractura de base de cráneo (hemotímpano, ojos de mapache, otorrea/rinorrea de LCR, signo de Battle)', '')}
+                ${check('cthVomitos2', '≥2 episodios de vómito', '')}
+                ${check('cthEdad65', 'Edad ≥ 65 años', '')}
+                <p style="font-size:11px; color:var(--text-tertiary); margin:10px 0;">Criterios de riesgo medio</p>
+                ${check('cthAmnesia30', 'Amnesia antes del impacto ≥ 30 minutos', '')}
+                ${check('cthMecanismo', 'Mecanismo peligroso (atropello, eyectado del vehículo, caída &gt;3 pies/5 escalones)', '')}
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Canadian C-Spine Rule (columna cervical)</div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Paso 1 — Criterios de alto riesgo</p>
+                ${check('csEdad65', 'Edad ≥ 65 años', '')}
+                ${check('csMecanismo', 'Mecanismo peligroso', '')}
+                ${check('csParestesias', 'Parestesias en extremidades', '')}
+                <p style="font-size:11px; color:var(--text-tertiary); margin:10px 0;">Paso 2 — Criterios de bajo riesgo (deben cumplirse TODOS para evaluar rotación)</p>
+                ${check('csChoqueTrasero', 'Choque de vehículo simple por detrás', '')}
+                ${check('csSentado', 'Sentado en el servicio de urgencias', '')}
+                ${check('csDeambulando', 'Ha deambulado en algún momento', '')}
+                ${check('csDolorDiferido', 'Dolor cervical de inicio diferido (no inmediato)', '')}
+                ${check('csSinDolorLinea', 'Sin dolor a la palpación de la línea media cervical', '')}
+                <p style="font-size:11px; color:var(--text-tertiary); margin:10px 0 6px;">Paso 3 — Solo si se cumplen TODOS los criterios de bajo riesgo</p>
+                <select id="csPuedeRotar" class="form-input">
+                    <option value="na">No evaluado / no aplica (no cumple bajo riesgo)</option>
+                    <option value="si">Puede rotar el cuello 45° a cada lado activamente</option>
+                    <option value="no">NO puede rotar el cuello 45° a cada lado</option>
+                </select>
+            </div>
+
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#92400e; margin:0;"><strong>⚠️ Herramienta de apoyo clínico</strong> — Verificar siempre con el equipo médico. Solo aplica a pacientes alertas y hemodinámicamente estables.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Evaluar Necesidad de Imagen</button>
+        </form>
+        <div id="traumaResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildTraumaCraneocervicalHTML(r) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const anyPositive = r.ctHead.necesitaTC || r.cSpine.necesitaImagen === true;
+    const headerHTML = `
+        <div style="background:${anyPositive ? '#f59e0b' : '#22c55e'}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:18px; font-weight:800;">🩹 Reglas de Decisión de Trauma Craneocervical</div>
+        </div>`;
+
+    const cthColor = r.ctHead.necesitaTC ? (r.ctHead.motivo === 'alto' ? '#ef4444' : '#f59e0b') : '#22c55e';
+    const cthHtml = section('🧠', 'Canadian CT Head Rule', cthColor, r.ctHead.necesitaTC
+        ? `<div><strong>TC craneal recomendada</strong> — criterio de riesgo ${r.ctHead.motivo === 'alto' ? 'ALTO (posible necesidad de intervención neuroquirúrgica)' : 'MEDIO (detección de lesión cerebral)'} presente.</div>`
+        : `<div><strong>TC craneal no necesaria</strong> por esta regla — ningún criterio de alto ni medio riesgo presente.</div>`);
+
+    let csHtml;
+    if (r.cSpine.necesitaImagen === true) {
+        const motivoTexto = { alto_riesgo: 'presenta un criterio de alto riesgo', sin_bajo_riesgo: 'no cumple todos los criterios de bajo riesgo necesarios para evaluar rotación', no_rota: 'no puede rotar el cuello 45° a cada lado' }[r.cSpine.paso];
+        csHtml = section('🦴', 'Canadian C-Spine Rule', '#ef4444', `<div><strong>Imagen de columna cervical recomendada</strong> — ${motivoTexto}.</div>`);
+    } else if (r.cSpine.necesitaImagen === false) {
+        csHtml = section('🦴', 'Canadian C-Spine Rule', '#22c55e', `<div><strong>Imagen no necesaria</strong> — cumple todos los criterios de bajo riesgo y rotación activa 45° posible sin dolor.</div>`);
+    } else {
+        csHtml = section('🦴', 'Canadian C-Spine Rule', '#f59e0b', `<div>Cumple los criterios de bajo riesgo — <strong>evaluar la rotación activa del cuello 45° a cada lado</strong> para completar la decisión (Paso 3).</div>`);
+    }
+
+    return `${headerHTML}${cthHtml}${csHtml}`;
+}
+
+function calculateTraumaCraneocervicalProtocol(event) {
+    event.preventDefault();
+    const puedeRotarRaw = document.getElementById('csPuedeRotar').value;
+    const puedeRotar = puedeRotarRaw === 'na' ? null : (puedeRotarRaw === 'si');
+
+    const inputs = {
+        ctHead: {
+            gcsMenor15: document.getElementById('cthGcs15').checked,
+            fracturaAbierta: document.getElementById('cthFracturaAbierta').checked,
+            signoFracturaBase: document.getElementById('cthSignoBase').checked,
+            vomitos2: document.getElementById('cthVomitos2').checked,
+            edad65: document.getElementById('cthEdad65').checked,
+            amnesia30: document.getElementById('cthAmnesia30').checked,
+            mecanismoPeligroso: document.getElementById('cthMecanismo').checked
+        },
+        cSpine: {
+            edad65: document.getElementById('csEdad65').checked,
+            mecanismoPeligroso: document.getElementById('csMecanismo').checked,
+            parestesias: document.getElementById('csParestesias').checked,
+            choqueTrasero: document.getElementById('csChoqueTrasero').checked,
+            sentadoEnServicio: document.getElementById('csSentado').checked,
+            deambulando: document.getElementById('csDeambulando').checked,
+            dolorDiferido: document.getElementById('csDolorDiferido').checked,
+            sinDolorLineaMedia: document.getElementById('csSinDolorLinea').checked,
+            puedeRotar
+        }
+    };
+
+    const r = Calculators.calculateTraumaCraneocervical(inputs);
+    const container = document.getElementById('traumaResult');
+    container.innerHTML = buildTraumaCraneocervicalHTML(r) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('traumaForm').reset(); document.getElementById('traumaResult').style.display='none';" style="width:100%; margin-top:12px;">🔄 Nueva Evaluación</button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 67, calculatorName: 'Trauma Craneocervical', inputs, result: r, interpretation: r.interpretation });
+}
+
+// === 68. ASPECTS SCORE === //
+function createAspectsForm() {
+    const check = (id, text) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text}</span>
+        </label>`;
+    return `
+        <form id="aspectsForm" onsubmit="calculateAspectsForm(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <p style="font-size:11px; color:var(--text-tertiary); margin-bottom:10px;">Marcar las regiones con cambios isquémicos tempranos en la TC simple (territorio de la ACM):</p>
+                ${check('aspCaudado', 'Núcleo caudado')}
+                ${check('aspLentiforme', 'Núcleo lentiforme')}
+                ${check('aspCapsula', 'Cápsula interna')}
+                ${check('aspInsular', 'Cintilla insular')}
+                ${check('aspM1', 'M1 (corteza frontal anterior)')}
+                ${check('aspM2', 'M2 (corteza temporal anterior)')}
+                ${check('aspM3', 'M3 (corteza temporal posterior)')}
+                ${check('aspM4', 'M4 (corteza frontal superior a M1)')}
+                ${check('aspM5', 'M5 (corteza parietal superior a M2)')}
+                ${check('aspM6', 'M6 (corteza temporo-parietal superior a M3)')}
+            </div>
+            <div style="background:#dbeafe; border-left:4px solid #3b82f6; padding:14px; border-radius:8px; margin-bottom:16px;">
+                <p style="font-size:12px; color:#1e3a8a; margin:0;">Complementa <strong>Código Ictus (Calculadora 48)</strong>, que ya menciona "ASPECTS ≥6" en su checklist de trombectomía.</p>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular ASPECTS</button>
+        </form>
+        <div id="aspectsResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateAspectsForm(event) {
+    event.preventDefault();
+    const inputs = {
+        caudado: document.getElementById('aspCaudado').checked,
+        lentiforme: document.getElementById('aspLentiforme').checked,
+        capsulaInterna: document.getElementById('aspCapsula').checked,
+        cintillaInsular: document.getElementById('aspInsular').checked,
+        m1: document.getElementById('aspM1').checked,
+        m2: document.getElementById('aspM2').checked,
+        m3: document.getElementById('aspM3').checked,
+        m4: document.getElementById('aspM4').checked,
+        m5: document.getElementById('aspM5').checked,
+        m6: document.getElementById('aspM6').checked
+    };
+    const result = Calculators.calculateAspects(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('aspectsResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">ASPECTS</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">/10</span></div>
+            <div style="font-size:14px; font-weight:600;">${result.interpretation.label}</div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('aspectsForm').reset(); document.getElementById('aspectsResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 68, calculatorName: 'ASPECTS Score', inputs, result, interpretation: result.interpretation });
+}
+
+// === 69. LESIÓN RENAL AGUDA — FeNa + ESTADIAJE KDIGO === //
+function createAKIForm() {
+    const units = Storage.getSettings().units;
+    const crUnit = units.creatinine || 'µmol/L';
+    return `
+        <form id="akiForm" onsubmit="calculateAKIProtocol(event)">
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">FeNa (opcional)</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Na Urinario (mEq/L)</label>
+                        <input type="number" id="akiNaOrina" step="any" min="0" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Na Plasmático (mEq/L)</label>
+                        <input type="number" id="akiNaPlasma" step="any" min="0" class="form-input">
+                    </div>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Creatinina Urinaria (mg/dL)</label>
+                        <input type="number" id="akiCrOrina" step="any" min="0" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Creatinina Plasmática (mg/dL)</label>
+                        <input type="number" id="akiCrPlasma" step="any" min="0" class="form-input">
+                    </div>
+                </div>
+                <p style="font-size:11px; color:var(--text-tertiary); margin-top:8px;">Deja en blanco si no dispones de electrolitos/creatinina en orina — el estadiaje KDIGO funciona de forma independiente.</p>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Estadiaje KDIGO — por Creatinina</div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Razón Cr actual / Cr basal (ej. 1.8) — ${crUnit}</label>
+                    <input type="number" id="akiCrRatio" step="any" min="0" class="form-input">
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Incremento absoluto de Cr en 48h (mg/dL)</label>
+                    <input type="number" id="akiCrAumento" step="any" min="0" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Creatinina absoluta actual (mg/dL) — para Estadio 3 por valor ≥4.0</label>
+                    <input type="number" id="akiCrAbsoluta" step="any" min="0" class="form-input">
+                </div>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Estadiaje KDIGO — por Diuresis</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Diuresis (mL/kg/h)</label>
+                        <input type="number" id="akiDiuresis" step="any" min="0" class="form-input">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Duración (horas)</label>
+                        <input type="number" id="akiDiuresisHoras" step="any" min="0" class="form-input">
+                    </div>
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="akiAnuria" style="width:18px; height:18px;"><span style="font-size:13px;">Anuria ≥ 12h</span></label>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="akiTrr" style="width:18px; height:18px;"><span style="font-size:13px;">Inicio de terapia de reemplazo renal (TRR)</span></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Evaluar Lesión Renal Aguda</button>
+        </form>
+        <div id="akiResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function buildAKIHTML(fena, staging) {
+    const section = (icon, title, color, content) => `
+        <div style="margin-bottom:12px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid ${color}33;">
+            <div style="background:${color}22; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid ${color}33;">
+                <span style="font-size:18px;">${icon}</span>
+                <span style="font-size:14px; font-weight:700; color:${color};">${title}</span>
+            </div>
+            <div style="padding:14px 16px; background:var(--bg-card); font-size:13px; line-height:1.8;">${content}</div>
+        </div>`;
+
+    const colorMap = { success: '#22c55e', warning: '#f59e0b', danger: '#ef4444' };
+    const headerHTML = `
+        <div style="background:${colorMap[staging.interpretation.color]}; padding:20px; border-radius:var(--radius-lg); color:white; margin-bottom:12px;">
+            <div style="font-size:20px; font-weight:800;">💧 ${staging.interpretation.label}</div>
+        </div>`;
+
+    const stagingHtml = section('📊', 'Estadiaje KDIGO', colorMap[staging.interpretation.color], `<div>${staging.interpretation.description}</div>`);
+    const fenaHtml = fena ? section('🧪', 'FeNa', colorMap[fena.interpretation.color], `
+        <div><strong>FeNa:</strong> ${fena.value}%</div>
+        <div style="margin-top:6px;">${fena.interpretation.description}</div>`) : '';
+
+    return `${headerHTML}${stagingHtml}${fenaHtml}`;
+}
+
+function calculateAKIProtocol(event) {
+    event.preventDefault();
+    const optNum = id => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+
+    const naOrina = optNum('akiNaOrina'), naPlasma = optNum('akiNaPlasma'), crOrina = optNum('akiCrOrina'), crPlasma = optNum('akiCrPlasma');
+    let fena = null;
+    let fenaInputs = null;
+    if (naOrina !== null && naPlasma !== null && crOrina !== null && crPlasma !== null) {
+        fenaInputs = { naOrina, naPlasma, crOrina, crPlasma };
+        fena = Calculators.calculateFeNa(fenaInputs);
+    }
+
+    const stagingInputs = {
+        crRatio: optNum('akiCrRatio'),
+        crAumentoAbs48h: optNum('akiCrAumento'),
+        crAbsoluta: optNum('akiCrAbsoluta'),
+        diuresisMlKgH: optNum('akiDiuresis'),
+        diuresisHoras: optNum('akiDiuresisHoras') || 0,
+        trr: document.getElementById('akiTrr').checked,
+        anuria12h: document.getElementById('akiAnuria').checked
+    };
+    const staging = Calculators.calculateAKIStaging(stagingInputs);
+
+    const container = document.getElementById('akiResult');
+    container.innerHTML = buildAKIHTML(fena, staging) + `
+        <button class="btn btn-secondary" onclick="document.getElementById('akiForm').reset(); document.getElementById('akiResult').style.display='none';" style="width:100%; margin-top:12px;">🔄 Nueva Evaluación</button>`;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 69, calculatorName: 'Lesión Renal Aguda (FeNa/KDIGO)', inputs: { fenaInputs, stagingInputs }, result: staging, interpretation: staging.interpretation });
+}
+
+// === 70. ÍNDICE DE COMORBILIDAD DE CHARLSON === //
+function createCharlsonForm() {
+    const check = (id, text, pts) => `
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="${id}" style="width:18px; height:18px; margin-top:2px;">
+            <span style="font-size:13px;">${text} <span style="color:var(--text-tertiary);">(${pts} pt${pts > 1 ? 's' : ''})</span></span>
+        </label>`;
+    return `
+        <form id="charlsonForm" onsubmit="calculateCharlsonForm(event)">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Edad</label>
+                <input type="number" id="charlsonEdad" step="1" min="0" max="120" class="form-input" required>
+            </div>
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:8px;">1 PUNTO C/U</div>
+                ${check('chIam', 'Infarto de miocardio previo', 1)}
+                ${check('chIcc', 'Insuficiencia cardíaca congestiva', 1)}
+                ${check('chEpa', 'Enfermedad arterial periférica', 1)}
+                ${check('chCerebrovascular', 'Enfermedad cerebrovascular (ACV/AIT)', 1)}
+                ${check('chDemencia', 'Demencia', 1)}
+                ${check('chEpoc', 'Enfermedad pulmonar crónica (EPOC)', 1)}
+                ${check('chTejidoConectivo', 'Enfermedad del tejido conectivo', 1)}
+                ${check('chUlceraPeptica', 'Úlcera péptica', 1)}
+                ${check('chHepatopatiaLeve', 'Hepatopatía leve', 1)}
+                ${check('chDiabetesSinComp', 'Diabetes sin complicaciones de órgano diana', 1)}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 8px;">2 PUNTOS C/U</div>
+                ${check('chHemiplejia', 'Hemiplejia/paraplejia', 2)}
+                ${check('chErc', 'Enfermedad renal crónica moderada-severa', 2)}
+                ${check('chDiabetesConComp', 'Diabetes con complicaciones de órgano diana', 2)}
+                ${check('chTumor', 'Tumor sólido (no metastásico)', 2)}
+                ${check('chLeucemia', 'Leucemia', 2)}
+                ${check('chLinfoma', 'Linfoma', 2)}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 8px;">3 PUNTOS</div>
+                ${check('chHepatopatiaSevera', 'Hepatopatía moderada-severa', 3)}
+                <div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin:14px 0 8px;">6 PUNTOS C/U</div>
+                ${check('chTumorMetastasico', 'Tumor sólido metastásico', 6)}
+                ${check('chSida', 'SIDA', 6)}
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px;">🧮 Calcular Charlson</button>
+        </form>
+        <div id="charlsonResult" style="display:none; margin-top:24px;"></div>
+    `;
+}
+
+function calculateCharlsonForm(event) {
+    event.preventDefault();
+    const inputs = {
+        edad: parseFloat(document.getElementById('charlsonEdad').value),
+        iam: document.getElementById('chIam').checked,
+        icc: document.getElementById('chIcc').checked,
+        epa: document.getElementById('chEpa').checked,
+        cerebrovascular: document.getElementById('chCerebrovascular').checked,
+        demencia: document.getElementById('chDemencia').checked,
+        epoc: document.getElementById('chEpoc').checked,
+        tejidoConectivo: document.getElementById('chTejidoConectivo').checked,
+        ulceraPeptica: document.getElementById('chUlceraPeptica').checked,
+        hepatopatiaLeve: document.getElementById('chHepatopatiaLeve').checked,
+        diabetesSinComplicaciones: document.getElementById('chDiabetesSinComp').checked,
+        hemiplejia: document.getElementById('chHemiplejia').checked,
+        erc: document.getElementById('chErc').checked,
+        diabetesConComplicaciones: document.getElementById('chDiabetesConComp').checked,
+        tumor: document.getElementById('chTumor').checked,
+        leucemia: document.getElementById('chLeucemia').checked,
+        linfoma: document.getElementById('chLinfoma').checked,
+        hepatopatiaModeradaSevera: document.getElementById('chHepatopatiaSevera').checked,
+        tumorMetastasico: document.getElementById('chTumorMetastasico').checked,
+        sida: document.getElementById('chSida').checked
+    };
+    const result = Calculators.calculateCharlson(inputs);
+    const colorMap = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+    const container = document.getElementById('charlsonResult');
+    container.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--brand-accent-dark),var(--brand-accent)); padding:24px; border-radius:var(--radius-lg); color:var(--brand-primary-dark); margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px; opacity:0.8;">ÍNDICE DE CHARLSON</div>
+            <div style="font-size:36px; font-weight:800; margin-bottom:4px;">${result.value} <span style="font-size:20px; font-weight:500;">pts</span></div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:12px;">Supervivencia estimada a 10 años: ${result.supervivencia}</div>
+            <div style="background:rgba(30,56,114,0.15); padding:12px; border-radius:8px; font-size:13px; display:flex; justify-content:space-around;">
+                <span><strong>Comorbilidad</strong> ${result.comorbilidad}</span>
+                <span><strong>Ajuste por edad</strong> +${result.ajusteEdad}</span>
+            </div>
+        </div>
+        <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-lg); border-left:4px solid ${colorMap[result.interpretation.color]}; margin-bottom:16px;">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${result.interpretation.description}</p>
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('charlsonForm').reset(); document.getElementById('charlsonResult').style.display='none';" style="width:100%; margin-top:0;">🔄 Nuevo Cálculo</button>
+    `;
+    container.style.display = 'block';
+    Storage.addToHistory({ calculatorId: 70, calculatorName: 'Índice de Comorbilidad de Charlson', inputs, result, interpretation: result.interpretation });
+}
+
 // === FUNCIÓN GENÉRICA PARA MOSTRAR RESULTADOS === //
 function displayGenericResult(result, inputs, calcId, calcName, formula, containerId) {
     const container = document.getElementById(containerId);

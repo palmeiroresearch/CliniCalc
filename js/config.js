@@ -1,9 +1,9 @@
 // ============================================
 // CLINICALC - CONFIGURACIÓN
-// Metadata de las 61 Calculadoras Médicas
+// Metadata de las 70 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '1.9.4';
+const APP_VERSION = '2.0.0';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //
@@ -647,6 +647,98 @@ const CALCULATORS_CONFIG = [
         categoryLabel: 'Laboratorio',
         description: 'Tabla navegable de intervalos de referencia — hematología, química sanguínea, iones/gases, hormonas y marcadores, inmunología, nefrología y orina.',
         formulas: ['Búsqueda por test', 'Filtro por categoría']
+    },
+
+    // === CATEGORÍA: CARDIO / NEURO / TRAUMA / RENAL / OTROS (HUECOS DE ADULTOS, IDs 62-70) === //
+    {
+        id: 62,
+        name: 'ASCVD',
+        fullName: 'Riesgo Cardiovascular ASCVD 2013 (Pooled Cohort Equations)',
+        icon: '❤️‍🩹',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Riesgo de evento cardiovascular a 10 años (AHA/ACC 2013) — edad, sexo, raza, colesterol, PA, diabetes, tabaquismo.',
+        formulas: ['Pooled Cohort Equations (Goff 2013)']
+    },
+    {
+        id: 63,
+        name: 'Wells DVT',
+        fullName: 'Wells Score — Trombosis Venosa Profunda',
+        icon: '🦵',
+        category: 'otros',
+        categoryLabel: 'Otros',
+        description: 'Probabilidad clínica de trombosis venosa profunda — distinta de Wells TEP (Calculadora 14).',
+        formulas: ['Wells DVT']
+    },
+    {
+        id: 64,
+        name: 'RCRI',
+        fullName: 'Índice de Riesgo Cardíaco Revisado (RCRI/Lee)',
+        icon: '🫀',
+        category: 'cardio',
+        categoryLabel: 'Cardiología',
+        description: 'Riesgo cardíaco perioperatorio en cirugía no cardíaca — 6 factores (Lee et al. 1999).',
+        formulas: ['RCRI']
+    },
+    {
+        id: 65,
+        name: 'Hunt & Hess / WFNS',
+        fullName: 'Hunt & Hess / WFNS — Hemorragia Subaracnoidea',
+        icon: '🧠',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Gravedad y pronóstico de hemorragia subaracnoidea — dos escalas complementarias.',
+        formulas: ['Hunt & Hess 1968', 'WFNS 1988']
+    },
+    {
+        id: 66,
+        name: 'ICH Score',
+        fullName: 'ICH Score — Hemorragia Intracerebral',
+        icon: '🩸',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Mortalidad a 30 días en hemorragia intracerebral (Hemphill et al. 2001).',
+        formulas: ['ICH Score']
+    },
+    {
+        id: 67,
+        name: 'Trauma Craneocervical',
+        fullName: 'Trauma Craneocervical — Canadian CT Head Rule + C-Spine Rule',
+        icon: '🩹',
+        category: 'trauma',
+        categoryLabel: 'Trauma',
+        description: 'Necesidad de TC craneal y de imagen de columna cervical tras trauma leve — dos reglas de decisión canadienses.',
+        formulas: ['Canadian CT Head Rule', 'Canadian C-Spine Rule']
+    },
+    {
+        id: 68,
+        name: 'ASPECTS',
+        fullName: 'ASPECTS Score — Cambios Isquémicos Tempranos',
+        icon: '🧠',
+        category: 'neuro',
+        categoryLabel: 'Neurología',
+        description: 'Escala radiológica de cambios isquémicos tempranos en TC simple en ictus isquémico — complementa Código Ictus (Calculadora 48).',
+        formulas: ['ASPECTS (Alberta Stroke Program)']
+    },
+    {
+        id: 69,
+        name: 'Lesión Renal Aguda',
+        fullName: 'Lesión Renal Aguda — FeNa + Estadiaje KDIGO',
+        icon: '💧',
+        category: 'renal',
+        categoryLabel: 'Renal',
+        description: 'Excreción fraccional de sodio (prerenal vs. NTA) y estadiaje KDIGO de AKI por creatinina/diuresis.',
+        formulas: ['FeNa', 'KDIGO AKI Staging']
+    },
+    {
+        id: 70,
+        name: 'Charlson',
+        fullName: 'Índice de Comorbilidad de Charlson',
+        icon: '📋',
+        category: 'otros',
+        categoryLabel: 'Otros',
+        description: 'Pronóstico ajustado por comorbilidad y edad — supervivencia estimada a 10 años.',
+        formulas: ['Charlson 1987 (age-adjusted)']
     }
 ];
 

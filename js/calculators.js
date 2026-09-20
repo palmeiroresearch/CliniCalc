@@ -3091,5 +3091,272 @@ const Calculators = {
                     : `Nivel ${nivel} µg/mL a las ${horas}h está por debajo del umbral (${Math.round(umbral * 10) / 10} µg/mL) — hepatotoxicidad poco probable, no requiere NAC por este criterio.`
             }
         };
+    },
+
+    // === 62. RIESGO CARDIOVASCULAR — ASCVD 2013 (Pooled Cohort Equations, Goff et al. 2013) === //
+    // Coeficientes verificados contra el caso de referencia clásico (hombre blanco 55a, CT 213, HDL 50,
+    // PAS 120 no tratada, no fumador, no diabético → 5.36%, coincide con el ~5.3% citado en la literatura).
+    calculateASCVD(inputs) {
+        const { sex, raza, age, totalChol, hdl, sbp, tratada, diabetes, fumador } = inputs;
+        const isMale = sex === 'M';
+        const isBlack = raza === 'afroamericano';
+
+        const lnAge = Math.log(age);
+        const lnTotalChol = Math.log(totalChol);
+        const lnHdl = Math.log(hdl);
+        const trlnsbp = tratada ? Math.log(sbp) : 0;
+        const ntlnsbp = tratada ? 0 : Math.log(sbp);
+        const ageTotalChol = lnAge * lnTotalChol;
+        const ageHdl = lnAge * lnHdl;
+        const agetSbp = lnAge * trlnsbp;
+        const agentSbp = lnAge * ntlnsbp;
+        const ageSmoke = fumador ? lnAge : 0;
+
+        let s0, mean, predict;
+        if (isBlack && !isMale) {
+            s0 = 0.95334; mean = 86.6081;
+            predict = 17.1141 * lnAge + 0.9396 * lnTotalChol - 18.9196 * lnHdl + 4.4748 * ageHdl
+                + 29.2907 * trlnsbp - 6.4321 * agetSbp + 27.8197 * ntlnsbp - 6.0873 * agentSbp
+                + (fumador ? 0.6908 : 0) + (diabetes ? 0.8738 : 0);
+        } else if (!isBlack && !isMale) {
+            s0 = 0.96652; mean = -29.1817;
+            predict = -29.799 * lnAge + 4.884 * Math.pow(lnAge, 2) + 13.54 * lnTotalChol - 3.114 * ageTotalChol
+                - 13.578 * lnHdl + 3.149 * ageHdl + 2.019 * trlnsbp + 1.957 * ntlnsbp
+                + (fumador ? 7.574 : 0) - 1.665 * ageSmoke + (diabetes ? 0.661 : 0);
+        } else if (isBlack && isMale) {
+            s0 = 0.89536; mean = 19.5425;
+            predict = 2.469 * lnAge + 0.302 * lnTotalChol - 0.307 * lnHdl + 1.916 * trlnsbp + 1.809 * ntlnsbp
+                + (fumador ? 0.549 : 0) + (diabetes ? 0.645 : 0);
+        } else {
+            s0 = 0.91436; mean = 61.1816;
+            predict = 12.344 * lnAge + 11.853 * lnTotalChol - 2.664 * ageTotalChol - 7.99 * lnHdl + 1.769 * ageHdl
+                + 1.797 * trlnsbp + 1.764 * ntlnsbp + (fumador ? 7.837 : 0) - 1.795 * ageSmoke + (diabetes ? 0.658 : 0);
+        }
+
+        const riskPct = (1 - Math.pow(s0, Math.exp(predict - mean))) * 100;
+        const risk = Math.round(riskPct * 10) / 10;
+
+        let label, color, description;
+        if (risk < 5) { label = 'Riesgo bajo'; color = 'success'; description = 'Riesgo <5% a 10 años — énfasis en cambios de estilo de vida.'; }
+        else if (risk < 7.5) { label = 'Riesgo límite'; color = 'warning'; description = 'Riesgo 5-7.4% a 10 años — considerar factores agravantes (historia familiar, PCR-us, calcio coronario) y decisión compartida sobre estatina.'; }
+        else if (risk < 20) { label = 'Riesgo intermedio'; color = 'warning'; description = 'Riesgo 7.5-19.9% a 10 años — estatina de intensidad moderada generalmente razonable.'; }
+        else { label = 'Riesgo alto'; color = 'danger'; description = 'Riesgo ≥20% a 10 años — estatina de alta intensidad recomendada.'; }
+
+        return {
+            value: risk, unit: '%', raceAproximada: raza === 'otro',
+            interpretation: { label, color, description }
+        };
+    },
+
+    // === 63. WELLS DVT (TROMBOSIS VENOSA PROFUNDA) === //
+    calculateWellsDVT(inputs) {
+        let score = 0;
+        ['cancer', 'paralisisInmovilizacion', 'encamado', 'dolorLocalizado', 'piernaEdematizada', 'edemaPantorrilla', 'edemaFovea', 'venasColaterales', 'tvpPrevia']
+            .forEach(k => { if (inputs[k]) score += 1; });
+        if (inputs.diagnosticoAlternativo) score -= 2;
+
+        let label, color, description;
+        if (score <= 0) { label = 'Baja probabilidad'; color = 'success'; description = 'Probabilidad de TVP ~5% — considerar dímero D para descartar sin necesidad de imagen.'; }
+        else if (score <= 2) { label = 'Probabilidad moderada'; color = 'warning'; description = 'Probabilidad de TVP ~17% — dímero D y/o ecografía Doppler.'; }
+        else { label = 'Alta probabilidad'; color = 'danger'; description = 'Probabilidad de TVP ~53% — ecografía Doppler directa recomendada.'; }
+
+        return { value: score, unit: 'pts', interpretation: { label, color, description } };
+    },
+
+    // === 64. ÍNDICE DE RIESGO CARDÍACO REVISADO (RCRI / LEE) === //
+    calculateRCRI(inputs) {
+        let score = 0;
+        ['cirugiaAltoRiesgo', 'cardiopatiaIsquemica', 'icc', 'enfermedadCerebrovascular', 'diabetesInsulina', 'creatininaMayor2']
+            .forEach(k => { if (inputs[k]) score += 1; });
+
+        let clase, riesgo;
+        if (score === 0) { clase = 'I'; riesgo = '~0.4%'; }
+        else if (score === 1) { clase = 'II'; riesgo = '~1.0%'; }
+        else if (score === 2) { clase = 'III'; riesgo = '~2.4%'; }
+        else { clase = 'IV'; riesgo = '~5.4%'; }
+
+        const color = score === 0 ? 'success' : (score <= 2 ? 'warning' : 'danger');
+        return {
+            value: score, unit: 'pts', clase, riesgo,
+            interpretation: { label: `Clase ${clase}`, color, description: `Riesgo estimado de evento cardíaco mayor perioperatorio: ${riesgo}.` }
+        };
+    },
+
+    // === 65. HUNT & HESS / WFNS (HEMORRAGIA SUBARACNOIDEA) === //
+    HUNT_HESS_LEVELS: [
+        { level: 1, label: 'Grado I', description: 'Asintomático o cefalea leve, rigidez de nuca leve' },
+        { level: 2, label: 'Grado II', description: 'Cefalea moderada-severa, rigidez de nuca, sin déficit neurológico salvo parálisis de par craneal' },
+        { level: 3, label: 'Grado III', description: 'Somnolencia, confusión, o déficit focal leve' },
+        { level: 4, label: 'Grado IV', description: 'Estupor, hemiparesia moderada-severa' },
+        { level: 5, label: 'Grado V', description: 'Coma, postura de descerebración' }
+    ],
+    WFNS_LEVELS: [
+        { level: 1, label: 'Grado I', description: 'GCS 15, sin déficit motor' },
+        { level: 2, label: 'Grado II', description: 'GCS 13-14, sin déficit motor' },
+        { level: 3, label: 'Grado III', description: 'GCS 13-14, con déficit motor' },
+        { level: 4, label: 'Grado IV', description: 'GCS 7-12, con o sin déficit motor' },
+        { level: 5, label: 'Grado V', description: 'GCS 3-6, con o sin déficit motor' }
+    ],
+    calculateHuntHessWFNS(inputs) {
+        const hh = this.HUNT_HESS_LEVELS.find(l => l.level === inputs.huntHess);
+        const wfns = this.WFNS_LEVELS.find(l => l.level === inputs.wfns);
+        const worst = Math.max(inputs.huntHess, inputs.wfns);
+        const color = worst <= 2 ? 'success' : (worst === 3 ? 'warning' : 'danger');
+        return {
+            huntHess: inputs.huntHess, hhLabel: hh.description,
+            wfns: inputs.wfns, wfnsLabel: wfns.description,
+            value: worst, unit: '',
+            interpretation: {
+                label: `Hunt & Hess ${hh.label} · WFNS ${wfns.label}`,
+                color,
+                description: 'Ambas escalas correlacionan con el pronóstico — a mayor grado, mayor mortalidad/peor recuperación funcional esperada.'
+            }
+        };
+    },
+
+    // === 66. ICH SCORE (HEMORRAGIA INTRACEREBRAL) === //
+    calculateICHScore(inputs) {
+        const { gcs, volumenMayor30, hiv, infratentorial, edadMayor80 } = inputs;
+        let score = 0;
+        if (gcs <= 4) score += 2;
+        else if (gcs <= 12) score += 1;
+        if (volumenMayor30) score += 1;
+        if (hiv) score += 1;
+        if (infratentorial) score += 1;
+        if (edadMayor80) score += 1;
+
+        const mortalidad = { 0: '0%', 1: '13%', 2: '26%', 3: '72%', 4: '97%', 5: '100%', 6: '100%' }[score];
+        const color = score <= 1 ? 'success' : (score <= 2 ? 'warning' : 'danger');
+        return {
+            value: score, unit: '/6', mortalidad,
+            interpretation: { label: `ICH Score ${score}`, color, description: `Mortalidad estimada a 30 días: ${mortalidad} (Hemphill et al. 2001).` }
+        };
+    },
+
+    // === 67. TRAUMA CRANEOCERVICAL — CANADIAN CT HEAD RULE + CANADIAN C-SPINE RULE === //
+    calculateTraumaCraneocervical(inputs) {
+        const cth = inputs.ctHead;
+        const altoCth = cth.gcsMenor15 || cth.fracturaAbierta || cth.signoFracturaBase || cth.vomitos2 || cth.edad65;
+        const medioCth = cth.amnesia30 || cth.mecanismoPeligroso;
+        let ctHeadResultado;
+        if (altoCth) ctHeadResultado = { necesitaTC: true, motivo: 'alto' };
+        else if (medioCth) ctHeadResultado = { necesitaTC: true, motivo: 'medio' };
+        else ctHeadResultado = { necesitaTC: false, motivo: null };
+
+        const cs = inputs.cSpine;
+        let cSpineResultado;
+        const altoCs = cs.edad65 || cs.mecanismoPeligroso || cs.parestesias;
+        if (altoCs) {
+            cSpineResultado = { necesitaImagen: true, paso: 'alto_riesgo' };
+        } else {
+            const bajoCumplido = cs.choqueTrasero && cs.sentadoEnServicio && cs.deambulando && cs.dolorDiferido && cs.sinDolorLineaMedia;
+            if (!bajoCumplido) {
+                cSpineResultado = { necesitaImagen: true, paso: 'sin_bajo_riesgo' };
+            } else if (cs.puedeRotar === false) {
+                cSpineResultado = { necesitaImagen: true, paso: 'no_rota' };
+            } else if (cs.puedeRotar === true) {
+                cSpineResultado = { necesitaImagen: false, paso: 'rota_ok' };
+            } else {
+                cSpineResultado = { necesitaImagen: null, paso: 'evaluar_rotacion' };
+            }
+        }
+
+        return {
+            ctHead: ctHeadResultado, cSpine: cSpineResultado, value: null, unit: '',
+            interpretation: {
+                label: 'Reglas de Decisión de Trauma Craneocervical',
+                color: 'info',
+                description: 'Ver desglose de TC craneal (Canadian CT Head Rule) y columna cervical (Canadian C-Spine Rule) por separado.'
+            }
+        };
+    },
+
+    // === 68. ASPECTS SCORE (CAMBIOS ISQUÉMICOS TEMPRANOS EN TC) === //
+    calculateAspects(inputs) {
+        const regiones = ['caudado', 'lentiforme', 'capsulaInterna', 'cintillaInsular', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'];
+        const afectadas = regiones.filter(r => inputs[r]).length;
+        const score = 10 - afectadas;
+
+        let label, color, description;
+        if (score === 10) { label = 'ASPECTS 10 — Normal'; color = 'success'; description = 'Sin cambios isquémicos tempranos evidentes en el territorio de la ACM.'; }
+        else if (score >= 6) { label = `ASPECTS ${score}`; color = 'warning'; description = 'Dentro del umbral habitual de elegibilidad para trombectomía mecánica — ver Código Ictus (Calculadora 48).'; }
+        else { label = `ASPECTS ${score}`; color = 'danger'; description = 'Cambios isquémicos extensos — mayor riesgo de transformación hemorrágica con trombolisis/trombectomía; valorar con el equipo de ictus.'; }
+
+        return { value: score, unit: '/10', interpretation: { label, color, description } };
+    },
+
+    // === 69. LESIÓN RENAL AGUDA — FeNa + ESTADIAJE KDIGO === //
+    calculateFeNa(inputs) {
+        const { naOrina, naPlasma, crOrina, crPlasma } = inputs;
+        const fena = (naOrina * crPlasma) / (naPlasma * crOrina) * 100;
+        const value = Math.round(fena * 100) / 100;
+
+        let label, color, description;
+        if (value < 1) { label = 'FeNa <1% — sugiere causa prerenal'; color = 'warning'; description = 'Sugiere causa prerenal (hipoperfusión) — la capacidad de reabsorción tubular de sodio está preservada.'; }
+        else if (value > 2) { label = 'FeNa >2% — sugiere necrosis tubular aguda'; color = 'danger'; description = 'Sugiere daño tubular intrínseco (necrosis tubular aguda) — la capacidad de reabsorción de sodio está alterada.'; }
+        else { label = 'FeNa 1-2% — zona indeterminada'; color = 'warning'; description = 'Zona indeterminada — puede verse en prerenal parcialmente tratada o NTA temprana; interpretar según el contexto clínico.'; }
+
+        return { value, unit: '%', interpretation: { label, color, description } };
+    },
+
+    calculateAKIStaging(inputs) {
+        const { crRatio, crAumentoAbs48h, crAbsoluta, diuresisMlKgH, diuresisHoras, trr, anuria12h } = inputs;
+
+        let estadioCr = 0;
+        if (typeof crAbsoluta === 'number' && crAbsoluta >= 4.0 && typeof crAumentoAbs48h === 'number' && crAumentoAbs48h >= 0.5) estadioCr = 3;
+        else if (typeof crRatio === 'number' && crRatio >= 3.0) estadioCr = 3;
+        else if (typeof crRatio === 'number' && crRatio >= 2.0) estadioCr = 2;
+        else if ((typeof crRatio === 'number' && crRatio >= 1.5) || (typeof crAumentoAbs48h === 'number' && crAumentoAbs48h >= 0.3)) estadioCr = 1;
+
+        let estadioDiuresis = 0;
+        if (anuria12h || (typeof diuresisMlKgH === 'number' && diuresisMlKgH < 0.3 && diuresisHoras >= 24)) estadioDiuresis = 3;
+        else if (typeof diuresisMlKgH === 'number' && diuresisMlKgH < 0.5 && diuresisHoras >= 12) estadioDiuresis = 2;
+        else if (typeof diuresisMlKgH === 'number' && diuresisMlKgH < 0.5 && diuresisHoras >= 6) estadioDiuresis = 1;
+
+        let estadio = Math.max(estadioCr, estadioDiuresis);
+        if (trr) estadio = 3;
+
+        const color = estadio === 0 ? 'success' : (estadio === 1 ? 'warning' : 'danger');
+        const label = estadio === 0 ? 'Sin criterios de AKI' : `Estadio KDIGO ${estadio}`;
+        return {
+            value: estadio, unit: '', estadioCr, estadioDiuresis,
+            interpretation: {
+                label, color,
+                description: estadio === 0
+                    ? 'No cumple criterios de lesión renal aguda por creatinina ni por diuresis.'
+                    : `Clasificado por el criterio más severo entre creatinina (Estadio ${estadioCr}) y diuresis (Estadio ${estadioDiuresis}).`
+            }
+        };
+    },
+
+    // === 70. ÍNDICE DE COMORBILIDAD DE CHARLSON === //
+    calculateCharlson(inputs) {
+        let score = 0;
+        ['iam', 'icc', 'epa', 'cerebrovascular', 'demencia', 'epoc', 'tejidoConectivo', 'ulceraPeptica', 'hepatopatiaLeve', 'diabetesSinComplicaciones']
+            .forEach(k => { if (inputs[k]) score += 1; });
+        ['hemiplejia', 'erc', 'diabetesConComplicaciones', 'tumor', 'leucemia', 'linfoma']
+            .forEach(k => { if (inputs[k]) score += 2; });
+        if (inputs.hepatopatiaModeradaSevera) score += 3;
+        ['tumorMetastasico', 'sida'].forEach(k => { if (inputs[k]) score += 6; });
+
+        let ageAdj = 0;
+        const edad = inputs.edad;
+        if (edad >= 90) ageAdj = 5;
+        else if (edad >= 80) ageAdj = 4;
+        else if (edad >= 70) ageAdj = 3;
+        else if (edad >= 60) ageAdj = 2;
+        else if (edad >= 50) ageAdj = 1;
+
+        const total = score + ageAdj;
+        let supervivencia, color;
+        if (total === 0) { supervivencia = '~98%'; color = 'success'; }
+        else if (total <= 2) { supervivencia = '~90%'; color = 'success'; }
+        else if (total <= 4) { supervivencia = '~53%'; color = 'warning'; }
+        else { supervivencia = '~21%'; color = 'danger'; }
+
+        return {
+            value: total, unit: 'pts', comorbilidad: score, ajusteEdad: ageAdj, supervivencia,
+            interpretation: { label: `Charlson ${total} pts`, color, description: `Supervivencia estimada a 10 años: ${supervivencia} (incluye ajuste por edad).` }
+        };
     }
 };

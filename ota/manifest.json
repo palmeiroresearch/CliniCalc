@@ -1,7 +1,7 @@
 ﻿{
-    "version":  "1.9.4",
-    "url":  "https://clinicalc.palmeiromed.com/ota/bundles/1.9.4.zip",
-    "sha256":  "5f4146eaf45b0ddeb5a58724d5fcd6dc37e4540683ebc11adca2751a96488c6f",
-    "sizeBytes":  561017,
-    "publishedAt":  "2026-09-20T13:32:03Z"
+    "version":  "2.0.0",
+    "url":  "https://clinicalc.palmeiromed.com/ota/bundles/2.0.0.zip",
+    "sha256":  "6c1723e64d76d9a67b007dc863e1f1e6e1045a05db28331de7a9856e554be73a",
+    "sizeBytes":  573240,
+    "publishedAt":  "2026-09-20T15:16:40Z"
 }

@@ -3,7 +3,7 @@
 // Funcionalidad Offline Completa
 // ============================================
 
-const CACHE_NAME = 'clinicalc-v1.9.2';
+const CACHE_NAME = 'clinicalc-v2.0.0';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

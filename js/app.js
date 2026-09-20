@@ -255,6 +255,15 @@ function loadCalculatorForm(calc) {
         case 59: container.innerHTML = createPancreatitisForm(); break;
         case 60: container.innerHTML = createParacetamolForm(); break;
         case 61: container.innerHTML = createLabReferenceForm(); _labShowInitial(); break;
+        case 62: container.innerHTML = createASCVDForm(); break;
+        case 63: container.innerHTML = createWellsDVTForm(); break;
+        case 64: container.innerHTML = createRCRIForm(); break;
+        case 65: container.innerHTML = createHuntHessWFNSForm(); break;
+        case 66: container.innerHTML = createICHScoreForm(); break;
+        case 67: container.innerHTML = createTraumaCraneocervicalForm(); break;
+        case 68: container.innerHTML = createAspectsForm(); break;
+        case 69: container.innerHTML = createAKIForm(); break;
+        case 70: container.innerHTML = createCharlsonForm(); break;
         default:
             container.innerHTML = `
                 <div class="coming-soon" style="text-align: center; padding: 40px 20px;">
