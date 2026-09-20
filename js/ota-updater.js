@@ -18,7 +18,11 @@
     const isNative = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
     const CapacitorUpdater = isNative && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater;
 
-    const MANIFEST_URL = './ota/manifest.json';
+    // URL ABSOLUTA a propósito: dentro del WebView nativo la página se sirve
+    // desde un origen local (https://localhost), no desde el dominio real —
+    // una ruta relativa nunca llegaría a internet. Debe apuntar siempre al
+    // sitio real, sin importar desde qué origen esté corriendo el WebView.
+    const MANIFEST_URL = 'https://clinicalc.palmeiromed.com/ota/manifest.json';
     const FETCH_TIMEOUT_MS = 8000;
 
     function isNewerVersion(remote, local) {
