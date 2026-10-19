@@ -3,7 +3,7 @@
 // Metadata de las 70 Calculadoras Médicas
 // ============================================
 
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.0.1';
 
 const CALCULATORS_CONFIG = [
     // === CATEGORÍA: RENAL === //

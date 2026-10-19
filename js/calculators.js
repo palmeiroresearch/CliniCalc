@@ -2156,7 +2156,7 @@ const Calculators = {
 
     // === 44. EDEMA AGUDO DE PULMÓN / ICA DESCOMPENSADA === //
     calculateEAP(inputs) {
-        const { sbp, spo2, hypoperfusion, congestion, causa } = inputs;
+        const { sbp, spo2, hypoperfusion, congestion, causa, weightKg, furosemidaCronica, respuestaDiuretico } = inputs;
 
         const hypoCount = Object.values(hypoperfusion).filter(Boolean).length;
         const congCount = Object.values(congestion).filter(Boolean).length;
@@ -2182,8 +2182,41 @@ const Calculators = {
             ? { label: 'Shock Cardiogénico', colorHex: '#7f1d1d', badge: '🚨' }
             : { label: `Perfil: ${profile.label}`, colorHex: profile.colorHex, badge: profile.badge };
 
+        // Dosis de inotrópicos/vasopresores calculadas por peso (rangos de referencia habituales)
+        let dosis = null;
+        if (typeof weightKg === 'number' && weightKg > 0) {
+            dosis = {
+                dobutaminaMin: Math.round(2 * weightKg),
+                dobutaminaMax: Math.round(20 * weightKg),
+                milrinonaMin: Math.round(0.375 * weightKg * 10) / 10,
+                milrinonaMax: Math.round(0.75 * weightKg * 10) / 10,
+                norepinefrinaMin: Math.round(0.05 * weightKg * 100) / 100,
+                norepinefrinaMax: Math.round(0.5 * weightKg * 100) / 100,
+                nitroprusiatoMin: Math.round(0.3 * weightKg * 10) / 10,
+                nitroprusiatoMax: Math.round(5 * weightKg * 10) / 10
+            };
+        }
+
+        // Furosemida: 1-2.5x la dosis oral crónica si ya la toma, o dosis fija de inicio si no
+        let furosemida;
+        if (typeof furosemidaCronica === 'number' && furosemidaCronica > 0) {
+            furosemida = {
+                dosisMin: Math.round(furosemidaCronica * 1),
+                dosisMax: Math.round(furosemidaCronica * 2.5),
+                nota: `Paciente ya en diurético de asa crónico (${furosemidaCronica} mg/día VO) — dosis IV = 1-2.5× la dosis oral diaria habitual.`
+            };
+        } else {
+            furosemida = {
+                dosisMin: 20, dosisMax: 40,
+                nota: 'Paciente sin diurético de asa crónico previo — dosis de inicio estándar.'
+            };
+        }
+
+        const resistenciaDiuretica = respuestaDiuretico === 'inadecuada';
+
         return {
             sbp, spo2, causa, profile, isFrio, isHumedo, needsNIV, shockCardiogenico, severity,
+            weightKg, dosis, furosemida, resistenciaDiuretica, respuestaDiuretico,
             value: sbp, unit: 'mmHg',
             interpretation: {
                 label: severity.label, color: 'danger',

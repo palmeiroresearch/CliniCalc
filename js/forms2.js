@@ -4970,12 +4970,13 @@ function calculateSepsisBundleProtocol(event) {
 
 // === 44. EDEMA AGUDO DE PULMÓN / ICA DESCOMPENSADA === //
 function createEAPForm() {
+    const wUnit = Storage.getSetting('units.weight') || 'kg';
     return `
         <form id="eapForm" onsubmit="calculateEAPProtocol(event)">
 
             <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
-                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Signos Vitales</div>
-                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Signos Vitales y Peso</div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                     <div>
                         <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">PAS (mmHg)</label>
                         <input type="number" id="eapSbp" required step="any" min="50" max="260" class="form-input">
@@ -4985,6 +4986,8 @@ function createEAPForm() {
                         <input type="number" id="eapSpo2" required step="any" min="50" max="100" class="form-input">
                     </div>
                 </div>
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Peso (${wUnit}) <span style="font-size:11px; font-weight:500; color:var(--text-tertiary);">— para calcular dosis de inotrópicos/vasopresores</span></label>
+                <input type="number" id="eapWeight" step="any" min="20" max="300" class="form-input">
             </div>
 
             <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
@@ -5026,6 +5029,20 @@ function createEAPForm() {
                     <option value="arritmia">Arritmia (FA rápida, bloqueo, etc.)</option>
                     <option value="valvular">Valvulopatía aguda (rotura de cuerda, endocarditis)</option>
                     <option value="desconocida">No clara / a investigar</option>
+                </select>
+            </div>
+
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.05em;">Diurético — Datos Opcionales</div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Dosis de furosemida oral crónica (mg/día)</label>
+                    <input type="number" id="eapFurosemidaCronica" step="any" min="0" class="form-input" placeholder="Dejar en blanco si no toma diurético de asa">
+                </div>
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:14px;">Respuesta diurética a las 2h (si ya se administró)</label>
+                <select id="eapRespuestaDiuretico" class="form-input">
+                    <option value="no_evaluado">Aún no evaluada</option>
+                    <option value="adecuada">Adecuada (&gt;100-150 mL/h o mejoría clínica)</option>
+                    <option value="inadecuada">Inadecuada — resistencia diurética</option>
                 </select>
             </div>
 
@@ -5074,34 +5091,65 @@ function buildEAPProtocolHTML(r) {
             <strong>⚠️ SpO₂ &lt; 90%:</strong> iniciar ventilación no invasiva (CPAP/BiPAP) precozmente salvo contraindicación — reduce la necesidad de intubación en EAP.
         </div>` : '';
 
+    const d = r.dosis;
+    const fur = r.furosemida;
+    const sinPeso = '<div style="margin-top:4px; color:var(--text-secondary); font-size:12px;">Ingresa el peso para calcular la dosis en mcg/min.</div>';
+
     let treatmentContent;
     if (r.profile.key === 'caliente-humedo') {
         treatmentContent = `
-            <div><strong>Vasodilatador:</strong> Nitroglicerina IV, iniciar 10-20 mcg/min, titular c/5 min según respuesta y PA (mantener PAS &gt; 90-100 mmHg)</div>
-            <div style="margin-top:4px;"><strong>Diurético:</strong> Furosemida IV — 20-40 mg si no toma diurético crónico; 1-2.5× la dosis oral diaria habitual (IV) si ya lo usa</div>
-            <div style="margin-top:4px;">Reevaluar diuresis a las 2h — si respuesta inadecuada (&lt;100-150 mL/h o sin mejoría clínica), duplicar la dosis de Furosemida</div>
-            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar betabloqueante IV en fase aguda descompensada (mantener el oral crónico si el paciente ya lo tomaba y está estable)</div>`;
+            <div><strong>Vasodilatador (1ª línea):</strong> Nitroglicerina IV, iniciar 10-20 mcg/min, titular c/5 min hasta 200 mcg/min según respuesta y PA (mantener PAS &gt; 90-100 mmHg)</div>
+            <div style="margin-top:4px;"><strong>Alternativa:</strong> Nitroprusiato de sodio${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.nitroprusiatoMin}-${d.nitroprusiatoMax} mcg/min</span> (0.3-5 mcg/kg/min)` : ' 0.3-5 mcg/kg/min' + sinPeso} — preferir si PA muy elevada o respuesta insuficiente a nitroglicerina</div>
+            <div style="margin-top:8px;"><strong>Diurético:</strong> Furosemida IV <span style="color:var(--brand-accent); font-weight:700;">${fur.dosisMin}-${fur.dosisMax} mg</span></div>
+            <div style="margin-top:2px; color:var(--text-secondary); font-size:12px;">${fur.nota}</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar betabloqueante IV en fase aguda descompensada (mantener el oral crónico si el paciente ya lo tomaba y está estable)</div>
+            <div style="margin-top:8px; color:var(--text-secondary); font-size:12px;">Ver también Vasoactivos IV (Calculadora 29) para calcular la tasa de goteo según la concentración preparada.</div>`;
     } else if (r.profile.key === 'frio-humedo') {
         treatmentContent = r.shockCardiogenico ? `
-            <div><strong>Inotrópico:</strong> Dobutamina 2-20 mcg/kg/min o Milrinone, titulado a perfusión</div>
-            <div style="margin-top:4px;"><strong>Vasopresor:</strong> Norepinefrina IV si hipotensión franca asociada, para mantener PAM ≥ 65 mmHg</div>
-            <div style="margin-top:4px;">Diurético solo una vez mejorada la perfusión — no como primera medida en shock</div>
+            <div><strong>Inotrópico (1ª línea):</strong> Dobutamina${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.dobutaminaMin}-${d.dobutaminaMax} mcg/min</span> (2-20 mcg/kg/min)` : ' 2-20 mcg/kg/min' + sinPeso}</div>
+            <div style="margin-top:4px;"><strong>Alternativa:</strong> Milrinona${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.milrinonaMin}-${d.milrinonaMax} mcg/min</span> (0.375-0.75 mcg/kg/min)` : ' 0.375-0.75 mcg/kg/min' + sinPeso} o Levosimendán — preferir si el paciente toma betabloqueante crónico (mecanismo no adrenérgico-dependiente). Ver Vasoactivos IV (Calculadora 29).</div>
+            <div style="margin-top:8px;"><strong>Vasopresor:</strong> Norepinefrina${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.norepinefrinaMin}-${d.norepinefrinaMax} mcg/min</span> (0.05-0.5 mcg/kg/min)` : ' 0.05-0.5 mcg/kg/min' + sinPeso} si hipotensión franca asociada, para mantener PAM ≥ 65 mmHg</div>
+            <div style="margin-top:8px;">Diurético solo una vez mejorada la perfusión — no como primera medida en shock</div>
             <div style="margin-top:4px; color:#dc2626; font-weight:600;">Buscar y tratar la causa (reperfusión si SCA, control de arritmia). Considerar soporte mecánico (balón de contrapulsación, ECMO) si refractario — interconsulta urgente a cardiología intervencionista/cirugía cardíaca.</div>`
             : `
             <div>PA aceptable pese a hipoperfusión — puede tolerar vasodilatador a dosis bajas + diurético con cautela</div>
-            <div style="margin-top:4px;">Considerar Inotrópico (Dobutamina/Milrinone) si no mejora la perfusión pese a lo anterior</div>
+            <div style="margin-top:4px;"><strong>Diurético:</strong> Furosemida IV <span style="color:var(--brand-accent); font-weight:700;">${fur.dosisMin}-${fur.dosisMax} mg</span>, con monitorización estrecha de PA</div>
+            <div style="margin-top:4px;"><strong>Si no mejora la perfusión:</strong> Inotrópico — Dobutamina${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.dobutaminaMin}-${d.dobutaminaMax} mcg/min</span>` : ' 2-20 mcg/kg/min'} o Milrinona${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.milrinonaMin}-${d.milrinonaMax} mcg/min</span>` : ' 0.375-0.75 mcg/kg/min'}</div>
             <div style="margin-top:4px;">Monitorización estrecha — puede progresar a shock cardiogénico</div>`;
     } else if (r.profile.key === 'frio-seco') {
         treatmentContent = `
             <div>Perfil poco frecuente — hipoperfusión SIN congestión franca</div>
-            <div style="margin-top:4px;">Optimizar precarga con pequeños bolos de fluido si tolera (evaluar respuesta a volumen)</div>
-            <div style="margin-top:4px;">Inotrópico a dosis baja si persiste hipoperfusión tras optimizar precarga</div>
-            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar diuréticos — pueden empeorar la hipoperfusión</div>`;
+            <div style="margin-top:4px;">Optimizar precarga con pequeños bolos de fluido (250 mL de cristaloide) si tolera, reevaluando respuesta tras cada bolo</div>
+            <div style="margin-top:4px;"><strong>Si persiste hipoperfusión:</strong> Inotrópico a dosis baja — Dobutamina${d ? ` <span style="color:var(--brand-accent); font-weight:700;">${d.dobutaminaMin}-${d.dobutaminaMax} mcg/min</span>` : ' 2-20 mcg/kg/min'} (iniciar en el extremo bajo del rango)</div>
+            <div style="margin-top:4px; color:#dc2626; font-weight:600;">Evitar diuréticos y vasodilatadores — pueden empeorar la hipoperfusión</div>`;
     } else {
         treatmentContent = `
             <div style="color:var(--success); font-weight:600;">Perfil compensado — no requiere manejo IV agudo</div>
             <div style="margin-top:4px;">Optimizar terapia crónica de insuficiencia cardíaca: IECA/ARA-II/ARNI, betabloqueante, antagonista mineralocorticoide, iSGLT2</div>
             <div style="margin-top:4px;">Reforzar restricción de sodio/líquidos y adherencia terapéutica antes del alta</div>`;
+    }
+
+    const causaContent = {
+        volumen: 'Reforzar educación sobre restricción de sodio (&lt;2g/día) y líquidos, revisar adherencia e interacciones (AINEs, corticoides, glitazonas). El diurético es el eje principal del tratamiento en este escenario.',
+        sca: 'ECG de 12 derivaciones y troponina seriada inmediatos — ver HEART Score (Calculadora 26), TIMI UA/NSTEMI y STEMI (Calculadoras 19/20) y Killip-Kimball (Calculadora 36). Cateterismo urgente/angioplastia primaria si hay elevación del ST.',
+        hipertensiva: 'Ver Crisis Hipertensiva (Calculadora 41) para el fármaco IV específico, objetivo de PA y velocidad de reducción — el EAP hipertensivo es daño de órgano diana y requiere reducción tensional controlada, no solo tratamiento de la congestión.',
+        arritmia: 'Ver Protocolo de Arritmias (Calculadora 45) para la cardioversión/antiarrítmico específico según el tipo — controlar la arritmia puede ser la medida más efectiva si es la causa primaria del deterioro.',
+        valvular: 'Ecocardiograma urgente para confirmar y cuantificar. Interconsulta a cirugía cardíaca si rotura de cuerda tendinosa, endocarditis con compromiso valvular severo, o disfunción protésica aguda.',
+        desconocida: 'Estudio etiológico dirigido: ECG, troponina seriada, péptidos natriuréticos (BNP/NT-proBNP — ver Calculadora 61, Laboratorio) y ecocardiograma urgente para identificar la causa precipitante.'
+    }[r.causa] || '';
+
+    let diureticoContent;
+    if (r.resistenciaDiuretica) {
+        diureticoContent = `
+            <div style="color:#dc2626; font-weight:700;">Respuesta diurética inadecuada reportada — escalar:</div>
+            <div style="margin-top:6px;">1. Duplicar la dosis de furosemida IV (hasta un máximo práctico de ~160-200 mg por dosis)</div>
+            <div style="margin-top:4px;">2. Si bolos repetidos no son efectivos, cambiar a infusión continua (ej. 5-20 mg/h tras un bolo de carga)</div>
+            <div style="margin-top:4px;">3. Bloqueo secuencial de la nefrona: añadir Hidroclorotiazida 25-50 mg VO o Metolazona 2.5-5 mg VO, 30 min antes del diurético de asa</div>
+            <div style="margin-top:4px;">4. Si persiste refractario: considerar Ultrafiltración/terapia de reemplazo renal — interconsulta a Nefrología</div>`;
+    } else if (r.respuestaDiuretico === 'adecuada') {
+        diureticoContent = `<div style="color:var(--success); font-weight:600;">Respuesta diurética adecuada — continuar la misma dosis y reevaluar cada 6-12h, ajustando según diuresis y peso.</div>`;
+    } else {
+        diureticoContent = `<div>Reevaluar la diuresis a las 2h del diurético — objetivo &gt;100-150 mL/h o &gt;3L en 6h. Si la respuesta es inadecuada, volver a esta calculadora marcando "Inadecuada" para ver la escalada de resistencia diurética.</div>`;
     }
 
     const reevalContent = `
@@ -5113,14 +5161,26 @@ function buildEAPProtocolHTML(r) {
     return `${headerHTML}${shockAlertHTML}${nivHTML}
         ${section('🫧', '1. Perfil Hemodinámico', r.profile.colorHex, `<div><strong>${r.profile.label}</strong> — ${r.isFrio ? 'con' : 'sin'} hipoperfusión, ${r.isHumedo ? 'con' : 'sin'} congestión</div>`)}
         ${section('💊', '2. Tratamiento Dirigido por Perfil', r.profile.colorHex, treatmentContent)}
-        ${section('📋', '3. Reevaluación y Disposición', '#14b8a6', reevalContent)}`;
+        ${section('🎯', '3. Manejo de la Causa Precipitante', '#6366f1', `<div>${causaContent}</div>`)}
+        ${section('🚰', '4. Resistencia Diurética / Escalada', r.resistenciaDiuretica ? '#dc2626' : '#14b8a6', diureticoContent)}
+        ${section('📋', '5. Reevaluación y Disposición', '#14b8a6', reevalContent)}`;
 }
 
 function calculateEAPProtocol(event) {
     event.preventDefault();
+    const units = Storage.getSettings().units;
+    const weightRaw = document.getElementById('eapWeight').value;
+    let weightKg = weightRaw === '' ? null : parseFloat(weightRaw);
+    if (weightKg !== null && units.weight === 'lb') weightKg = weightKg / 2.20462;
+
+    const furosemidaRaw = document.getElementById('eapFurosemidaCronica').value;
+
     const inputs = {
         sbp: parseFloat(document.getElementById('eapSbp').value),
         spo2: parseFloat(document.getElementById('eapSpo2').value),
+        weightKg,
+        furosemidaCronica: furosemidaRaw === '' ? null : parseFloat(furosemidaRaw),
+        respuestaDiuretico: document.getElementById('eapRespuestaDiuretico').value,
         hypoperfusion: {
             extremidadesFrias: document.getElementById('eapExtremidadesFrias').checked,
             oliguria: document.getElementById('eapOliguria').checked,
