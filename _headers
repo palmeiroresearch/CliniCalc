@@ -1,0 +1,52 @@
+# Cloudflare Pages — reglas de caché del borde.
+#
+# Lo más importante del despliegue, y lo que no da ningún error si falta.
+#
+# El borde de Cloudflare es mucho más agresivo que el de GitHub Pages, y en
+# CliniCalc **ningún archivo lleva hash en el nombre**: una versión nueva
+# reutiliza exactamente las mismas URL. Sin estas reglas, Cloudflare seguiría
+# sirviendo la versión vieja durante horas aunque el despliegue haya ido bien.
+#
+# Por eso casi todo se revalida. El coste es bajo: el service worker sirve la
+# app desde su propia caché, la red solo se toca en la primera carga y al
+# buscar actualizaciones, y un 304 son unos cientos de bytes.
+#
+# Cloudflare CONCATENA las cabeceras de todas las reglas que casan, no se queda
+# con la más específica (medido en TACV). Por eso ninguna regla de aquí se
+# solapa con otra en Cache-Control.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
+# El service worker: es quien decide cuándo se actualiza la app. Cacheado, el
+# worker viejo sigue mandando y nadie recibe una versión nueva nunca.
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# El armazón: sin hash, así que se revalida.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Las actualizaciones OTA de la app Android. El manifiesto es lo que la app
+# consulta para saber si hay versión nueva: cacheado, el OTA deja de funcionar
+# en silencio. Los paquetes llevan la versión en el nombre: inmutables de
+# verdad.
+/ota/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
+/ota/bundles/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Un día de desfase en un icono o en el manifiesto no le hace daño a nadie.
+/icon-192.png
+  Cache-Control: public, max-age=86400
+/icon-512.png
+  Cache-Control: public, max-age=86400
+/manifest.json
+  Cache-Control: public, max-age=86400
