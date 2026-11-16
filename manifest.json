@@ -2,7 +2,7 @@
   "name": "CliniCalc - Calculadoras Médicas",
   "short_name": "CliniCalc",
   "description": "Calculadoras médicas profesionales para estudiantes y profesionales de la salud. GFR, IMC, scores clínicos y más.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e3872",

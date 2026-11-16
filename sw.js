@@ -3,7 +3,7 @@
 // Funcionalidad Offline Completa
 // ============================================
 
-const CACHE_NAME = 'clinicalc-v2.0.1';
+const CACHE_NAME = 'clinicalc-v2.0.2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -47,6 +47,35 @@ const ASSETS_TO_CACHE = [
 ];
 
 // === INSTALACIÓN === //
+// === RESPUESTAS REDIRIGIDAS === //
+// Safari NO acepta que una navegación se sirva con una respuesta que viene
+// de una redirección: «Response served by service worker has redirections»,
+// y la app no carga, ni con red ni sin ella (Chromium aplica la misma regla).
+//
+// Cloudflare Pages redirige /index.html → / con un 308; GitHub Pages no lo
+// hacía. `cache.addAll` sigue esa redirección y guarda la respuesta MARCADA
+// como redirigida bajo './index.html' — que es donde arranca la app instalada
+// (start_url) y lo que se sirve como respaldo sin red. Por eso se rompió tras
+// la migración.
+//
+// La respuesta se reconstruye con el mismo cuerpo, estado y cabeceras; solo se
+// pierde la marca. Se limpia al instalar y también al servir, por si queda
+// alguna entrada vieja. Se copia con blob() y no pasando el body en stream
+// porque Safari ha tenido fallos con lo segundo.
+async function sinRedireccion(res) {
+    if (!res || !res.redirected) return res;
+    return new Response(await res.blob(), {
+        status: res.status, statusText: res.statusText, headers: res.headers,
+    });
+}
+
+async function limpiarRedirecciones(cache) {
+    for (const req of await cache.keys()) {
+        const res = await cache.match(req);
+        if (res && res.redirected) await cache.put(req, await sinRedireccion(res));
+    }
+}
+
 self.addEventListener('install', (event) => {
     console.log('[SW] Instalando CliniCalc...');
     
@@ -54,7 +83,8 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[SW] Cacheando archivos');
-                return cache.addAll(ASSETS_TO_CACHE);
+                return cache.addAll(ASSETS_TO_CACHE)
+                    .then(() => limpiarRedirecciones(cache));
             })
             .then(() => {
                 console.log('[SW] Instalación completa - esperando confirmación del usuario');
@@ -122,7 +152,7 @@ self.addEventListener('fetch', (event) => {
                             // Sin conexión, seguir usando cache
                         });
                     
-                    return cachedResponse;
+                    return sinRedireccion(cachedResponse);
                 }
                 
                 // Obtener de red y cachear
@@ -143,7 +173,7 @@ self.addEventListener('fetch', (event) => {
                         
                         // Si falla navegación, mostrar página offline
                         if (event.request.mode === 'navigate') {
-                            return caches.match('./index.html');
+                            return caches.match('./index.html').then(sinRedireccion);
                         }
                         
                         throw error;
